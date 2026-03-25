@@ -52,17 +52,17 @@ const ResultsPreview = () => {
 
   const pillars = hasRealResults
     ? [
-        { name: "Clarity", score: result.scores.clarity.score * 10, fullMark: 100 },
-        { name: "Hook", score: result.scores.hook.score * 10, fullMark: 100 },
-        { name: "Trust", score: result.scores.trust.score * 10, fullMark: 100 },
-        { name: "Desire", score: result.scores.desire.score * 10, fullMark: 100 },
-        { name: "Action", score: result.scores.action.score * 10, fullMark: 100 },
-        { name: "Objections", score: result.scores.objections.score * 10, fullMark: 100 },
+        { name: "Clarity", score: (result?.scores?.clarity?.score || 0) * 10, fullMark: 100 },
+        { name: "Hook", score: (result?.scores?.hook?.score || 0) * 10, fullMark: 100 },
+        { name: "Trust", score: (result?.scores?.trust?.score || 0) * 10, fullMark: 100 },
+        { name: "Desire", score: (result?.scores?.desire?.score || 0) * 10, fullMark: 100 },
+        { name: "Action", score: (result?.scores?.action?.score || 0) * 10, fullMark: 100 },
+        { name: "Objections", score: (result?.scores?.objections?.score || 0) * 10, fullMark: 100 },
       ]
     : defaultPillars;
 
-  const overallScore = hasRealResults ? result.overall_score : 67;
-  const verdict = hasRealResults ? result.verdict : "Needs Attention";
+  const overallScore = hasRealResults ? (result?.overall_score || 0) : 67;
+  const verdict = hasRealResults ? (result?.verdict || "Needs Attention") : "Needs Attention";
 
   return (
     <section id="results" className="py-24 px-6">
@@ -165,7 +165,7 @@ const ResultsPreview = () => {
           </div>
 
           {/* Top 3 Fixes */}
-          {hasRealResults && (
+          {hasRealResults && result?.top_3_fixes && (
             <div className="w-full space-y-4 mb-8">
               <h4 className="text-lg font-bold text-foreground">Top 3 Priority Fixes</h4>
               {result.top_3_fixes.map((fix, i) => (
@@ -201,7 +201,7 @@ const ResultsPreview = () => {
           )}
 
           {/* Remaining pillars - blurred/locked */}
-          {hasRealResults && (
+          {hasRealResults && result?.scores && (
             <div className="w-full relative">
               <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 rounded-xl flex flex-col items-center justify-center px-4 text-center">
                 <Lock className="w-8 h-8 text-primary mb-3" />
@@ -219,11 +219,11 @@ const ResultsPreview = () => {
                   <div key={key} className="glass-card p-5">
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-bold capitalize text-foreground">{key}</span>
-                      <span className={`font-bold ${scoreColor(pillar.score * 10)}`}>
-                        {pillar.score}/10
+                      <span className={`font-bold ${scoreColor((pillar?.score || 0) * 10)}`}>
+                        {pillar?.score || 0}/10
                       </span>
                     </div>
-                    <p className="text-xs text-body">{pillar.issue}</p>
+                    <p className="text-xs text-body">{pillar?.issue || ""}</p>
                   </div>
                 ))}
               </div>

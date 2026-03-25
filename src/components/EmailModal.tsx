@@ -19,12 +19,14 @@ const EmailModal = () => {
     e.preventDefault();
     setEmailError(null);
 
-    if (!email.trim()) {
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail) {
       setEmailError("Please enter your email address");
       return;
     }
 
-    if (!isValidEmail(email)) {
+    if (!isValidEmail(trimmedEmail)) {
       setEmailError("Please enter a valid email address");
       return;
     }
@@ -33,39 +35,37 @@ const EmailModal = () => {
 
     setSubmitting(true);
     try {
-      // Save subscriber
-      await supabase.from("subscribers").insert({
-        email: email.trim(),
-        source: "free_audit",
-      });
+      // 1. Save subscriber (upsert on email)
+      const { error: subError } = await supabase
+        .from("subscribers")
+        .upsert({
+          email: trimmedEmail,
+          source: "free_audit",
+        });
 
-      // Save audit
-      await supabase.from("audits").insert({
-        email: email.trim(),
-        url,
-        overall_score: result.overall_score,
-        verdict: result.verdict,
-        clarity_score: result.scores.clarity.score,
-        hook_score: result.scores.hook.score,
-        trust_score: result.scores.trust.score,
-        desire_score: result.scores.desire.score,
-        action_score: result.scores.action.score,
-        objections_score: result.scores.objections.score,
-        top_3_fixes: result.top_3_fixes as any,
-        full_results: result as any,
-        tier: "free",
-      });
+      if (subError) {
+        console.warn("Subscriber save error:", subError.message);
+      }
 
-      // Save to Leads table
-      await supabase.from("Leads").insert({
-        email: email.trim(),
-        url,
-        score: result.overall_score,
-        status: "free",
-      });
+      // 2. Save to Leads table using ONLY requested columns
+      // Using optional chaining for overall_score just in case
+      const { error: leadsError } = await supabase
+        .from("Leads")
+        .insert({
+          email: trimmedEmail,
+          url,
+          score: result?.overall_score || 0,
+        });
 
+      if (leadsError) {
+        console.error("Leads save error:", leadsError.message);
+        toast.error(`Results unlocked — saving failed this time. (${leadsError.message})`);
+      } else {
+        toast.success("Results unlocked — saved.");
+      }
+
+      // Always unlock results if we reached here
       setStage("done");
-      toast.success("Your audit results are ready!");
 
       // Scroll to results after a brief delay
       setTimeout(() => {
@@ -74,9 +74,19 @@ const EmailModal = () => {
           resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
         }
       }, 300);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Save error:", err);
-      toast.error("Something went wrong. Please try again.");
+      // Even on catch, we unlock results as per "fail-open" requirement
+      setStage("done");
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      toast.error(`Results unlocked — saving failed this time. (${errorMessage})`);
+      
+      setTimeout(() => {
+        const resultsEl = document.getElementById("results");
+        if (resultsEl) {
+          resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 300);
     } finally {
       setSubmitting(false);
     }

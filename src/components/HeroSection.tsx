@@ -1,9 +1,8 @@
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { motion } from "motion/react";
-import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { useAudit } from "@/contexts/AuditContext";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import EmailModal from "./EmailModal";
 
 const loadingSteps = [
@@ -33,14 +32,52 @@ const isValidUrl = (input: string): boolean => {
   }
 };
 
+const getFriendlyErrorMessage = (err: unknown): string => {
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  
+  if (msg.includes("429")) {
+    return "We're busy right now. Please wait a moment.";
+  }
+  if (msg.includes("timeout") || msg.includes("abort")) {
+    return "The audit took too long. Please try again with a different URL.";
+  }
+  if (msg.includes("network") || msg.includes("fetch") || msg.includes("failed to fetch")) {
+    return "Network error. Please check your internet connection.";
+  }
+  if (msg.includes("invalid url") || msg.includes("malformed")) {
+    return "The URL provided seems invalid. Please check and try again.";
+  }
+  if (msg.includes("not found") || msg.includes("404")) {
+    return "We couldn't find that page. Please check the URL.";
+  }
+  
+  return "We couldn't audit this page. Please make sure the URL is public and try again.";
+};
+
 const HeroSection = () => {
   const { stage, setStage, url, setUrl, result, setResult, setError } = useAudit();
   const isLoading = ["capturing", "analysing", "generating"].includes(stage);
   const [urlError, setUrlError] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown <= 0) {
+      setCountdown(null);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setCountdown((prev) => (prev !== null ? prev - 1 : null));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [countdown]);
 
   const runAudit = async (e: FormEvent) => {
     e.preventDefault();
     setUrlError(null);
+    setError(null);
 
     if (!url.trim()) {
       setUrlError("Please enter your landing page URL");
@@ -54,23 +91,46 @@ const HeroSection = () => {
 
     const normalizedUrl = normalizeUrl(url);
     setUrl(normalizedUrl);
-    setError(null);
     setStage("capturing");
 
     const timer1 = setTimeout(() => setStage("analysing"), 2000);
     const timer2 = setTimeout(() => setStage("generating"), 5000);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("run-audit", {
-        body: { url: normalizedUrl },
+      // Use fetch to be able to read headers for 429 Retry-After as requested
+      // We get the URL and Key from the supabase client instance
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const supabaseUrl = (supabase as any).supabaseUrl as string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const supabaseKey = (supabase as any).supabaseKey as string;
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/run-audit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({ url: normalizedUrl }),
       });
 
       clearTimeout(timer1);
       clearTimeout(timer2);
 
-      if (fnError) {
-        throw new Error(fnError.message || "Audit failed");
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After');
+        const seconds = retryAfter ? parseInt(retryAfter, 10) : 30;
+        setCountdown(seconds);
+        setUrlError(`We’re busy right now. Try again in ${seconds} seconds.`);
+        setStage("idle");
+        return;
       }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Error ${response.status}`);
+      }
+
+      const data = await response.json();
 
       if (data?.error) {
         throw new Error(data.error);
@@ -78,12 +138,14 @@ const HeroSection = () => {
 
       setResult(data);
       setStage("email_capture");
-    } catch (err: any) {
+    } catch (err: unknown) {
       clearTimeout(timer1);
       clearTimeout(timer2);
       console.error("Audit error:", err);
-      setError(err.message || "Something went wrong");
-      toast.error(err.message || "Something went wrong. Please try again.");
+      
+      const friendlyMsg = getFriendlyErrorMessage(err);
+      setUrlError(friendlyMsg);
+      setError(friendlyMsg);
       setStage("idle");
     }
   };
@@ -136,7 +198,7 @@ const HeroSection = () => {
                   if (urlError) setUrlError(null);
                 }}
                 placeholder="Enter your landing page URL (e.g. stripe.com)"
-                disabled={isLoading}
+                disabled={isLoading || countdown !== null}
                 className={`relative w-full bg-navy-dark border rounded-xl px-6 py-4 text-sm text-foreground placeholder:text-caption focus:outline-none focus:border-primary transition-colors disabled:opacity-50 ${
                   urlError ? "border-destructive" : "border-white/10"
                 }`}
@@ -144,13 +206,18 @@ const HeroSection = () => {
             </div>
             <button
               type="submit"
-              disabled={isLoading}
-              className="btn-primary text-lg px-8 py-4 flex items-center justify-center gap-3 shrink-0 disabled:opacity-70"
+              disabled={isLoading || countdown !== null}
+              className="btn-primary text-lg px-8 py-4 flex items-center justify-center gap-3 shrink-0 disabled:opacity-70 min-w-[200px]"
             >
               {isLoading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
                   Analysing...
+                </>
+              ) : countdown !== null ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Wait {countdown}s
                 </>
               ) : (
                 <>
@@ -162,7 +229,14 @@ const HeroSection = () => {
           </form>
 
           {urlError && (
-            <p className="text-sm text-destructive text-left mb-4">{urlError}</p>
+            <div className="flex items-center gap-2 mt-2 px-2">
+              <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
+              <p className="text-sm text-destructive text-left">
+                {countdown !== null 
+                  ? `We’re busy right now. Try again in ${countdown} seconds.` 
+                  : urlError}
+              </p>
+            </div>
           )}
 
           {isLoading && (
