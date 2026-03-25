@@ -57,6 +57,10 @@ export default {
         "score-green": "hsl(var(--score-green))",
         "score-amber": "hsl(var(--score-amber))",
         "score-red": "hsl(var(--score-red))",
+        "body": "hsl(var(--body))",
+        "caption": "hsl(var(--caption))",
+        "card-text": "hsl(var(--card-text))",
+        "subheading": "hsl(var(--subheading))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

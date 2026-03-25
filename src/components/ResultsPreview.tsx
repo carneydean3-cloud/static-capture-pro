@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { AlertCircle, CheckCircle2, Lock, ArrowRight } from "lucide-react";
 import {
@@ -39,6 +40,15 @@ const scoreColor = (score: number) => {
 const ResultsPreview = () => {
   const { stage, result } = useAudit();
   const hasRealResults = stage === "done" && result;
+  const [highlight, setHighlight] = useState(false);
+
+  useEffect(() => {
+    if (stage === "done") {
+      setHighlight(true);
+      const timer = setTimeout(() => setHighlight(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [stage]);
 
   const pillars = hasRealResults
     ? [
@@ -57,32 +67,53 @@ const ResultsPreview = () => {
   return (
     <section id="results" className="py-24 px-6">
       <div className="max-w-3xl mx-auto">
+        {/* Section header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="text-center mb-10"
+        >
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
+            {hasRealResults ? "Your Conversion Diagnosis" : "Conversion Diagnosis"}
+          </h2>
+          <p className="text-lg text-subheading">
+            {hasRealResults
+              ? "Here's exactly what's holding your page back."
+              : "See exactly what's holding your page back."}
+          </p>
+        </motion.div>
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="glass-card p-10 relative overflow-hidden flex flex-col items-center"
+          className={`glass-card p-10 relative overflow-hidden flex flex-col items-center transition-shadow duration-1000 ${
+            highlight ? "ring-2 ring-primary shadow-[0_0_40px_rgba(20,184,166,0.3)]" : ""
+          }`}
         >
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-score-amber to-score-red"></div>
           <div className="w-full flex items-center justify-between mb-10">
             <h3 className="text-xl font-bold">Conversion Radar</h3>
-            <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            <div className="text-xs font-bold uppercase tracking-widest text-caption">
               {hasRealResults ? "Your Audit" : "Example Audit"}
             </div>
           </div>
 
-          <div className="w-full h-[400px] mb-6">
+          <div className="w-full h-[420px] mb-6">
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="80%" data={pillars}>
+              <RadarChart cx="50%" cy="50%" outerRadius="70%" data={pillars}>
                 <PolarGrid stroke="rgba(255,255,255,0.1)" />
                 <PolarAngleAxis
                   dataKey="name"
                   tick={{
-                    fill: "rgba(255,255,255,0.6)",
-                    fontSize: 12,
+                    fill: "hsl(203 41% 79%)",
+                    fontSize: 13,
                     fontWeight: 600,
                   }}
+                  tickLine={false}
                 />
                 <Radar
                   name="Score"
@@ -96,7 +127,7 @@ const ResultsPreview = () => {
           </div>
 
           {!hasRealResults && (
-            <p className="text-xs text-muted-foreground font-medium mb-12">
+            <p className="text-xs text-caption font-medium mb-12">
               Example audit — your results will vary
             </p>
           )}
@@ -110,7 +141,7 @@ const ResultsPreview = () => {
               <div className={`text-4xl font-bold mb-2 ${scoreColor(overallScore)}`}>
                 {overallScore}/100
               </div>
-              <div className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+              <div className="text-sm font-bold uppercase tracking-widest text-caption">
                 Conversion Score
               </div>
             </div>
@@ -125,7 +156,7 @@ const ResultsPreview = () => {
                   {verdict}
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <p className="text-sm text-body leading-relaxed">
                 {hasRealResults
                   ? "Your detailed diagnosis is below. Review the top fixes to boost conversions."
                   : "Significant improvements identified across your trust architecture and objection handling."}
@@ -133,10 +164,10 @@ const ResultsPreview = () => {
             </div>
           </div>
 
-          {/* Top 3 Fixes - shown when real results */}
+          {/* Top 3 Fixes */}
           {hasRealResults && (
             <div className="w-full space-y-4 mb-8">
-              <h4 className="text-lg font-bold">Top 3 Priority Fixes</h4>
+              <h4 className="text-lg font-bold text-foreground">Top 3 Priority Fixes</h4>
               {result.top_3_fixes.map((fix, i) => (
                 <motion.div
                   key={i}
@@ -146,15 +177,22 @@ const ResultsPreview = () => {
                   className="glass-card p-6"
                 >
                   <div className="flex items-start gap-4">
-                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 text-sm font-bold text-primary">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0 text-base font-bold text-primary">
                       {fix.priority}
                     </div>
-                    <div className="flex-1">
-                      <h5 className="font-bold mb-1">{fix.issue}</h5>
-                      <p className="text-sm text-score-amber font-medium mb-2">
-                        Impact: {fix.impact}
-                      </p>
-                      <p className="text-sm text-muted-foreground">{fix.fix}</p>
+                    <div className="flex-1 space-y-2">
+                      <div>
+                        <span className="text-xs font-bold uppercase tracking-widest text-caption">Issue</span>
+                        <h5 className="font-bold text-foreground">{fix.issue}</h5>
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold uppercase tracking-widest text-caption">Impact</span>
+                        <p className="text-sm text-score-amber font-medium">{fix.impact}</p>
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold uppercase tracking-widest text-caption">Fix</span>
+                        <p className="text-sm text-card-text">{fix.fix}</p>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -162,13 +200,13 @@ const ResultsPreview = () => {
             </div>
           )}
 
-          {/* Remaining pillars - blurred/locked when real results */}
+          {/* Remaining pillars - blurred/locked */}
           {hasRealResults && (
             <div className="w-full relative">
               <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 rounded-xl flex flex-col items-center justify-center">
                 <Lock className="w-8 h-8 text-primary mb-3" />
                 <h4 className="font-bold text-lg mb-2">Unlock Full Diagnosis</h4>
-                <p className="text-sm text-muted-foreground mb-4 text-center max-w-xs">
+                <p className="text-sm text-body mb-4 text-center max-w-xs">
                   Get detailed issue + fix for every pillar, rewritten copy, and visual mockups.
                 </p>
                 <a href="#pricing" className="btn-primary flex items-center gap-2">
@@ -180,12 +218,12 @@ const ResultsPreview = () => {
                 {Object.entries(result.scores).map(([key, pillar]) => (
                   <div key={key} className="glass-card p-5">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold capitalize">{key}</span>
+                      <span className="font-bold capitalize text-foreground">{key}</span>
                       <span className={`font-bold ${scoreColor(pillar.score * 10)}`}>
                         {pillar.score}/10
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground">{pillar.issue}</p>
+                    <p className="text-xs text-body">{pillar.issue}</p>
                   </div>
                 ))}
               </div>

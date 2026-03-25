@@ -5,27 +5,43 @@ import { useAudit } from "@/contexts/AuditContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+const isValidEmail = (email: string) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
 const EmailModal = () => {
   const { stage, setStage, url, result } = useAudit();
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const isOpen = stage === "email_capture";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!result || !email) return;
+    setEmailError(null);
+
+    if (!email.trim()) {
+      setEmailError("Please enter your email address");
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      setEmailError("Please enter a valid email address");
+      return;
+    }
+
+    if (!result) return;
 
     setSubmitting(true);
     try {
       // Save subscriber
       await supabase.from("subscribers").insert({
-        email,
+        email: email.trim(),
         source: "free_audit",
       });
 
       // Save audit
       await supabase.from("audits").insert({
-        email,
+        email: email.trim(),
         url,
         overall_score: result.overall_score,
         verdict: result.verdict,
@@ -40,8 +56,24 @@ const EmailModal = () => {
         tier: "free",
       });
 
+      // Save to Leads table
+      await supabase.from("Leads").insert({
+        email: email.trim(),
+        url,
+        score: result.overall_score,
+        status: "free",
+      });
+
       setStage("done");
       toast.success("Your audit results are ready!");
+
+      // Scroll to results after a brief delay
+      setTimeout(() => {
+        const resultsEl = document.getElementById("results");
+        if (resultsEl) {
+          resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 300);
     } catch (err) {
       console.error("Save error:", err);
       toast.error("Something went wrong. Please try again.");
@@ -68,7 +100,7 @@ const EmailModal = () => {
           >
             <button
               onClick={() => setStage("idle")}
-              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+              className="absolute top-4 right-4 text-caption hover:text-foreground"
             >
               <X className="w-5 h-5" />
             </button>
@@ -78,20 +110,29 @@ const EmailModal = () => {
                 <span className="text-3xl">🎯</span>
               </div>
               <h3 className="text-2xl font-bold mb-2">Your audit is ready.</h3>
-              <p className="text-sm text-muted-foreground mb-6">
+              <p className="text-sm text-body mb-6">
                 Enter your email to unlock your results.
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                required
-                className="w-full bg-navy-dark border border-white/10 rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
-              />
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div>
+                <input
+                  type="text"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (emailError) setEmailError(null);
+                  }}
+                  placeholder="you@company.com"
+                  className={`w-full bg-navy-dark border rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-caption focus:outline-none focus:border-primary ${
+                    emailError ? "border-destructive" : "border-white/10"
+                  }`}
+                />
+                {emailError && (
+                  <p className="text-xs text-destructive mt-1.5">{emailError}</p>
+                )}
+              </div>
               <button
                 type="submit"
                 disabled={submitting}
@@ -106,7 +147,7 @@ const EmailModal = () => {
                   </>
                 )}
               </button>
-              <p className="text-xs text-center text-muted-foreground">
+              <p className="text-xs text-center text-caption">
                 No spam. Unsubscribe anytime.
               </p>
             </form>

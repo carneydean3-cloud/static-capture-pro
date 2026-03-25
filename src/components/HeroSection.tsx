@@ -12,28 +12,57 @@ const loadingSteps = [
   { key: "generating", label: "Generating your diagnosis..." },
 ];
 
+const normalizeUrl = (input: string): string => {
+  const trimmed = input.trim();
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+};
+
+const isValidUrl = (input: string): boolean => {
+  const trimmed = input.trim();
+  if (!trimmed || trimmed.length < 4) return false;
+  if (!trimmed.includes(".")) return false;
+  try {
+    const normalized = normalizeUrl(trimmed);
+    new URL(normalized);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const HeroSection = () => {
   const { stage, setStage, url, setUrl, result, setResult, setError } = useAudit();
   const isLoading = ["capturing", "analysing", "generating"].includes(stage);
+  const [urlError, setUrlError] = useState<string | null>(null);
 
   const runAudit = async (e: FormEvent) => {
     e.preventDefault();
+    setUrlError(null);
 
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-      toast.error("Please enter a valid URL starting with http:// or https://");
+    if (!url.trim()) {
+      setUrlError("Please enter your landing page URL");
       return;
     }
 
+    if (!isValidUrl(url)) {
+      setUrlError("Please enter a valid URL (e.g. stripe.com)");
+      return;
+    }
+
+    const normalizedUrl = normalizeUrl(url);
+    setUrl(normalizedUrl);
     setError(null);
     setStage("capturing");
 
-    // Animate through loading steps
     const timer1 = setTimeout(() => setStage("analysing"), 2000);
     const timer2 = setTimeout(() => setStage("generating"), 5000);
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke("run-audit", {
-        body: { url },
+        body: { url: normalizedUrl },
       });
 
       clearTimeout(timer1);
@@ -85,7 +114,7 @@ const HeroSection = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-xl text-muted-foreground max-w-3xl mx-auto mb-12 leading-relaxed"
+          className="text-xl text-body max-w-3xl mx-auto mb-12 leading-relaxed"
         >
           ConversionDoc analyses your page across 6 conversion pillars and delivers a precise diagnosis — with every fix included.
         </motion.p>
@@ -96,17 +125,21 @@ const HeroSection = () => {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="max-w-2xl mx-auto mb-16"
         >
-          <form onSubmit={runAudit} className="flex flex-col md:flex-row items-stretch gap-4 mb-6">
+          <form onSubmit={runAudit} className="flex flex-col md:flex-row items-stretch gap-4 mb-2">
             <div className="relative flex-grow group">
               <div className="absolute -inset-1 bg-primary/40 rounded-xl blur opacity-25 group-focus-within:opacity-50 transition duration-1000"></div>
               <input
-                type="url"
+                type="text"
                 value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="Paste your landing page URL..."
-                required
+                onChange={(e) => {
+                  setUrl(e.target.value);
+                  if (urlError) setUrlError(null);
+                }}
+                placeholder="Enter your landing page URL (e.g. stripe.com)"
                 disabled={isLoading}
-                className="relative w-full bg-navy-dark border border-white/10 rounded-xl px-6 py-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors disabled:opacity-50"
+                className={`relative w-full bg-navy-dark border rounded-xl px-6 py-4 text-sm text-foreground placeholder:text-caption focus:outline-none focus:border-primary transition-colors disabled:opacity-50 ${
+                  urlError ? "border-destructive" : "border-white/10"
+                }`}
               />
             </div>
             <button
@@ -128,12 +161,15 @@ const HeroSection = () => {
             </button>
           </form>
 
-          {/* Loading animation */}
+          {urlError && (
+            <p className="text-sm text-destructive text-left mb-4">{urlError}</p>
+          )}
+
           {isLoading && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="glass-card p-6 mb-6"
+              className="glass-card p-6 mb-6 mt-4"
             >
               <div className="space-y-3">
                 {loadingSteps.map((step) => {
@@ -157,7 +193,7 @@ const HeroSection = () => {
                             ? "text-primary"
                             : isCurrent
                             ? "text-foreground"
-                            : "text-muted-foreground"
+                            : "text-caption"
                         }`}
                       >
                         {step.label}
@@ -170,8 +206,8 @@ const HeroSection = () => {
           )}
 
           {!isLoading && stage === "idle" && (
-            <div className="flex flex-col items-center gap-8">
-              <div className="flex flex-wrap items-center justify-center gap-6 text-xs font-medium text-muted-foreground">
+            <div className="flex flex-col items-center gap-8 mt-4">
+              <div className="flex flex-wrap items-center justify-center gap-6 text-xs font-medium text-body">
                 {["Free", "No credit card", "Results in 60 seconds"].map((text) => (
                   <div key={text} className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-primary" />
