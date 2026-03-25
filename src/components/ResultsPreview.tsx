@@ -102,9 +102,9 @@ const ResultsPreview = () => {
             </div>
           </div>
 
-          <div className="w-full h-[420px] mb-6">
+          <div className="w-full h-[420px] md:h-[420px] h-[340px] mb-6 px-2 md:px-0">
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="70%" data={pillars}>
+              <RadarChart cx="50%" cy="50%" outerRadius="65%" data={pillars}>
                 <PolarGrid stroke="rgba(255,255,255,0.1)" />
                 <PolarAngleAxis
                   dataKey="name"
@@ -177,7 +177,7 @@ const ResultsPreview = () => {
                   className="glass-card p-6"
                 >
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0 text-base font-bold text-primary">
+                    <div className="w-10 h-10 rounded-full bg-primary/30 flex items-center justify-center shrink-0 text-base font-bold text-white">
                       {fix.priority}
                     </div>
                     <div className="flex-1 space-y-2">
@@ -187,7 +187,7 @@ const ResultsPreview = () => {
                       </div>
                       <div>
                         <span className="text-xs font-bold uppercase tracking-widest text-caption">Impact</span>
-                        <p className="text-sm text-score-amber font-medium">{fix.impact}</p>
+                        <p className="text-sm text-body font-medium">{fix.impact}</p>
                       </div>
                       <div>
                         <span className="text-xs font-bold uppercase tracking-widest text-caption">Fix</span>
@@ -203,13 +203,13 @@ const ResultsPreview = () => {
           {/* Remaining pillars - blurred/locked */}
           {hasRealResults && (
             <div className="w-full relative">
-              <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 rounded-xl flex flex-col items-center justify-center">
+              <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 rounded-xl flex flex-col items-center justify-center px-4 text-center">
                 <Lock className="w-8 h-8 text-primary mb-3" />
                 <h4 className="font-bold text-lg mb-2">Unlock Full Diagnosis</h4>
                 <p className="text-sm text-body mb-4 text-center max-w-xs">
                   Get detailed issue + fix for every pillar, rewritten copy, and visual mockups.
                 </p>
-                <a href="#pricing" className="btn-primary flex items-center gap-2">
+                <a href="#pricing" className="btn-primary flex items-center gap-2 whitespace-nowrap text-sm md:text-base">
                   Get Full Diagnosis £149
                   <ArrowRight className="w-4 h-4" />
                 </a>
