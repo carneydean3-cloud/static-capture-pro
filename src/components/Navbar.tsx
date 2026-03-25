@@ -49,7 +49,7 @@ const Navbar = () => {
               <option value="GBP" className="bg-navy-dark text-foreground">GBP</option>
             </select>
           </div>
-          <a href="#hero-cta" className="btn-primary text-sm py-2 px-4">Get Free Audit</a>
+          <a href="#hero-cta" className="btn-primary text-sm py-2 px-4 whitespace-nowrap"><span className="hidden sm:inline">Get </span>Free Audit</a>
         </div>
       </div>
     </nav>
