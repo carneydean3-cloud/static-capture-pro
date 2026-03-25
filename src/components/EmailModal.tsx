@@ -31,43 +31,81 @@ const EmailModal = () => {
       return;
     }
 
-    if (!result) return;
+    // We still unlock results even if result is missing,
+    // but most of the time result should be there.
+    const currentResult = result;
 
     setSubmitting(true);
     try {
-      // 1. Save subscriber (upsert on email)
-      const { error: subError } = await supabase
-        .from("subscribers")
-        .upsert({
-          email: trimmedEmail,
-          source: "free_audit",
-        });
+      // 1) SUBSCRIBER UPSERT
+      try {
+        const { error: subError } = await supabase
+          .from("subscribers")
+          .upsert({
+            email: trimmedEmail,
+            source: "free_audit",
+          });
 
-      if (subError) {
-        console.warn("Subscriber save error:", subError.message);
+        if (subError) {
+          console.error("Subscriber save error:", subError.message);
+          toast.error(
+            `Couldn't save subscriber record this time. (${subError.message})`
+          );
+        }
+      } catch (err) {
+        console.error("Subscriber save exception:", err);
+        // Don't block anything on this failure
       }
 
-      // 2. Save to Leads table using ONLY requested columns
-      // Using optional chaining for overall_score just in case
-      const { error: leadsError } = await supabase
-        .from("Leads")
-        .insert({
+      // 2) LEAD INSERT
+      try {
+        const { error: leadsError } = await supabase.from("Leads").insert({
           email: trimmedEmail,
           url,
-          score: result?.overall_score || 0,
+          score: currentResult?.overall_score || 0,
         });
 
-      if (leadsError) {
-        console.error("Leads save error:", leadsError.message);
-        toast.error(`Results unlocked — saving failed this time. (${leadsError.message})`);
-      } else {
-        toast.success("Results unlocked — saved.");
+        if (leadsError) {
+          console.error("Leads save error:", leadsError.message);
+          toast.error(
+            `Results unlocked — saving lead failed this time. (${leadsError.message})`
+          );
+        } else {
+          toast.success("Results unlocked — lead saved.");
+        }
+      } catch (err) {
+        console.error("Leads save exception:", err);
+        toast.error("Results unlocked — saving lead failed this time.");
       }
 
-      // Always unlock results if we reached here
+      // 3) AUDIT INSERT (full analysis JSON)
+      try {
+        if (currentResult) {
+          const { error: auditError } = await supabase.from("audits").insert({
+            email: trimmedEmail,
+            url,
+            overall_score: currentResult.overall_score ?? null,
+            verdict: currentResult.verdict ?? null,
+            analysis: currentResult, // JSONB column recommended
+          });
+
+          if (auditError) {
+            console.error("Audits save error:", auditError.message);
+            toast.error(
+              `Couldn't save detailed audit this time. (${auditError.message})`
+            );
+          }
+        } else {
+          console.warn("No result present when trying to save audit record.");
+        }
+      } catch (err) {
+        console.error("Audits save exception:", err);
+        // Don't block results
+      }
+
+      // ALWAYS unlock results if we reached here
       setStage("done");
 
-      // Scroll to results after a brief delay
       setTimeout(() => {
         const resultsEl = document.getElementById("results");
         if (resultsEl) {
@@ -76,11 +114,12 @@ const EmailModal = () => {
       }, 300);
     } catch (err: unknown) {
       console.error("Save error:", err);
-      // Even on catch, we unlock results as per "fail-open" requirement
       setStage("done");
-      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+
+      const errorMessage =
+        err instanceof Error ? err.message : "Unknown error";
       toast.error(`Results unlocked — saving failed this time. (${errorMessage})`);
-      
+
       setTimeout(() => {
         const resultsEl = document.getElementById("results");
         if (resultsEl) {
@@ -140,7 +179,9 @@ const EmailModal = () => {
                   }`}
                 />
                 {emailError && (
-                  <p className="text-xs text-destructive mt-1.5">{emailError}</p>
+                  <p className="text-xs text-destructive mt-1.5">
+                    {emailError}
+                  </p>
                 )}
               </div>
               <button
