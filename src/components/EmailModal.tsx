@@ -31,9 +31,7 @@ const EmailModal = () => {
       return;
     }
 
-    // We still unlock results even if result is missing,
-    // but most of the time result should be there.
-    const currentResult = result;
+    const currentResult = result; // may be null in worst case
 
     setSubmitting(true);
     try {
@@ -54,7 +52,7 @@ const EmailModal = () => {
         }
       } catch (err) {
         console.error("Subscriber save exception:", err);
-        // Don't block anything on this failure
+        // Do not block anything on this failure
       }
 
       // 2) LEAD INSERT
@@ -78,15 +76,15 @@ const EmailModal = () => {
         toast.error("Results unlocked — saving lead failed this time.");
       }
 
-      // 3) AUDIT INSERT (full analysis JSON)
+      // 3) AUDIT INSERT — NO 'analysis' FIELD ANYMORE
       try {
         if (currentResult) {
           const { error: auditError } = await supabase.from("audits").insert({
             email: trimmedEmail,
             url,
+            // use whatever columns your 'audits' table actually has:
             overall_score: currentResult.overall_score ?? null,
             verdict: currentResult.verdict ?? null,
-            analysis: currentResult, // JSONB column recommended
           });
 
           if (auditError) {
@@ -103,7 +101,7 @@ const EmailModal = () => {
         // Don't block results
       }
 
-      // ALWAYS unlock results if we reached here
+      // ALWAYS unlock results
       setStage("done");
 
       setTimeout(() => {
