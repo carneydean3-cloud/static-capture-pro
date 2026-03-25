@@ -102,7 +102,7 @@ const ResultsPreview = () => {
             </div>
           </div>
 
-          <div className="w-full h-[420px] md:h-[420px] h-[340px] mb-6 px-2 md:px-0">
+          <div className="w-full h-[340px] md:h-[420px] mb-6 px-4 md:px-0">
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart cx="50%" cy="50%" outerRadius="65%" data={pillars}>
                 <PolarGrid stroke="rgba(255,255,255,0.1)" />
