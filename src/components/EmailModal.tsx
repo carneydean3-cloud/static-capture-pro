@@ -1,19 +1,53 @@
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, ArrowRight, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { useAudit } from "@/contexts/AuditContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-interface EmailModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-const EmailModal = ({ isOpen, onClose }: EmailModalProps) => {
+const EmailModal = () => {
+  const { stage, setStage, url, result } = useAudit();
   const [email, setEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const isOpen = stage === "email_capture";
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert(`Audit requested for: ${email}`);
-    onClose();
+    if (!result || !email) return;
+
+    setSubmitting(true);
+    try {
+      // Save subscriber
+      await supabase.from("subscribers").insert({
+        email,
+        source: "free_audit",
+      });
+
+      // Save audit
+      await supabase.from("audits").insert({
+        email,
+        url,
+        overall_score: result.overall_score,
+        verdict: result.verdict,
+        clarity_score: result.scores.clarity.score,
+        hook_score: result.scores.hook.score,
+        trust_score: result.scores.trust.score,
+        desire_score: result.scores.desire.score,
+        action_score: result.scores.action.score,
+        objections_score: result.scores.objections.score,
+        top_3_fixes: result.top_3_fixes as any,
+        full_results: result as any,
+        tier: "free",
+      });
+
+      setStage("done");
+      toast.success("Your audit results are ready!");
+    } catch (err) {
+      console.error("Save error:", err);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -24,7 +58,6 @@ const EmailModal = ({ isOpen, onClose }: EmailModalProps) => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
-          onClick={onClose}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -33,11 +66,23 @@ const EmailModal = ({ isOpen, onClose }: EmailModalProps) => {
             className="glass-card p-8 max-w-md w-full relative"
             onClick={(e) => e.stopPropagation()}
           >
-            <button onClick={onClose} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
+            <button
+              onClick={() => setStage("idle")}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+            >
               <X className="w-5 h-5" />
             </button>
-            <h3 className="text-xl font-bold mb-2">Almost there!</h3>
-            <p className="text-sm text-muted-foreground mb-6">Enter your email to receive your free audit results.</p>
+
+            <div className="text-center mb-2">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">🎯</span>
+              </div>
+              <h3 className="text-2xl font-bold mb-2">Your audit is ready.</h3>
+              <p className="text-sm text-muted-foreground mb-6">
+                Enter your email to unlock your results.
+              </p>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <input
                 type="email"
@@ -47,7 +92,23 @@ const EmailModal = ({ isOpen, onClose }: EmailModalProps) => {
                 required
                 className="w-full bg-navy-dark border border-white/10 rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
               />
-              <button type="submit" className="btn-primary w-full">Send My Audit</button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn-primary w-full flex items-center justify-center gap-2"
+              >
+                {submitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    See My Results
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+              <p className="text-xs text-center text-muted-foreground">
+                No spam. Unsubscribe anytime.
+              </p>
             </form>
           </motion.div>
         </motion.div>
