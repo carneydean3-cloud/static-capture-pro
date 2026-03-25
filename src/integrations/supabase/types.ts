@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      audits: {
+        Row: {
+          action_score: number | null
+          clarity_score: number | null
+          created_at: string
+          desire_score: number | null
+          email: string
+          full_results: Json | null
+          hook_score: number | null
+          id: string
+          objections_score: number | null
+          overall_score: number | null
+          tier: string
+          top_3_fixes: Json | null
+          trust_score: number | null
+          url: string
+          verdict: string | null
+        }
+        Insert: {
+          action_score?: number | null
+          clarity_score?: number | null
+          created_at?: string
+          desire_score?: number | null
+          email: string
+          full_results?: Json | null
+          hook_score?: number | null
+          id?: string
+          objections_score?: number | null
+          overall_score?: number | null
+          tier?: string
+          top_3_fixes?: Json | null
+          trust_score?: number | null
+          url: string
+          verdict?: string | null
+        }
+        Update: {
+          action_score?: number | null
+          clarity_score?: number | null
+          created_at?: string
+          desire_score?: number | null
+          email?: string
+          full_results?: Json | null
+          hook_score?: number | null
+          id?: string
+          objections_score?: number | null
+          overall_score?: number | null
+          tier?: string
+          top_3_fixes?: Json | null
+          trust_score?: number | null
+          url?: string
+          verdict?: string | null
+        }
+        Relationships: []
+      }
       Leads: {
         Row: {
           created_at: string
@@ -38,6 +92,27 @@ export type Database = {
           score?: number | null
           status?: string | null
           url?: string | null
+        }
+        Relationships: []
+      }
+      subscribers: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          source?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          source?: string
         }
         Relationships: []
       }
