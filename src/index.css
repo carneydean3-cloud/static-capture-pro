@@ -44,6 +44,12 @@
     --score-amber: 38 92% 50%;
     --score-red: 0 84% 60%;
 
+    /* Typography contrast tokens */
+    --body: 213 27% 78%;
+    --caption: 215 23% 62%;
+    --card-text: 214 32% 91%;
+    --subheading: 210 33% 95%;
+
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -82,7 +88,7 @@
   }
 
   .body-text {
-    @apply text-muted-foreground leading-relaxed;
+    @apply text-body leading-relaxed;
   }
 
   .btn-primary {
