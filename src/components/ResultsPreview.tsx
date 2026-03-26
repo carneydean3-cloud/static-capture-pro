@@ -1,4 +1,4 @@
-import { useAudit } from "../context/AuditContext";
+import { useAudit } from "@/contexts/AuditContext";
 
 export default function ResultsPreview() {
   const { result, url, userEmail } = useAudit();
