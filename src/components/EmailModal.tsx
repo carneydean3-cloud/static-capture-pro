@@ -9,7 +9,7 @@ const isValidEmail = (email: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
 const EmailModal = () => {
-  const { stage, setStage, url, result } = useAudit();
+  const { stage, setStage, url, result, setUserEmail } = useAudit() as any;
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -35,6 +35,9 @@ const EmailModal = () => {
 
     setSubmitting(true);
     try {
+      // Save email into AuditContext so checkout can use it later
+      setUserEmail(trimmedEmail);
+
       // 1) SUBSCRIBER INSERT (ignore duplicates)
       try {
         const { error: subError } = await supabase.from("subscribers").insert({
@@ -145,7 +148,9 @@ const EmailModal = () => {
                     emailError ? "border-destructive" : "border-white/10"
                   }`}
                 />
-                {emailError && <p className="text-xs text-destructive mt-1.5">{emailError}</p>}
+                {emailError && (
+                  <p className="text-xs text-destructive mt-1.5">{emailError}</p>
+                )}
               </div>
 
               <button
@@ -163,7 +168,9 @@ const EmailModal = () => {
                 )}
               </button>
 
-              <p className="text-xs text-center text-caption">No spam. Unsubscribe anytime.</p>
+              <p className="text-xs text-center text-caption">
+                No spam. Unsubscribe anytime.
+              </p>
             </form>
           </motion.div>
         </motion.div>
