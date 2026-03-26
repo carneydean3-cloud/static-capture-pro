@@ -35,17 +35,16 @@ const EmailModal = () => {
 
     setSubmitting(true);
     try {
-      // 1) SUBSCRIBER: insert-only (ignore duplicates)
+      // 1) SUBSCRIBER INSERT (ignore duplicates)
       try {
-        const { error: subError } = await supabase
-          .from("subscribers")
-          .upsert(
-            { email: trimmedEmail, source: "free_audit" },
-            { onConflict: "email", ignoreDuplicates: true }
-          );
+        const { error: subError } = await supabase.from("subscribers").insert({
+          email: trimmedEmail,
+          source: "free_audit",
+        });
 
-        if (subError) {
-          console.error("Subscriber save error:", subError.message);
+        // 23505 = unique_violation (email already exists) -> ignore
+        if (subError && subError.code !== "23505") {
+          console.error("Subscriber save error:", subError);
           toast.error(`Couldn't save subscriber. (${subError.message})`);
         }
       } catch (err) {
@@ -57,7 +56,7 @@ const EmailModal = () => {
         const { error: leadsError } = await supabase.from("Leads").insert({
           email: trimmedEmail,
           url,
-          score: currentResult?.overall_score || 0
+          score: currentResult?.overall_score || 0,
         });
 
         if (leadsError) {
@@ -75,7 +74,7 @@ const EmailModal = () => {
             email: trimmedEmail,
             url,
             overall_score: currentResult.overall_score ?? null,
-            verdict: currentResult.verdict ?? null
+            verdict: currentResult.verdict ?? null,
           });
 
           if (auditError) {
@@ -93,7 +92,7 @@ const EmailModal = () => {
       setTimeout(() => {
         document.getElementById("results")?.scrollIntoView({
           behavior: "smooth",
-          block: "start"
+          block: "start",
         });
       }, 300);
     } finally {
@@ -129,9 +128,7 @@ const EmailModal = () => {
                 <span className="text-3xl">🎯</span>
               </div>
               <h3 className="text-2xl font-bold mb-2">Your audit is ready.</h3>
-              <p className="text-sm text-body mb-6">
-                Enter your email to unlock your results.
-              </p>
+              <p className="text-sm text-body mb-6">Enter your email to unlock your results.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-3">
@@ -148,9 +145,7 @@ const EmailModal = () => {
                     emailError ? "border-destructive" : "border-white/10"
                   }`}
                 />
-                {emailError && (
-                  <p className="text-xs text-destructive mt-1.5">{emailError}</p>
-                )}
+                {emailError && <p className="text-xs text-destructive mt-1.5">{emailError}</p>}
               </div>
 
               <button
@@ -168,9 +163,7 @@ const EmailModal = () => {
                 )}
               </button>
 
-              <p className="text-xs text-center text-caption">
-                No spam. Unsubscribe anytime.
-              </p>
+              <p className="text-xs text-center text-caption">No spam. Unsubscribe anytime.</p>
             </form>
           </motion.div>
         </motion.div>
