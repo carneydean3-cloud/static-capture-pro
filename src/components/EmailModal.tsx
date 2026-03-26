@@ -35,8 +35,11 @@ const EmailModal = () => {
 
     setSubmitting(true);
     try {
-      // Save email into AuditContext so checkout can use it later
+      // Save email in context
       setUserEmail(trimmedEmail);
+
+      // Save email in localStorage as backup for checkout
+      localStorage.setItem("conversiondoc_user_email", trimmedEmail);
 
       // 1) SUBSCRIBER INSERT (ignore duplicates)
       try {
@@ -45,7 +48,6 @@ const EmailModal = () => {
           source: "free_audit",
         });
 
-        // 23505 = unique_violation (email already exists) -> ignore
         if (subError && subError.code !== "23505") {
           console.error("Subscriber save error:", subError);
           toast.error(`Couldn't save subscriber. (${subError.message})`);
@@ -89,7 +91,6 @@ const EmailModal = () => {
         console.error("Audits save exception:", err);
       }
 
-      // ALWAYS unlock results
       setStage("done");
 
       setTimeout(() => {
