@@ -31,28 +31,25 @@ const EmailModal = () => {
       return;
     }
 
-    const currentResult = result; // may be null in worst case
+    const currentResult = result;
 
     setSubmitting(true);
     try {
-      // 1) SUBSCRIBER UPSERT
+      // 1) SUBSCRIBER: insert-only (ignore duplicates)
       try {
         const { error: subError } = await supabase
           .from("subscribers")
-          .upsert({
-            email: trimmedEmail,
-            source: "free_audit",
-          });
+          .upsert(
+            { email: trimmedEmail, source: "free_audit" },
+            { onConflict: "email", ignoreDuplicates: true }
+          );
 
         if (subError) {
           console.error("Subscriber save error:", subError.message);
-          toast.error(
-            `Couldn't save subscriber record this time. (${subError.message})`
-          );
+          toast.error(`Couldn't save subscriber. (${subError.message})`);
         }
       } catch (err) {
         console.error("Subscriber save exception:", err);
-        // Do not block anything on this failure
       }
 
       // 2) LEAD INSERT
@@ -60,69 +57,44 @@ const EmailModal = () => {
         const { error: leadsError } = await supabase.from("Leads").insert({
           email: trimmedEmail,
           url,
-          score: currentResult?.overall_score || 0,
+          score: currentResult?.overall_score || 0
         });
 
         if (leadsError) {
           console.error("Leads save error:", leadsError.message);
-          toast.error(
-            `Results unlocked — saving lead failed this time. (${leadsError.message})`
-          );
-        } else {
-          toast.success("Results unlocked — lead saved.");
+          toast.error(`Results unlocked — lead save failed. (${leadsError.message})`);
         }
       } catch (err) {
         console.error("Leads save exception:", err);
-        toast.error("Results unlocked — saving lead failed this time.");
       }
 
-      // 3) AUDIT INSERT — NO 'analysis' FIELD ANYMORE
+      // 3) AUDIT INSERT
       try {
         if (currentResult) {
           const { error: auditError } = await supabase.from("audits").insert({
             email: trimmedEmail,
             url,
-            // use whatever columns your 'audits' table actually has:
             overall_score: currentResult.overall_score ?? null,
-            verdict: currentResult.verdict ?? null,
+            verdict: currentResult.verdict ?? null
           });
 
           if (auditError) {
             console.error("Audits save error:", auditError.message);
-            toast.error(
-              `Couldn't save detailed audit this time. (${auditError.message})`
-            );
+            toast.error(`Results unlocked — audit save failed. (${auditError.message})`);
           }
-        } else {
-          console.warn("No result present when trying to save audit record.");
         }
       } catch (err) {
         console.error("Audits save exception:", err);
-        // Don't block results
       }
 
       // ALWAYS unlock results
       setStage("done");
 
       setTimeout(() => {
-        const resultsEl = document.getElementById("results");
-        if (resultsEl) {
-          resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      }, 300);
-    } catch (err: unknown) {
-      console.error("Save error:", err);
-      setStage("done");
-
-      const errorMessage =
-        err instanceof Error ? err.message : "Unknown error";
-      toast.error(`Results unlocked — saving failed this time. (${errorMessage})`);
-
-      setTimeout(() => {
-        const resultsEl = document.getElementById("results");
-        if (resultsEl) {
-          resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
+        document.getElementById("results")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start"
+        });
       }, 300);
     } finally {
       setSubmitting(false);
@@ -177,11 +149,10 @@ const EmailModal = () => {
                   }`}
                 />
                 {emailError && (
-                  <p className="text-xs text-destructive mt-1.5">
-                    {emailError}
-                  </p>
+                  <p className="text-xs text-destructive mt-1.5">{emailError}</p>
                 )}
               </div>
+
               <button
                 type="submit"
                 disabled={submitting}
@@ -196,6 +167,7 @@ const EmailModal = () => {
                   </>
                 )}
               </button>
+
               <p className="text-xs text-center text-caption">
                 No spam. Unsubscribe anytime.
               </p>
