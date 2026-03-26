@@ -38,9 +38,11 @@ const scoreColor = (score: number) => {
 };
 
 const ResultsPreview = () => {
-  const { stage, result } = useAudit();
+  const { stage, result, url, userEmail } = useAudit();
   const hasRealResults = stage === "done" && result;
   const [highlight, setHighlight] = useState(false);
+  const [loadingCheckout, setLoadingCheckout] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   useEffect(() => {
     if (stage === "done") {
@@ -50,19 +52,70 @@ const ResultsPreview = () => {
     }
   }, [stage]);
 
+  // Safely access scores – protect against undefined
+  const scores = hasRealResults ? result.scores || {} : {};
+
   const pillars = hasRealResults
     ? [
-        { name: "Clarity", score: result.scores.clarity.score * 10, fullMark: 100 },
-        { name: "Hook", score: result.scores.hook.score * 10, fullMark: 100 },
-        { name: "Trust", score: result.scores.trust.score * 10, fullMark: 100 },
-        { name: "Desire", score: result.scores.desire.score * 10, fullMark: 100 },
-        { name: "Action", score: result.scores.action.score * 10, fullMark: 100 },
-        { name: "Objections", score: result.scores.objections.score * 10, fullMark: 100 },
+        { name: "Clarity", score: (scores.clarity?.score ?? 0) * 10, fullMark: 100 },
+        { name: "Hook", score: (scores.hook?.score ?? 0) * 10, fullMark: 100 },
+        { name: "Trust", score: (scores.trust?.score ?? 0) * 10, fullMark: 100 },
+        { name: "Desire", score: (scores.desire?.score ?? 0) * 10, fullMark: 100 },
+        { name: "Action", score: (scores.action?.score ?? 0) * 10, fullMark: 100 },
+        { name: "Objections", score: (scores.objections?.score ?? 0) * 10, fullMark: 100 },
       ]
     : defaultPillars;
 
-  const overallScore = hasRealResults ? result.overall_score : 67;
-  const verdict = hasRealResults ? result.verdict : "Needs Attention";
+  const overallScore = hasRealResults ? result.overall_score ?? 0 : 67;
+  const verdict = hasRealResults ? result.verdict || "Needs Attention" : "Needs Attention";
+
+  const topFixes = hasRealResults ? result.top_3_fixes || [] : [];
+
+  // Stripe checkout handler
+  const handleCheckout = async () => {
+    if (!userEmail || !url || !result) {
+      setCheckoutError("Missing audit data. Please run the audit again.");
+      return;
+    }
+
+    setLoadingCheckout(true);
+    setCheckoutError(null);
+
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            userEmail,
+            url,
+            auditResult: result,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || `Checkout failed (${res.status})`);
+      }
+
+      const data = await res.json();
+      if (!data.url) {
+        throw new Error("No checkout URL returned");
+      }
+
+      window.location.href = data.url;
+    } catch (err: any) {
+      console.error(err);
+      setCheckoutError(err.message || "Something went wrong with checkout.");
+    } finally {
+      setLoadingCheckout(false);
+    }
+  };
 
   return (
     <section id="results" className="py-24 px-6">
@@ -135,7 +188,9 @@ const ResultsPreview = () => {
           <div className="w-full grid md:grid-cols-2 gap-6 mb-8">
             <div
               className={`rounded-xl p-8 border text-center ${
-                hasRealResults ? verdictBg[verdict] || verdictBg["Needs Attention"] : "bg-score-amber/10 border-score-amber/20"
+                hasRealResults
+                  ? verdictBg[verdict] || verdictBg["Needs Attention"]
+                  : "bg-score-amber/10 border-score-amber/20"
               }`}
             >
               <div className={`text-4xl font-bold mb-2 ${scoreColor(overallScore)}`}>
@@ -150,9 +205,17 @@ const ResultsPreview = () => {
                 {verdict === "Healthy" ? (
                   <CheckCircle2 className="w-5 h-5 text-score-green" />
                 ) : (
-                  <AlertCircle className={`w-5 h-5 ${verdictColor[verdict] || "text-score-amber"}`} />
+                  <AlertCircle
+                    className={`w-5 h-5 ${
+                      verdictColor[verdict] || "text-score-amber"
+                    }`}
+                  />
                 )}
-                <span className={`font-bold ${verdictColor[verdict] || "text-score-amber"}`}>
+                <span
+                  className={`font-bold ${
+                    verdictColor[verdict] || "text-score-amber"
+                  }`}
+                >
                   {verdict}
                 </span>
               </div>
@@ -165,10 +228,12 @@ const ResultsPreview = () => {
           </div>
 
           {/* Top 3 Fixes */}
-          {hasRealResults && (
+          {hasRealResults && topFixes.length > 0 && (
             <div className="w-full space-y-4 mb-8">
-              <h4 className="text-lg font-bold text-foreground">Top 3 Priority Fixes</h4>
-              {result.top_3_fixes.map((fix, i) => (
+              <h4 className="text-lg font-bold text-foreground">
+                Top 3 Priority Fixes
+              </h4>
+              {topFixes.map((fix: any, i: number) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, x: -20 }}
@@ -178,19 +243,29 @@ const ResultsPreview = () => {
                 >
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-full bg-primary/30 flex items-center justify-center shrink-0 text-base font-bold text-white">
-                      {fix.priority}
+                      {fix.priority ?? i + 1}
                     </div>
                     <div className="flex-1 space-y-2">
                       <div>
-                        <span className="text-xs font-bold uppercase tracking-widest text-caption">Issue</span>
-                        <h5 className="font-bold text-foreground">{fix.issue}</h5>
+                        <span className="text-xs font-bold uppercase tracking-widest text-caption">
+                          Issue
+                        </span>
+                        <h5 className="font-bold text-foreground">
+                          {fix.issue}
+                        </h5>
                       </div>
                       <div>
-                        <span className="text-xs font-bold uppercase tracking-widest text-caption">Impact</span>
-                        <p className="text-sm text-body font-medium">{fix.impact}</p>
+                        <span className="text-xs font-bold uppercase tracking-widest text-caption">
+                          Impact
+                        </span>
+                        <p className="text-sm text-body font-medium">
+                          {fix.impact ?? "High"}
+                        </p>
                       </div>
                       <div>
-                        <span className="text-xs font-bold uppercase tracking-widest text-caption">Fix</span>
+                        <span className="text-xs font-bold uppercase tracking-widest text-caption">
+                          Fix
+                        </span>
                         <p className="text-sm text-card-text">{fix.fix}</p>
                       </div>
                     </div>
@@ -207,23 +282,45 @@ const ResultsPreview = () => {
                 <Lock className="w-8 h-8 text-primary mb-3" />
                 <h4 className="font-bold text-lg mb-2">Unlock Full Diagnosis</h4>
                 <p className="text-sm text-body mb-4 text-center max-w-xs">
-                  Get detailed issue + fix for every pillar, rewritten copy, and visual mockups.
+                  Get detailed issue + fix for every pillar, rewritten copy, and
+                  visual mockups.
                 </p>
-                <a href="#pricing" className="btn-primary flex items-center gap-2 whitespace-nowrap text-sm md:text-base">
-                  Get Full Diagnosis £149
-                  <ArrowRight className="w-4 h-4" />
-                </a>
+
+                {checkoutError && (
+                  <p className="text-xs text-score-red mb-2">
+                    {checkoutError}
+                  </p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleCheckout}
+                  disabled={loadingCheckout}
+                  className="btn-primary flex items-center gap-2 whitespace-nowrap text-sm md:text-base disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {loadingCheckout ? "Processing..." : "Get Full Diagnosis £149"}
+                  {!loadingCheckout && <ArrowRight className="w-4 h-4" />}
+                </button>
               </div>
+
               <div className="grid md:grid-cols-2 gap-4 p-4">
-                {Object.entries(result.scores).map(([key, pillar]) => (
+                {Object.entries(scores).map(([key, pillar]: any) => (
                   <div key={key} className="glass-card p-5">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold capitalize text-foreground">{key}</span>
-                      <span className={`font-bold ${scoreColor(pillar.score * 10)}`}>
+                      <span className="font-bold capitalize text-foreground">
+                        {key}
+                      </span>
+                      <span
+                        className={`font-bold ${scoreColor(
+                          (pillar.score ?? 0) * 10
+                        )}`}
+                      >
                         {pillar.score}/10
                       </span>
                     </div>
-                    <p className="text-xs text-body">{pillar.issue}</p>
+                    <p className="text-xs text-body">
+                      {pillar.issue || "Could not analyze."}
+                    </p>
                   </div>
                 ))}
               </div>
