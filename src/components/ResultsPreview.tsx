@@ -38,9 +38,11 @@ const scoreColor = (score: number) => {
 };
 
 const ResultsPreview = () => {
-  const { stage, result } = useAudit();
+  const { stage, result, url, userEmail } = useAudit() as any;
   const hasRealResults = stage === "done" && result;
   const [highlight, setHighlight] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   useEffect(() => {
     if (stage === "done") {
@@ -63,6 +65,47 @@ const ResultsPreview = () => {
 
   const overallScore = hasRealResults ? (result?.overall_score || 0) : 67;
   const verdict = hasRealResults ? (result?.verdict || "Needs Attention") : "Needs Attention";
+
+  const handleCheckout = async () => {
+    setCheckoutLoading(true);
+    setCheckoutError(null);
+
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            userEmail: userEmail || "",
+            url: url || "",
+            auditResult: result,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || "Checkout failed (" + res.status + ")");
+      }
+
+      const data = await res.json();
+
+      if (!data.url) {
+        throw new Error("No checkout URL returned");
+      }
+
+      window.location.href = data.url;
+    } catch (err: any) {
+      console.error("Checkout error:", err);
+      setCheckoutError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
 
   return (
     <section id="results" className="py-24 px-6">
@@ -168,7 +211,7 @@ const ResultsPreview = () => {
           {hasRealResults && result?.top_3_fixes && (
             <div className="w-full space-y-4 mb-8">
               <h4 className="text-lg font-bold text-foreground">Top 3 Priority Fixes</h4>
-              {result.top_3_fixes.map((fix, i) => (
+              {result.top_3_fixes.map((fix: any, i: number) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, x: -20 }}
@@ -209,13 +252,23 @@ const ResultsPreview = () => {
                 <p className="text-sm text-body mb-4 text-center max-w-xs">
                   Get detailed issue + fix for every pillar, rewritten copy, and visual mockups.
                 </p>
-                <a href="#pricing" className="btn-primary flex items-center gap-2 whitespace-nowrap text-sm md:text-base">
-                  Get Full Diagnosis £149
-                  <ArrowRight className="w-4 h-4" />
-                </a>
+
+                {checkoutError && (
+                  <p className="text-xs text-score-red mb-3">{checkoutError}</p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleCheckout}
+                  disabled={checkoutLoading}
+                  className="btn-primary flex items-center gap-2 whitespace-nowrap text-sm md:text-base disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {checkoutLoading ? "Processing..." : "Get Full Diagnosis £149"}
+                  {!checkoutLoading && <ArrowRight className="w-4 h-4" />}
+                </button>
               </div>
               <div className="grid md:grid-cols-2 gap-4 p-4">
-                {Object.entries(result.scores).map(([key, pillar]) => (
+                {Object.entries(result.scores).map(([key, pillar]: any) => (
                   <div key={key} className="glass-card p-5">
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-bold capitalize text-foreground">{key}</span>
