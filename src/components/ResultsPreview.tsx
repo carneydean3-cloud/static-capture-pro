@@ -1,161 +1,77 @@
-import { useState } from "react";
-import { X, ArrowRight, Loader2 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
-import { useAudit } from "@/contexts/AuditContext";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useAudit } from "../context/AuditContext";
 
-const isValidEmail = (email: string) =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+export default function ResultsPreview() {
+  const { result, url, userEmail } = useAudit();
 
-const EmailModal = () => {
-  const { stage, setStage, url, result } = useAudit();
-  const [email, setEmail] = useState("");
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const isOpen = stage === "email_capture";
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setEmailError(null);
-
-    if (!email.trim()) {
-      setEmailError("Please enter your email address");
-      return;
-    }
-
-    if (!isValidEmail(email)) {
-      setEmailError("Please enter a valid email address");
-      return;
-    }
-
-    if (!result) return;
-
-    setSubmitting(true);
-    try {
-      // Save subscriber
-      await supabase.from("subscribers").insert({
-        email: email.trim(),
-        source: "free_audit",
-      });
-
-      // Save audit
-      await supabase.from("audits").insert({
-        email: email.trim(),
-        url,
-        overall_score: result.overall_score,
-        verdict: result.verdict,
-        clarity_score: result.scores.clarity.score,
-        hook_score: result.scores.hook.score,
-        trust_score: result.scores.trust.score,
-        desire_score: result.scores.desire.score,
-        action_score: result.scores.action.score,
-        objections_score: result.scores.objections.score,
-        top_3_fixes: result.top_3_fixes as any,
-        full_results: result as any,
-        tier: "free",
-      });
-
-      // Save to Leads table
-      await supabase.from("Leads").insert({
-        email: email.trim(),
-        url,
-        score: result.overall_score,
-        status: "free",
-      });
-
-      setStage("done");
-      toast.success("Your audit results are ready!");
-
-      // Scroll to results after a brief delay
-      setTimeout(() => {
-        const resultsEl = document.getElementById("results");
-        if (resultsEl) {
-          resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      }, 300);
-    } catch (err) {
-      console.error("Save error:", err);
-      toast.error("Something went wrong. Please try again.");
-    } finally {
-      setSubmitting(false);
+  const handleFullDiagnosis = async () => {
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: userEmail,
+          url: url,
+          auditResult: result,
+        }),
+      }
+    );
+    
+    const data = await response.json();
+    if (data.url) {
+      window.location.href = data.url;
     }
   };
 
+  if (!result) return <div>Loading...</div>;
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="glass-card p-8 max-w-md w-full relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setStage("idle")}
-              className="absolute top-4 right-4 text-caption hover:text-foreground"
-            >
-              <X className="w-5 h-5" />
-            </button>
+    <div className="max-w-4xl mx-auto p-8">
+      <h2 className="text-2xl font-bold mb-6">Your Free Audit Results</h2>
+      
+      <div className="grid grid-cols-2 gap-4 mb-8">
+        <div className="p-4 border rounded">
+          <div className="text-4xl font-bold">{result.overall_score}</div>
+          <div className="text-gray-600">Overall Score</div>
+        </div>
+        <div className="p-4 border rounded">
+          <div className="text-xl font-semibold">{result.verdict}</div>
+        </div>
+      </div>
 
-            <div className="text-center mb-2">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">🎯</span>
-              </div>
-              <h3 className="text-2xl font-bold mb-2">Your audit is ready.</h3>
-              <p className="text-sm text-body mb-6">
-                Enter your email to unlock your results.
-              </p>
+      <div className="grid grid-cols-2 gap-4 mb-8">
+        {Object.entries(result.scores || {}).map(([key, value]: [string, any]) => (
+          <div key={key} className="border rounded p-4">
+            <div className="capitalize font-semibold">{key}</div>
+            <div className="text-2xl font-bold">{value.score}/10</div>
+            <div className="text-sm text-gray-600 mt-2">{value.issue}</div>
+            <div className="text-sm mt-1">
+              <span className="font-semibold">Fix:</span> {value.fix}
             </div>
+          </div>
+        ))}
+      </div>
 
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div>
-                <input
-                  type="text"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (emailError) setEmailError(null);
-                  }}
-                  placeholder="you@company.com"
-                  className={`w-full bg-navy-dark border rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-caption focus:outline-none focus:border-primary ${
-                    emailError ? "border-destructive" : "border-white/10"
-                  }`}
-                />
-                {emailError && (
-                  <p className="text-xs text-destructive mt-1.5">{emailError}</p>
-                )}
-              </div>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="btn-primary w-full flex items-center justify-center gap-2"
-              >
-                {submitting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    See My Results
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-              <p className="text-xs text-center text-caption">
-                No spam. Unsubscribe anytime.
-              </p>
-            </form>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+      <div className="bg-gray-50 p-6 rounded-lg mb-8">
+        <h3 className="text-xl font-bold mb-4">Top 3 Fixes</h3>
+        {result.top_3_fixes?.map((fix: any) => (
+          <div key={fix.priority} className="mb-4">
+            <div className="font-semibold">{fix.priority}. {fix.issue}</div>
+            <div className="text-sm text-gray-600">Impact: {fix.impact}</div>
+            <div className="text-sm">{fix.fix}</div>
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={handleFullDiagnosis}
+        className="w-full bg-green-600 text-white py-4 rounded-lg text-xl font-bold hover:bg-green-700 transition"
+      >
+        Get Full Diagnosis £149 →
+      </button>
+    </div>
   );
-};
-
-export default EmailModal;
+}
