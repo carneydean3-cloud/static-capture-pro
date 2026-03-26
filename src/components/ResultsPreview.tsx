@@ -71,6 +71,13 @@ const ResultsPreview = () => {
     setCheckoutError(null);
 
     try {
+      const savedEmail = localStorage.getItem("conversiondoc_user_email") || "";
+      const checkoutEmail = userEmail || savedEmail || "";
+
+      if (!checkoutEmail) {
+        throw new Error("No email provided for checkout");
+      }
+
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
         {
@@ -80,7 +87,7 @@ const ResultsPreview = () => {
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
           body: JSON.stringify({
-            userEmail: userEmail || "",
+            userEmail: checkoutEmail,
             url: url || "",
             auditResult: result,
           }),
@@ -110,7 +117,6 @@ const ResultsPreview = () => {
   return (
     <section id="results" className="py-24 px-6">
       <div className="max-w-3xl mx-auto">
-        {/* Section header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -207,7 +213,6 @@ const ResultsPreview = () => {
             </div>
           </div>
 
-          {/* Top 3 Fixes */}
           {hasRealResults && result?.top_3_fixes && (
             <div className="w-full space-y-4 mb-8">
               <h4 className="text-lg font-bold text-foreground">Top 3 Priority Fixes</h4>
@@ -243,7 +248,6 @@ const ResultsPreview = () => {
             </div>
           )}
 
-          {/* Remaining pillars - blurred/locked */}
           {hasRealResults && result?.scores && (
             <div className="w-full relative">
               <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 rounded-xl flex flex-col items-center justify-center px-4 text-center">
