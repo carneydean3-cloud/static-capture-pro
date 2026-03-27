@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { toPng } from "html-to-image";
 import { supabase } from "../integrations/supabase/client";
 
 type ScoreItem = {
@@ -90,7 +91,9 @@ export default function PaidReport() {
     };
 
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [sessionId]);
 
   const auditData = purchase?.audit_data ?? null;
@@ -147,7 +150,6 @@ export default function PaidReport() {
     if (!mockupRef.current) return;
     try {
       setDownloading(true);
-      const { toPng } = await import("https://esm.sh/html-to-image@1.11.11");
       const dataUrl = await toPng(mockupRef.current, { cacheBust: true });
       const link = document.createElement("a");
       link.download = "conversion-mockup.png";
@@ -211,7 +213,13 @@ export default function PaidReport() {
 
           <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
             <p className="text-sm text-gray-500">Overall Score</p>
-            <p className={`mt-2 text-2xl font-semibold ${overallScore !== null && overallScore >= 70 ? "text-emerald-600" : overallScore !== null && overallScore >= 50 ? "text-amber-500" : "text-red-500"}`}>
+            <p className={`mt-2 text-2xl font-semibold ${
+              overallScore !== null && overallScore >= 70
+                ? "text-emerald-600"
+                : overallScore !== null && overallScore >= 50
+                  ? "text-amber-500"
+                  : "text-red-500"
+            }`}>
               {overallScore !== null ? `${overallScore}/100` : "N/A"}
             </p>
           </div>
@@ -245,7 +253,13 @@ export default function PaidReport() {
                       <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                         Impact:
                       </span>
-                      <span className={`text-xs font-bold uppercase ${x.impact === "High" ? "text-red-500" : x.impact === "Medium" ? "text-amber-500" : "text-gray-400"}`}>
+                      <span className={`text-xs font-bold uppercase ${
+                        x.impact === "High"
+                          ? "text-red-500"
+                          : x.impact === "Medium"
+                            ? "text-amber-500"
+                            : "text-gray-400"
+                      }`}>
                         {x.impact ?? "—"}
                       </span>
                     </div>
@@ -364,7 +378,7 @@ export default function PaidReport() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-red-500 mb-3">
                   ❌ Before (Current)
                 </p>
-                <div className="rounded-xl border-2 border-red-100 bg-red-50 p-6 text-center text-gray-400 text-sm min-h-[200px] flex items-center justify-center">
+                <div className="rounded-xl border-2 border-red-100 bg-red-50 min-h-[200px] flex items-center justify-center overflow-hidden">
                   {purchase.url ? (
                     <img
                       src={`https://image.thum.io/get/width/600/crop/400/${purchase.url}`}
@@ -375,7 +389,7 @@ export default function PaidReport() {
                       }}
                     />
                   ) : (
-                    <p>Screenshot not available</p>
+                    <p className="text-gray-400 text-sm">Screenshot not available</p>
                   )}
                 </div>
               </div>
