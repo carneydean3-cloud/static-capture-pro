@@ -1,179 +1,237 @@
-import { useEffect, useState } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { supabase } from "../integrations/supabase/client";
 
-interface AuditData {
-  overall_score: number
-  verdict: string
-  scores: {
-    clarity: number
-    hook_strength: number
-    trust_architecture: number
-    desire_building: number
-    action_clarity: number
-    objection_handling: number
-  }
-  top_fixes: Array<{
-    issue: string
-    fix: string
-    impact: string
-  }>
-  full_analysis: string
-}
+type ScoreItem = {
+  score?: number;
+  issue?: string;
+  fix?: string;
+  verdict?: string;
+};
+
+type AuditData = {
+  overall_score?: number;
+  verdict?: string;
+  top_fixes?: string[];
+  fixes?: string[];
+  scores?: Record<string, ScoreItem>;
+};
+
+type PurchaseRow = {
+  id: string;
+  status: string;
+  paid_at?: string | null;
+  audit_data: AuditData | null;
+  url?: string | null;
+};
+
+const prettyLabel = (key: string) =>
+  key
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 
 export default function PaidReport() {
-  const [searchParams] = useSearchParams()
-  const navigate = useNavigate()
-  const [loading, setLoading] = useState(true)
-  const [auditData, setAuditData] = useState<AuditData | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [searchParams] = useSearchParams();
+  const sessionId = searchParams.get("session_id");
 
-  const sessionId = searchParams.get('session_id')
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [purchase, setPurchase] = useState<PurchaseRow | null>(null);
 
   useEffect(() => {
-    if (!sessionId) {
-      setError('No session ID provided')
-      setLoading(false)
-      return
-    }
-
-    verifyAndLoadReport()
-  }, [sessionId])
-
-  const verifyAndLoadReport = async () => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-purchase`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sessionId }),
-        }
-      )
-
-      const data = await response.json()
-
-      if (!data.valid) {
-        setError('Invalid or unpaid session')
-        setLoading(false)
-        return
+    const fetchPurchase = async () => {
+      if (!sessionId) {
+        setError("Missing session_id in URL");
+        setLoading(false);
+        return;
       }
 
-      setAuditData(data.purchase.audit_data)
-      setLoading(false)
-    } catch (err) {
-      console.error('Verification failed:', err)
-      setError('Failed to load report')
-      setLoading(false)
+      const { data, error } = await supabase
+        .from("purchases")
+        .select("id, status, paid_at, audit_data, url")
+        .eq("stripe_session_id", sessionId)
+        .maybeSingle();
+
+      if (error) {
+        setError("Failed to load report");
+        setLoading(false);
+        return;
+      }
+
+      if (!data) {
+        setError("No purchase found for this session");
+        setLoading(false);
+        return;
+      }
+
+      setPurchase(data as PurchaseRow);
+      setLoading(false);
+    };
+
+    fetchPurchase();
+  }, [sessionId]);
+
+  const auditData = purchase?.audit_data || null;
+  const scores = auditData?.scores || {};
+
+  const scoreEntries = useMemo(() => Object.entries(scores), [scores]);
+
+  const derivedTopFixes = useMemo(() => {
+    if (Array.isArray(auditData?.top_fixes)) return auditData.top_fixes;
+    if (Array.isArray(auditData?.fixes)) return auditData.fixes;
+
+    return scoreEntries
+      .map(([pillar, value]) => ({
+        pillar,
+        fix: value?.fix || "",
+      }))
+      .filter((item) => item.fix)
+      .slice(0, 3)
+      .map((item) => `${prettyLabel(item.pillar)}: ${item.fix}`);
+  }, [auditData, scoreEntries]);
+
+  const derivedOverallScore = useMemo(() => {
+    if (typeof auditData?.overall_score === "number") {
+      return auditData.overall_score;
     }
-  }
+
+    const numericScores = scoreEntries
+      .map(([, value]) => value?.score)
+      .filter((score): score is number => typeof score === "number");
+
+    if (!numericScores.length) return null;
+
+    return Math.round(
+      numericScores.reduce((sum, score) => sum + score, 0) / numericScores.length
+    );
+  }, [auditData, scoreEntries]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your full diagnosis...</p>
+      <div className="min-h-screen bg-white px-6 py-16">
+        <div className="mx-auto max-w-4xl">
+          <h1 className="text-3xl font-bold text-gray-900">Loading report...</h1>
         </div>
       </div>
-    )
+    );
   }
 
-  if (error || !auditData) {
+  if (error || !purchase) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto px-4">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
-          <p className="text-gray-600 mb-6">{error || 'Report not found'}</p>
-          <button
-            onClick={() => navigate('/')}
-            className="bg-teal-600 text-white px-6 py-3 rounded-lg hover:bg-teal-700"
-          >
-            Return Home
-          </button>
+      <div className="min-h-screen bg-white px-6 py-16">
+        <div className="mx-auto max-w-4xl">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Report unavailable</h1>
+          <p className="text-gray-600">{error || "Something went wrong."}</p>
         </div>
       </div>
-    )
-  }
-
-  const scoreColor = (score: number) => {
-    if (score >= 8) return 'text-green-600'
-    if (score >= 5) return 'text-amber-600'
-    return 'text-red-600'
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-8 mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Full Conversion Diagnosis
+    <div className="min-h-screen bg-white px-6 py-16">
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-10">
+          <p className="text-sm font-medium uppercase tracking-wide text-indigo-600">
+            Full Diagnosis
+          </p>
+          <h1 className="mt-2 text-4xl font-bold text-gray-900">
+            Conversion Report
           </h1>
-          <p className="text-gray-600">Complete analysis of your landing page</p>
+          <p className="mt-3 text-gray-600">
+            Review the full breakdown of your landing page audit.
+          </p>
         </div>
 
-        {/* Overall Score */}
-        <div className="bg-white rounded-lg shadow-sm p-8 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                Overall Score
-              </h2>
-              <p className="text-gray-600">{auditData.verdict}</p>
-            </div>
-            <div className="text-6xl font-bold text-teal-600">
-              {auditData.overall_score}
-            </div>
+        <div className="grid gap-6 md:grid-cols-3 mb-10">
+          <div className="rounded-2xl border border-gray-200 p-6 shadow-sm">
+            <p className="text-sm text-gray-500">Payment Status</p>
+            <p className="mt-2 text-2xl font-semibold text-gray-900 capitalize">
+              {purchase.status}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 p-6 shadow-sm">
+            <p className="text-sm text-gray-500">Overall Score</p>
+            <p className="mt-2 text-2xl font-semibold text-gray-900">
+              {derivedOverallScore !== null ? `${derivedOverallScore}/100` : "N/A"}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 p-6 shadow-sm">
+            <p className="text-sm text-gray-500">URL</p>
+            <p className="mt-2 text-sm font-medium text-gray-900 break-all">
+              {purchase.url || "Not available"}
+            </p>
           </div>
         </div>
 
-        {/* Score Breakdown */}
-        <div className="bg-white rounded-lg shadow-sm p-8 mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Score Breakdown</h2>
-          <div className="space-y-4">
-            {Object.entries(auditData.scores).map(([key, value]) => (
-              <div key={key} className="flex items-center justify-between">
-                <span className="text-gray-700 capitalize">
-                  {key.replace(/_/g, ' ')}
-                </span>
-                <span className={`text-2xl font-bold ${scoreColor(value)}`}>
-                  {value}/10
-                </span>
-              </div>
-            ))}
+        {derivedTopFixes.length > 0 && (
+          <div className="mb-10 rounded-2xl border border-gray-200 p-6 shadow-sm">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+              Top Fixes
+            </h2>
+            <ul className="space-y-3">
+              {derivedTopFixes.map((fix, index) => (
+                <li
+                  key={index}
+                  className="rounded-xl bg-gray-50 p-4 text-gray-800"
+                >
+                  {fix}
+                </li>
+              ))}
+            </ul>
           </div>
-        </div>
+        )}
 
-        {/* Top Fixes */}
-        <div className="bg-white rounded-lg shadow-sm p-8 mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Priority Fixes</h2>
-          <div className="space-y-6">
-            {auditData.top_fixes.map((fix, idx) => (
-              <div key={idx} className="border-l-4 border-teal-500 pl-4">
-                <h3 className="font-semibold text-gray-900 mb-2">
-                  {idx + 1}. {fix.issue}
-                </h3>
-                <p className="text-gray-700 mb-2">{fix.fix}</p>
-                <span className="text-sm text-teal-600 font-medium">
-                  Impact: {fix.impact}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Full Analysis */}
-        <div className="bg-white rounded-lg shadow-sm p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            Complete Analysis
+        <div className="rounded-2xl border border-gray-200 p-6 shadow-sm">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-6">
+            Score Breakdown
           </h2>
-          <div className="prose prose-lg max-w-none">
-            <pre className="whitespace-pre-wrap text-gray-700 font-sans">
-              {auditData.full_analysis}
-            </pre>
-          </div>
+
+          {scoreEntries.length === 0 ? (
+            <p className="text-gray-600">No score data available.</p>
+          ) : (
+            <div className="space-y-6">
+              {scoreEntries.map(([pillar, value]) => (
+                <div
+                  key={pillar}
+                  className="rounded-xl border border-gray-100 bg-gray-50 p-5"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {prettyLabel(pillar)}
+                    </h3>
+                    <span className="text-sm font-medium text-gray-700">
+                      {typeof value?.score === "number" ? `${value.score}/100` : "No score"}
+                    </span>
+                  </div>
+
+                  {value?.issue && (
+                    <div className="mb-3">
+                      <p className="text-sm font-medium text-gray-500 mb-1">Issue</p>
+                      <p className="text-gray-800">{value.issue}</p>
+                    </div>
+                  )}
+
+                  {value?.fix && (
+                    <div className="mb-3">
+                      <p className="text-sm font-medium text-gray-500 mb-1">Recommended Fix</p>
+                      <p className="text-gray-800">{value.fix}</p>
+                    </div>
+                  )}
+
+                  {value?.verdict && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 mb-1">Verdict</p>
+                      <p className="text-gray-800">{value.verdict}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
-  )
+  );
 }
