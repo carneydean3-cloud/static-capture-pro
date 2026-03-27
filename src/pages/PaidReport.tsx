@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { supabase } from "../integrations/supabase/client";
 
 type ScoreItem = {
   score?: number;
@@ -17,7 +16,7 @@ type AuditData = {
   scores?: Record<string, ScoreItem>;
 };
 
-type PurchaseRow = {
+type PurchasePayload = {
   id: string;
   status: string;
   paid_at?: string | null;
@@ -25,10 +24,49 @@ type PurchaseRow = {
   url?: string | null;
 };
 
+type VerifyPurchaseResponse =
+  | { ok: true; purchase: PurchasePayload }
+  | { ok?: false; error?: string };
+
 const prettyLabel = (key: string) =>
-  key
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+  key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+
+async function verifyPurchase(sessionId: string): Promise<PurchasePayload> {
+  const baseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+
+  if (!baseUrl || !anonKey) {
+    throw new Error("Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY");
+  }
+
+  // POST + query param = compatible whether your Edge Function reads query, body, or both
+  const res = await fetch(
+    `${baseUrl}/functions/v1/verify-purchase?session_id=${encodeURIComponent(
+      sessionId
+    )}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+      },
+      body: JSON.stringify({ session_id: sessionId }),
+    }
+  );
+
+  const json = (await res.json().catch(() => ({}))) as VerifyPurchaseResponse;
+
+  if (!res.ok) {
+    throw new Error((json as any)?.error || `verify-purchase failed (${res.status})`);
+  }
+
+  if (!("purchase" in json) || !json.purchase) {
+    throw new Error((json as any)?.error || "verify-purchase returned no purchase");
+  }
+
+  return json.purchase;
+}
 
 export default function PaidReport() {
   const [searchParams] = useSearchParams();
@@ -36,64 +74,53 @@ export default function PaidReport() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [purchase, setPurchase] = useState<PurchaseRow | null>(null);
+  const [purchase, setPurchase] = useState<PurchasePayload | null>(null);
 
   useEffect(() => {
-    const fetchPurchase = async () => {
-      if (!sessionId) {
-        setError("Missing session_id in URL");
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        if (!sessionId) {
+          throw new Error("Missing session_id in URL");
+        }
+
+        const p = await verifyPurchase(sessionId);
+
+        if (cancelled) return;
+        setPurchase(p);
         setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("purchases")
-        .select("id, status, paid_at, audit_data, url")
-        .eq("stripe_session_id", sessionId)
-        .maybeSingle();
-
-      if (error) {
-        setError("Failed to load report");
+      } catch (e: any) {
+        if (cancelled) return;
+        setError(String(e?.message || e));
         setLoading(false);
-        return;
       }
-
-      if (!data) {
-        setError("No purchase found for this session");
-        setLoading(false);
-        return;
-      }
-
-      setPurchase(data as PurchaseRow);
-      setLoading(false);
     };
 
-    fetchPurchase();
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [sessionId]);
 
   const auditData = purchase?.audit_data || null;
   const scores = auditData?.scores || {};
-
   const scoreEntries = useMemo(() => Object.entries(scores), [scores]);
 
   const derivedTopFixes = useMemo(() => {
-    if (Array.isArray(auditData?.top_fixes)) return auditData.top_fixes;
-    if (Array.isArray(auditData?.fixes)) return auditData.fixes;
+    if (Array.isArray(auditData?.top_fixes) && auditData.top_fixes.length)
+      return auditData.top_fixes;
+    if (Array.isArray(auditData?.fixes) && auditData.fixes.length) return auditData.fixes;
 
     return scoreEntries
-      .map(([pillar, value]) => ({
-        pillar,
-        fix: value?.fix || "",
-      }))
+      .map(([pillar, value]) => ({ pillar, fix: value?.fix || "" }))
       .filter((item) => item.fix)
       .slice(0, 3)
       .map((item) => `${prettyLabel(item.pillar)}: ${item.fix}`);
   }, [auditData, scoreEntries]);
 
   const derivedOverallScore = useMemo(() => {
-    if (typeof auditData?.overall_score === "number") {
-      return auditData.overall_score;
-    }
+    if (typeof auditData?.overall_score === "number") return auditData.overall_score;
 
     const numericScores = scoreEntries
       .map(([, value]) => value?.score)
@@ -134,9 +161,7 @@ export default function PaidReport() {
           <p className="text-sm font-medium uppercase tracking-wide text-indigo-600">
             Full Diagnosis
           </p>
-          <h1 className="mt-2 text-4xl font-bold text-gray-900">
-            Conversion Report
-          </h1>
+          <h1 className="mt-2 text-4xl font-bold text-gray-900">Conversion Report</h1>
           <p className="mt-3 text-gray-600">
             Review the full breakdown of your landing page audit.
           </p>
@@ -167,15 +192,10 @@ export default function PaidReport() {
 
         {derivedTopFixes.length > 0 && (
           <div className="mb-10 rounded-2xl border border-gray-200 p-6 shadow-sm">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-              Top Fixes
-            </h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">Top Fixes</h2>
             <ul className="space-y-3">
               {derivedTopFixes.map((fix, index) => (
-                <li
-                  key={index}
-                  className="rounded-xl bg-gray-50 p-4 text-gray-800"
-                >
+                <li key={index} className="rounded-xl bg-gray-50 p-4 text-gray-800">
                   {fix}
                 </li>
               ))}
@@ -202,7 +222,9 @@ export default function PaidReport() {
                       {prettyLabel(pillar)}
                     </h3>
                     <span className="text-sm font-medium text-gray-700">
-                      {typeof value?.score === "number" ? `${value.score}/100` : "No score"}
+                      {typeof value?.score === "number"
+                        ? `${value.score}/100`
+                        : "No score"}
                     </span>
                   </div>
 
@@ -215,7 +237,9 @@ export default function PaidReport() {
 
                   {value?.fix && (
                     <div className="mb-3">
-                      <p className="text-sm font-medium text-gray-500 mb-1">Recommended Fix</p>
+                      <p className="text-sm font-medium text-gray-500 mb-1">
+                        Recommended Fix
+                      </p>
                       <p className="text-gray-800">{value.fix}</p>
                     </div>
                   )}
