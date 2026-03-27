@@ -22,7 +22,7 @@ type PurchaseRow = {
   status: string;
   paid_at?: string | null;
   audit_data: AuditData | null;
-  url?: string | null; // optional (only if your function returns it)
+  url?: string | null;
 };
 
 type VerifyPurchaseResponse =
@@ -43,7 +43,7 @@ export default function PaidReport() {
   useEffect(() => {
     let cancelled = false;
 
-    const fetchPurchase = async () => {
+    const load = async () => {
       try {
         if (!sessionId) throw new Error("Missing session_id in URL");
 
@@ -72,7 +72,7 @@ export default function PaidReport() {
       }
     };
 
-    fetchPurchase();
+    load();
     return () => {
       cancelled = true;
     };
@@ -83,8 +83,8 @@ export default function PaidReport() {
   const scoreEntries = useMemo(() => Object.entries(scores), [scores]);
 
   const derivedTopFixes = useMemo(() => {
-    if (Array.isArray(auditData?.top_fixes)) return auditData.top_fixes;
-    if (Array.isArray(auditData?.fixes)) return auditData.fixes;
+    if (Array.isArray(auditData?.top_fixes) && auditData.top_fixes.length) return auditData.top_fixes;
+    if (Array.isArray(auditData?.fixes) && auditData.fixes.length) return auditData.fixes;
 
     return scoreEntries
       .map(([pillar, value]) => ({ pillar, fix: value?.fix || "" }))
