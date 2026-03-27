@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { AuditProvider } from "@/contexts/AuditContext";
 import Index from "./pages/Index.tsx";
+import PaidReport from "./pages/PaidReport.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -20,6 +21,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/paid-report" element={<PaidReport />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
