@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { supabase } from "../integrations/supabase/client";
 
 type ScoreItem = {
   score?: number;
@@ -16,7 +17,7 @@ type AuditData = {
   scores?: Record<string, ScoreItem>;
 };
 
-type PurchasePayload = {
+type PurchaseRow = {
   id: string;
   status: string;
   paid_at?: string | null;
@@ -24,48 +25,52 @@ type PurchasePayload = {
   url?: string | null;
 };
 
-type VerifyPurchaseResponse =
-  | { ok: true; purchase: PurchasePayload }
-  | { ok?: false; error?: string };
-
 const prettyLabel = (key: string) =>
   key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
-async function verifyPurchase(sessionId: string): Promise<PurchasePayload> {
-  const baseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+function extractPurchase(payload: any): PurchaseRow | null {
+  if (!payload) return null;
 
-  if (!baseUrl || !anonKey) {
-    throw new Error("Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY");
-  }
+  // common shapes
+  const p =
+    payload.purchase ??
+    payload?.data?.purchase ??
+    (payload.ok && payload.purchase ? payload.purchase : null) ??
+    payload;
 
-  // POST + query param = compatible whether your Edge Function reads query, body, or both
-  const res = await fetch(
-    `${baseUrl}/functions/v1/verify-purchase?session_id=${encodeURIComponent(
-      sessionId
-    )}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: anonKey,
-        Authorization: `Bearer ${anonKey}`,
-      },
-      body: JSON.stringify({ session_id: sessionId }),
-    }
+  if (!p || typeof p !== "object") return null;
+  if (!("audit_data" in p)) return null;
+
+  return p as PurchaseRow;
+}
+
+async function loadPurchaseViaVerifyPurchase(sessionId: string): Promise<PurchaseRow> {
+  // Attempt 1: standard invoke with body (most common)
+  let res = await supabase.functions.invoke("verify-purchase", {
+    method: "POST",
+    body: { session_id: sessionId },
+  });
+
+  let purchase = extractPurchase(res.data);
+  if (purchase) return purchase;
+
+  // Attempt 2: some people coded the function to read query params
+  // (invoke supports passing a path string; if your version doesn't, this fails gracefully)
+  res = await supabase.functions.invoke(
+    `verify-purchase?session_id=${encodeURIComponent(sessionId)}`,
+    { method: "POST", body: { session_id: sessionId } }
   );
 
-  const json = (await res.json().catch(() => ({}))) as VerifyPurchaseResponse;
+  purchase = extractPurchase(res.data);
+  if (purchase) return purchase;
 
-  if (!res.ok) {
-    throw new Error((json as any)?.error || `verify-purchase failed (${res.status})`);
+  // If function returned an error, surface it
+  if (res.error) {
+    throw new Error(res.error.message);
   }
 
-  if (!("purchase" in json) || !json.purchase) {
-    throw new Error((json as any)?.error || "verify-purchase returned no purchase");
-  }
-
-  return json.purchase;
+  // If we got here: function responded but not in a recognized shape
+  throw new Error("verify-purchase returned an unexpected response (no purchase)");
 }
 
 export default function PaidReport() {
@@ -74,18 +79,16 @@ export default function PaidReport() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [purchase, setPurchase] = useState<PurchasePayload | null>(null);
+  const [purchase, setPurchase] = useState<PurchaseRow | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    const load = async () => {
+    const run = async () => {
       try {
-        if (!sessionId) {
-          throw new Error("Missing session_id in URL");
-        }
+        if (!sessionId) throw new Error("Missing session_id in URL");
 
-        const p = await verifyPurchase(sessionId);
+        const p = await loadPurchaseViaVerifyPurchase(sessionId);
 
         if (cancelled) return;
         setPurchase(p);
@@ -97,7 +100,7 @@ export default function PaidReport() {
       }
     };
 
-    load();
+    run();
     return () => {
       cancelled = true;
     };
@@ -108,9 +111,8 @@ export default function PaidReport() {
   const scoreEntries = useMemo(() => Object.entries(scores), [scores]);
 
   const derivedTopFixes = useMemo(() => {
-    if (Array.isArray(auditData?.top_fixes) && auditData.top_fixes.length)
-      return auditData.top_fixes;
-    if (Array.isArray(auditData?.fixes) && auditData.fixes.length) return auditData.fixes;
+    if (Array.isArray(auditData?.top_fixes)) return auditData.top_fixes;
+    if (Array.isArray(auditData?.fixes)) return auditData.fixes;
 
     return scoreEntries
       .map(([pillar, value]) => ({ pillar, fix: value?.fix || "" }))
@@ -222,9 +224,7 @@ export default function PaidReport() {
                       {prettyLabel(pillar)}
                     </h3>
                     <span className="text-sm font-medium text-gray-700">
-                      {typeof value?.score === "number"
-                        ? `${value.score}/100`
-                        : "No score"}
+                      {typeof value?.score === "number" ? `${value.score}/100` : "No score"}
                     </span>
                   </div>
 
