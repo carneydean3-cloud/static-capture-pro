@@ -22,56 +22,15 @@ type PurchaseRow = {
   status: string;
   paid_at?: string | null;
   audit_data: AuditData | null;
-  url?: string | null;
+  url?: string | null; // optional (only if your function returns it)
 };
+
+type VerifyPurchaseResponse =
+  | { valid: true; purchase: PurchaseRow }
+  | { valid: false; error?: string };
 
 const prettyLabel = (key: string) =>
   key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
-
-function extractPurchase(payload: any): PurchaseRow | null {
-  if (!payload) return null;
-
-  // common shapes
-  const p =
-    payload.purchase ??
-    payload?.data?.purchase ??
-    (payload.ok && payload.purchase ? payload.purchase : null) ??
-    payload;
-
-  if (!p || typeof p !== "object") return null;
-  if (!("audit_data" in p)) return null;
-
-  return p as PurchaseRow;
-}
-
-async function loadPurchaseViaVerifyPurchase(sessionId: string): Promise<PurchaseRow> {
-  // Attempt 1: standard invoke with body (most common)
-  let res = await supabase.functions.invoke("verify-purchase", {
-    method: "POST",
-    body: { session_id: sessionId },
-  });
-
-  let purchase = extractPurchase(res.data);
-  if (purchase) return purchase;
-
-  // Attempt 2: some people coded the function to read query params
-  // (invoke supports passing a path string; if your version doesn't, this fails gracefully)
-  res = await supabase.functions.invoke(
-    `verify-purchase?session_id=${encodeURIComponent(sessionId)}`,
-    { method: "POST", body: { session_id: sessionId } }
-  );
-
-  purchase = extractPurchase(res.data);
-  if (purchase) return purchase;
-
-  // If function returned an error, surface it
-  if (res.error) {
-    throw new Error(res.error.message);
-  }
-
-  // If we got here: function responded but not in a recognized shape
-  throw new Error("verify-purchase returned an unexpected response (no purchase)");
-}
 
 export default function PaidReport() {
   const [searchParams] = useSearchParams();
@@ -84,14 +43,27 @@ export default function PaidReport() {
   useEffect(() => {
     let cancelled = false;
 
-    const run = async () => {
+    const fetchPurchase = async () => {
       try {
         if (!sessionId) throw new Error("Missing session_id in URL");
 
-        const p = await loadPurchaseViaVerifyPurchase(sessionId);
+        const { data, error } = await supabase.functions.invoke<VerifyPurchaseResponse>(
+          "verify-purchase",
+          {
+            method: "POST",
+            body: { session_id: sessionId },
+          }
+        );
+
+        if (error) throw new Error(error.message);
+        if (!data) throw new Error("No response from verify-purchase");
+
+        if (!data.valid) {
+          throw new Error(data.error || "Purchase not valid / not paid");
+        }
 
         if (cancelled) return;
-        setPurchase(p);
+        setPurchase(data.purchase);
         setLoading(false);
       } catch (e: any) {
         if (cancelled) return;
@@ -100,7 +72,7 @@ export default function PaidReport() {
       }
     };
 
-    run();
+    fetchPurchase();
     return () => {
       cancelled = true;
     };
@@ -206,9 +178,7 @@ export default function PaidReport() {
         )}
 
         <div className="rounded-2xl border border-gray-200 p-6 shadow-sm">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-6">
-            Score Breakdown
-          </h2>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-6">Score Breakdown</h2>
 
           {scoreEntries.length === 0 ? (
             <p className="text-gray-600">No score data available.</p>
