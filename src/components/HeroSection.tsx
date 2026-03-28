@@ -13,9 +13,7 @@ const loadingSteps = [
 
 const normalizeUrl = (input: string): string => {
   const trimmed = input.trim();
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return trimmed;
-  }
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
   return `https://${trimmed}`;
 };
 
@@ -24,8 +22,7 @@ const isValidUrl = (input: string): boolean => {
   if (!trimmed || trimmed.length < 4) return false;
   if (!trimmed.includes(".")) return false;
   try {
-    const normalized = normalizeUrl(trimmed);
-    new URL(normalized);
+    new URL(normalizeUrl(trimmed));
     return true;
   } catch {
     return false;
@@ -34,24 +31,56 @@ const isValidUrl = (input: string): boolean => {
 
 const getFriendlyErrorMessage = (err: unknown): string => {
   const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-  
-  if (msg.includes("429")) {
-    return "We're busy right now. Please wait a moment.";
-  }
-  if (msg.includes("timeout") || msg.includes("abort")) {
-    return "The audit took too long. Please try again with a different URL.";
-  }
-  if (msg.includes("network") || msg.includes("fetch") || msg.includes("failed to fetch")) {
-    return "Network error. Please check your internet connection.";
-  }
-  if (msg.includes("invalid url") || msg.includes("malformed")) {
-    return "The URL provided seems invalid. Please check and try again.";
-  }
-  if (msg.includes("not found") || msg.includes("404")) {
-    return "We couldn't find that page. Please check the URL.";
-  }
-  
+  if (msg.includes("429")) return "We're busy right now. Please wait a moment.";
+  if (msg.includes("timeout") || msg.includes("abort")) return "The audit took too long. Please try again.";
+  if (msg.includes("network") || msg.includes("fetch") || msg.includes("failed to fetch")) return "Network error. Please check your connection.";
+  if (msg.includes("invalid url") || msg.includes("malformed")) return "The URL seems invalid. Please check and try again.";
+  if (msg.includes("not found") || msg.includes("404")) return "We couldn't find that page. Please check the URL.";
   return "We couldn't audit this page. Please make sure the URL is public and try again.";
+};
+
+// Capture screenshot client-side and upload to Supabase Storage
+const captureScreenshotToStorage = async (pageUrl: string): Promise<string> => {
+  try {
+    const supabaseUrl = (supabase as any).supabaseUrl as string;
+    const supabaseKey = (supabase as any).supabaseKey as string;
+
+    if (!supabaseUrl || !supabaseKey) return "";
+
+    const thumbUrl = `https://image.thum.io/get/width/1400/crop/900/noanimate/${pageUrl}`;
+    const imgRes = await fetch(thumbUrl);
+    if (!imgRes.ok) return "";
+
+    const blob = await imgRes.blob();
+    if (blob.size < 5000) return ""; // blank/error image
+
+    const fileName = `screenshot-${Date.now()}.jpg`;
+
+    const uploadRes = await fetch(
+      `${supabaseUrl}/storage/v1/object/screenshots/${fileName}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${supabaseKey}`,
+          "Content-Type": "image/jpeg",
+          "x-upsert": "true",
+        },
+        body: blob,
+      }
+    );
+
+    if (!uploadRes.ok) {
+      console.warn("Screenshot upload failed:", uploadRes.status);
+      return "";
+    }
+
+    const publicUrl = `${supabaseUrl}/storage/v1/object/public/screenshots/${fileName}`;
+    console.log("Screenshot stored:", publicUrl);
+    return publicUrl;
+  } catch (e) {
+    console.warn("Screenshot capture failed:", e);
+    return "";
+  }
 };
 
 const HeroSection = () => {
@@ -62,15 +91,10 @@ const HeroSection = () => {
 
   useEffect(() => {
     if (countdown === null) return;
-    if (countdown <= 0) {
-      setCountdown(null);
-      return;
-    }
-
+    if (countdown <= 0) { setCountdown(null); return; }
     const timer = setInterval(() => {
       setCountdown((prev) => (prev !== null ? prev - 1 : null));
     }, 1000);
-
     return () => clearInterval(timer);
   }, [countdown]);
 
@@ -79,15 +103,8 @@ const HeroSection = () => {
     setUrlError(null);
     setError(null);
 
-    if (!url.trim()) {
-      setUrlError("Please enter your landing page URL");
-      return;
-    }
-
-    if (!isValidUrl(url)) {
-      setUrlError("Please enter a valid URL (e.g. stripe.com)");
-      return;
-    }
+    if (!url.trim()) { setUrlError("Please enter your landing page URL"); return; }
+    if (!isValidUrl(url)) { setUrlError("Please enter a valid URL (e.g. stripe.com)"); return; }
 
     const normalizedUrl = normalizeUrl(url);
     setUrl(normalizedUrl);
@@ -97,18 +114,14 @@ const HeroSection = () => {
     const timer2 = setTimeout(() => setStage("generating"), 5000);
 
     try {
-      // Use fetch to be able to read headers for 429 Retry-After as requested
-      // We get the URL and Key from the supabase client instance
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const supabaseUrl = (supabase as any).supabaseUrl as string;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const supabaseKey = (supabase as any).supabaseKey as string;
-      
+
       const response = await fetch(`${supabaseUrl}/functions/v1/run-audit`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${supabaseKey}`,
         },
         body: JSON.stringify({ url: normalizedUrl }),
       });
@@ -117,10 +130,10 @@ const HeroSection = () => {
       clearTimeout(timer2);
 
       if (response.status === 429) {
-        const retryAfter = response.headers.get('Retry-After');
+        const retryAfter = response.headers.get("Retry-After");
         const seconds = retryAfter ? parseInt(retryAfter, 10) : 30;
         setCountdown(seconds);
-        setUrlError(`We’re busy right now. Try again in ${seconds} seconds.`);
+        setUrlError(`We're busy right now. Try again in ${seconds} seconds.`);
         setStage("idle");
         return;
       }
@@ -131,18 +144,25 @@ const HeroSection = () => {
       }
 
       const data = await response.json();
+      if (data?.error) throw new Error(data.error);
 
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-
+      // Set result immediately so user sees their results
       setResult(data);
       setStage("email_capture");
+
+      // Capture screenshot in background — don't block the UI
+      // When done, update result with screenshot_url
+      captureScreenshotToStorage(normalizedUrl).then((screenshotUrl) => {
+        if (screenshotUrl) {
+          setResult({ ...data, screenshot_url: screenshotUrl });
+          console.log("Screenshot ready:", screenshotUrl);
+        }
+      });
+
     } catch (err: unknown) {
       clearTimeout(timer1);
       clearTimeout(timer2);
       console.error("Audit error:", err);
-      
       const friendlyMsg = getFriendlyErrorMessage(err);
       setUrlError(friendlyMsg);
       setError(friendlyMsg);
@@ -193,10 +213,7 @@ const HeroSection = () => {
               <input
                 type="text"
                 value={url}
-                onChange={(e) => {
-                  setUrl(e.target.value);
-                  if (urlError) setUrlError(null);
-                }}
+                onChange={(e) => { setUrl(e.target.value); if (urlError) setUrlError(null); }}
                 placeholder="Enter your landing page URL (e.g. stripe.com)"
                 disabled={isLoading || countdown !== null}
                 className={`relative w-full bg-navy-dark border rounded-xl px-6 py-4 text-sm text-foreground placeholder:text-caption focus:outline-none focus:border-primary transition-colors disabled:opacity-50 ${
@@ -210,20 +227,11 @@ const HeroSection = () => {
               className="btn-primary text-lg px-8 py-4 flex items-center justify-center gap-3 shrink-0 disabled:opacity-70 min-w-[200px]"
             >
               {isLoading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Analysing...
-                </>
+                <><Loader2 className="w-5 h-5 animate-spin" />Analysing...</>
               ) : countdown !== null ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Wait {countdown}s
-                </>
+                <><Loader2 className="w-5 h-5 animate-spin" />Wait {countdown}s</>
               ) : (
-                <>
-                  Run Free Audit
-                  <ArrowRight className="w-5 h-5" />
-                </>
+                <>Run Free Audit<ArrowRight className="w-5 h-5" /></>
               )}
             </button>
           </form>
@@ -232,9 +240,7 @@ const HeroSection = () => {
             <div className="flex items-center gap-2 mt-2 px-2">
               <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
               <p className="text-sm text-destructive text-left">
-                {countdown !== null 
-                  ? `We’re busy right now. Try again in ${countdown} seconds.` 
-                  : urlError}
+                {countdown !== null ? `We're busy right now. Try again in ${countdown} seconds.` : urlError}
               </p>
             </div>
           )}
@@ -251,7 +257,6 @@ const HeroSection = () => {
                   const currentIndex = loadingSteps.findIndex((s) => s.key === stage);
                   const isDone = stepIndex < currentIndex;
                   const isCurrent = step.key === stage;
-
                   return (
                     <div key={step.key} className="flex items-center gap-3">
                       {isDone ? (
@@ -261,15 +266,9 @@ const HeroSection = () => {
                       ) : (
                         <div className="w-5 h-5 rounded-full border border-white/20 shrink-0" />
                       )}
-                      <span
-                        className={`text-sm font-medium ${
-                          isDone
-                            ? "text-primary"
-                            : isCurrent
-                            ? "text-foreground"
-                            : "text-caption"
-                        }`}
-                      >
+                      <span className={`text-sm font-medium ${
+                        isDone ? "text-primary" : isCurrent ? "text-foreground" : "text-caption"
+                      }`}>
                         {step.label}
                       </span>
                     </div>
@@ -289,7 +288,6 @@ const HeroSection = () => {
                   </div>
                 ))}
               </div>
-
               <div className="flex items-center gap-4">
                 <div className="flex -space-x-3">
                   {[1, 2, 3, 4, 5].map((i) => (
