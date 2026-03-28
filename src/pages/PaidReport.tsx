@@ -68,10 +68,8 @@ const scoreColor = (score?: number) => {
   return "text-red-500";
 };
 
-function injectHeroVisualSlot(mockupHtml: string, screenshotUrl?: string | null) {
-  if (!mockupHtml) return "";
-
-  const visualHtml = `
+function buildHeroVisualHtml(screenshotUrl?: string | null) {
+  return `
     <div style="position:relative;width:100%;height:100%;min-height:320px;border-radius:20px;overflow:hidden;background:#0f172a;border:1px solid rgba(255,255,255,0.10);box-shadow:0 24px 48px rgba(0,0,0,0.22);">
       ${
         screenshotUrl
@@ -87,8 +85,54 @@ function injectHeroVisualSlot(mockupHtml: string, screenshotUrl?: string | null)
       </div>
     </div>
   `;
+}
 
-  return mockupHtml.replace(/\{\{\s*HERO_VISUAL_SLOT\s*\}\}/g, visualHtml);
+function injectHeroVisualSlot(mockupHtml: string, screenshotUrl?: string | null) {
+  if (!mockupHtml) return "";
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(mockupHtml, "text/html");
+  const visualHtml = buildHeroVisualHtml(screenshotUrl);
+
+  // 1) Replace explicit placeholder text nodes anywhere
+  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+  const textNodesToReplace: Text[] = [];
+
+  let currentNode = walker.nextNode();
+  while (currentNode) {
+    const textNode = currentNode as Text;
+    if (textNode.textContent?.includes("HERO_VISUAL_SLOT")) {
+      textNodesToReplace.push(textNode);
+    }
+    currentNode = walker.nextNode();
+  }
+
+  textNodesToReplace.forEach((textNode) => {
+    const wrapper = doc.createElement("div");
+    wrapper.innerHTML = visualHtml;
+    textNode.parentNode?.replaceChild(wrapper.firstElementChild!, textNode);
+  });
+
+  // 2) Replace any elements whose innerHTML/text still contains the token
+  const allElements = Array.from(doc.body.querySelectorAll("*"));
+  allElements.forEach((el) => {
+    const html = el.innerHTML || "";
+    const text = el.textContent || "";
+
+    if (html.includes("HERO_VISUAL_SLOT") || text.includes("HERO_VISUAL_SLOT")) {
+      const wrapper = doc.createElement("div");
+      wrapper.innerHTML = visualHtml;
+      el.replaceWith(wrapper.firstElementChild!);
+    }
+  });
+
+  // 3) Fallback: if nothing was replaced, inject into any dedicated slot container if present
+  const explicitSlot = doc.body.querySelector("#conversiondoc-hero-visual");
+  if (explicitSlot) {
+    explicitSlot.outerHTML = visualHtml;
+  }
+
+  return doc.body.innerHTML;
 }
 
 export default function PaidReport() {
@@ -349,33 +393,6 @@ ${mockupHtml || ""}
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#f5f8fc] px-6 py-16">
-        <div className="mx-auto max-w-6xl">
-          <div className="animate-pulse space-y-4">
-            <div className="h-12 bg-slate-200 rounded w-1/3" />
-            <div className="h-5 bg-slate-200 rounded w-1/2" />
-            <div className="h-5 bg-slate-200 rounded w-2/3" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !purchase) {
-    return (
-      <div className="min-h-screen bg-[#f5f8fc] px-6 py-16">
-        <div className="mx-auto max-w-4xl">
-          <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
-            <h1 className="text-3xl font-bold text-slate-900 mb-4">Report unavailable</h1>
-            <p className="text-slate-600">{error || "Something went wrong."}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-[#f5f8fc] px-6 py-16">
       <div className="mx-auto max-w-6xl space-y-8">
@@ -392,35 +409,6 @@ ${mockupHtml || ""}
                 "{auditData.verdict}"
               </p>
             )}
-
-            <div className="mt-8 grid gap-4 md:grid-cols-3">
-              <div className="rounded-2xl bg-white/6 border border-white/10 backdrop-blur-sm p-5">
-                <p className="text-sm text-slate-400">Payment Status</p>
-                <p className="mt-2 text-2xl font-semibold text-white capitalize">
-                  {purchase.status}
-                </p>
-              </div>
-
-              <div className="rounded-2xl bg-white/6 border border-white/10 backdrop-blur-sm p-5">
-                <p className="text-sm text-slate-400">Overall Score</p>
-                <p className={`mt-2 text-2xl font-semibold ${
-                  overallScore !== null && overallScore >= 70
-                    ? "text-emerald-400"
-                    : overallScore !== null && overallScore >= 50
-                      ? "text-amber-300"
-                      : "text-red-300"
-                }`}>
-                  {overallScore !== null ? `${overallScore}/100` : "N/A"}
-                </p>
-              </div>
-
-              <div className="rounded-2xl bg-white/6 border border-white/10 backdrop-blur-sm p-5">
-                <p className="text-sm text-slate-400">URL Audited</p>
-                <p className="mt-2 text-sm font-medium text-white break-all">
-                  {purchase.url || "Not available"}
-                </p>
-              </div>
-            </div>
           </div>
         </section>
 
