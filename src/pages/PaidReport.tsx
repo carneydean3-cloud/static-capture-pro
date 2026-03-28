@@ -71,7 +71,7 @@ const scoreColor = (score?: number) => {
 function injectHeroVisualSlot(mockupHtml: string, screenshotUrl?: string | null) {
   if (!mockupHtml) return "";
 
-  const visualBlock = `
+  const visualHtml = `
     <div style="position:relative;width:100%;height:100%;min-height:320px;border-radius:20px;overflow:hidden;background:#0f172a;border:1px solid rgba(255,255,255,0.10);box-shadow:0 24px 48px rgba(0,0,0,0.22);">
       ${
         screenshotUrl
@@ -88,10 +88,7 @@ function injectHeroVisualSlot(mockupHtml: string, screenshotUrl?: string | null)
     </div>
   `;
 
-  return mockupHtml.replace(
-    /<div id="conversiondoc-hero-visual"[\s\S]*?<\/div>/i,
-    visualBlock
-  );
+  return mockupHtml.replaceAll("{{HERO_VISUAL_SLOT}}", visualHtml);
 }
 
 export default function PaidReport() {
@@ -354,8 +351,8 @@ ${mockupHtml || ""}
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 px-6 py-16">
-        <div className="mx-auto max-w-5xl">
+      <div className="min-h-screen bg-[#f5f8fc] px-6 py-16">
+        <div className="mx-auto max-w-6xl">
           <div className="animate-pulse space-y-4">
             <div className="h-12 bg-slate-200 rounded w-1/3" />
             <div className="h-5 bg-slate-200 rounded w-1/2" />
@@ -368,7 +365,7 @@ ${mockupHtml || ""}
 
   if (error || !purchase) {
     return (
-      <div className="min-h-screen bg-slate-50 px-6 py-16">
+      <div className="min-h-screen bg-[#f5f8fc] px-6 py-16">
         <div className="mx-auto max-w-4xl">
           <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
             <h1 className="text-3xl font-bold text-slate-900 mb-4">Report unavailable</h1>
@@ -382,8 +379,6 @@ ${mockupHtml || ""}
   return (
     <div className="min-h-screen bg-[#f5f8fc] px-6 py-16">
       <div className="mx-auto max-w-6xl space-y-8">
-
-        {/* Premium branded hero */}
         <section className="rounded-[32px] overflow-hidden border border-slate-900/10 shadow-[0_20px_60px_rgba(15,23,42,0.12)]">
           <div className="bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.18),_transparent_30%),linear-gradient(135deg,#020617,#0f172a_50%,#111827)] px-8 py-10 md:px-10 md:py-12">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-400">
@@ -429,7 +424,6 @@ ${mockupHtml || ""}
           </div>
         </section>
 
-        {/* Executive Summary */}
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
           <div className="mb-6">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">
@@ -488,7 +482,6 @@ ${mockupHtml || ""}
           </div>
         </section>
 
-        {/* Top fixes */}
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
           <div className="mb-6">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">
@@ -502,10 +495,7 @@ ${mockupHtml || ""}
           {topFixes ? (
             <div className="space-y-4">
               {topFixes.map((x, idx) => (
-                <div
-                  key={idx}
-                  className="flex gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-5"
-                >
+                <div key={idx} className="flex gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-5">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-500 text-white text-sm font-bold shadow-sm">
                     {x.priority ?? idx + 1}
                   </div>
@@ -525,7 +515,6 @@ ${mockupHtml || ""}
                         {x.impact ?? "—"}
                       </span>
                     </div>
-
                     {x.issue && (
                       <p className="font-semibold text-slate-900 text-lg mb-1">{x.issue}</p>
                     )}
@@ -539,7 +528,6 @@ ${mockupHtml || ""}
           )}
         </section>
 
-        {/* Score breakdown */}
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
           <div className="mb-6">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">
@@ -591,7 +579,6 @@ ${mockupHtml || ""}
           )}
         </section>
 
-        {/* Copy pack */}
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div>
@@ -670,7 +657,6 @@ ${mockupHtml || ""}
           </div>
         </section>
 
-        {/* Mockup */}
         {mockupHtml && (
           <section className="rounded-[28px] border border-slate-200 bg-white shadow-sm overflow-hidden">
             <div className="bg-[linear-gradient(135deg,#020617,#0f172a)] px-6 py-5">
@@ -794,7 +780,6 @@ ${mockupHtml || ""}
           </section>
         )}
 
-        {/* Final CTA */}
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600 mb-2">
             Next Step
