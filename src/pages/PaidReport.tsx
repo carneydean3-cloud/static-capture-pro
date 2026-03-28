@@ -88,7 +88,7 @@ function injectHeroVisualSlot(mockupHtml: string, screenshotUrl?: string | null)
     </div>
   `;
 
-  return mockupHtml.replaceAll("{{HERO_VISUAL_SLOT}}", visualHtml);
+  return mockupHtml.replace(/\{\{\s*HERO_VISUAL_SLOT\s*\}\}/g, visualHtml);
 }
 
 export default function PaidReport() {
