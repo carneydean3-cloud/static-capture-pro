@@ -72,15 +72,18 @@ function injectHeroVisualSlot(mockupHtml: string, screenshotUrl?: string | null)
   if (!mockupHtml) return "";
 
   const visualBlock = `
-    <div style="position:relative;width:100%;height:100%;min-height:320px;border-radius:18px;overflow:hidden;background:#111827;border:1px solid rgba(255,255,255,0.10);box-shadow:0 20px 40px rgba(0,0,0,0.18);">
+    <div style="position:relative;width:100%;height:100%;min-height:320px;border-radius:20px;overflow:hidden;background:#0f172a;border:1px solid rgba(255,255,255,0.10);box-shadow:0 24px 48px rgba(0,0,0,0.22);">
       ${
         screenshotUrl
-          ? `<img src="${screenshotUrl}" alt="Site visual" style="width:100%;height:100%;object-fit:cover;display:block;filter:brightness(0.78) saturate(1.05);" />`
+          ? `<img src="${screenshotUrl}" alt="Site visual" style="width:100%;height:100%;object-fit:cover;object-position:center top;display:block;transform:scale(1.04);filter:brightness(0.72) saturate(1.05);" />`
           : ""
       }
-      <div style="position:absolute;inset:0;background:linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.30));"></div>
-      <div style="position:absolute;left:16px;bottom:16px;background:rgba(15,23,42,0.78);backdrop-filter:blur(10px);color:white;padding:10px 14px;border-radius:12px;font-size:12px;font-weight:600;letter-spacing:0.3px;">
+      <div style="position:absolute;inset:0;background:linear-gradient(180deg, rgba(2,6,23,0.10), rgba(2,6,23,0.42));"></div>
+      <div style="position:absolute;left:18px;top:18px;background:rgba(15,23,42,0.72);backdrop-filter:blur(8px);color:white;padding:8px 12px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;border:1px solid rgba(255,255,255,0.10);">
         Improved visual direction
+      </div>
+      <div style="position:absolute;left:18px;bottom:18px;background:rgba(255,255,255,0.08);backdrop-filter:blur(12px);color:white;padding:12px 14px;border-radius:14px;font-size:12px;line-height:1.45;max-width:240px;border:1px solid rgba(255,255,255,0.10);">
+        More focused layout, clearer hierarchy, and stronger visual framing.
       </div>
     </div>
   `;
@@ -354,7 +357,7 @@ ${mockupHtml || ""}
       <div className="min-h-screen bg-slate-50 px-6 py-16">
         <div className="mx-auto max-w-5xl">
           <div className="animate-pulse space-y-4">
-            <div className="h-10 bg-slate-200 rounded w-1/3" />
+            <div className="h-12 bg-slate-200 rounded w-1/3" />
             <div className="h-5 bg-slate-200 rounded w-1/2" />
             <div className="h-5 bg-slate-200 rounded w-2/3" />
           </div>
@@ -367,7 +370,7 @@ ${mockupHtml || ""}
     return (
       <div className="min-h-screen bg-slate-50 px-6 py-16">
         <div className="mx-auto max-w-4xl">
-          <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+          <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
             <h1 className="text-3xl font-bold text-slate-900 mb-4">Report unavailable</h1>
             <p className="text-slate-600">{error || "Something went wrong."}</p>
           </div>
@@ -377,13 +380,13 @@ ${mockupHtml || ""}
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-16">
+    <div className="min-h-screen bg-[#f5f8fc] px-6 py-16">
       <div className="mx-auto max-w-6xl space-y-8">
 
-        {/* Premium Header */}
-        <div className="rounded-[28px] overflow-hidden shadow-xl border border-slate-800/20 bg-slate-950">
-          <div className="bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.20),_transparent_35%),linear-gradient(135deg,#020617,#0f172a_55%,#111827)] px-8 py-10 md:px-10 md:py-12">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-teal-400">
+        {/* Premium branded hero */}
+        <section className="rounded-[32px] overflow-hidden border border-slate-900/10 shadow-[0_20px_60px_rgba(15,23,42,0.12)]">
+          <div className="bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.18),_transparent_30%),linear-gradient(135deg,#020617,#0f172a_50%,#111827)] px-8 py-10 md:px-10 md:py-12">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-400">
               Full Diagnosis
             </p>
             <h1 className="mt-3 text-4xl md:text-5xl font-bold text-white tracking-tight">
@@ -396,14 +399,14 @@ ${mockupHtml || ""}
             )}
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
-              <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm p-5">
+              <div className="rounded-2xl bg-white/6 border border-white/10 backdrop-blur-sm p-5">
                 <p className="text-sm text-slate-400">Payment Status</p>
                 <p className="mt-2 text-2xl font-semibold text-white capitalize">
                   {purchase.status}
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm p-5">
+              <div className="rounded-2xl bg-white/6 border border-white/10 backdrop-blur-sm p-5">
                 <p className="text-sm text-slate-400">Overall Score</p>
                 <p className={`mt-2 text-2xl font-semibold ${
                   overallScore !== null && overallScore >= 70
@@ -416,7 +419,7 @@ ${mockupHtml || ""}
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm p-5">
+              <div className="rounded-2xl bg-white/6 border border-white/10 backdrop-blur-sm p-5">
                 <p className="text-sm text-slate-400">URL Audited</p>
                 <p className="mt-2 text-sm font-medium text-white break-all">
                   {purchase.url || "Not available"}
@@ -424,7 +427,7 @@ ${mockupHtml || ""}
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Executive Summary */}
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
@@ -467,7 +470,7 @@ ${mockupHtml || ""}
           </div>
 
           <div className="rounded-2xl border border-teal-100 bg-teal-50 p-5 mb-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 mb-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-700 mb-2">
               Biggest Opportunity
             </p>
             <p className="text-slate-900 font-medium text-lg">
@@ -476,7 +479,7 @@ ${mockupHtml || ""}
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">
               Diagnosis
             </p>
             <p className="text-slate-700 leading-8">
@@ -485,7 +488,7 @@ ${mockupHtml || ""}
           </div>
         </section>
 
-        {/* Top Fixes */}
+        {/* Top fixes */}
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
           <div className="mb-6">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">
@@ -536,7 +539,7 @@ ${mockupHtml || ""}
           )}
         </section>
 
-        {/* Score Breakdown */}
+        {/* Score breakdown */}
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
           <div className="mb-6">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">
@@ -588,7 +591,7 @@ ${mockupHtml || ""}
           )}
         </section>
 
-        {/* Copy Pack */}
+        {/* Copy pack */}
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div>
@@ -711,11 +714,11 @@ ${mockupHtml || ""}
                       src={screenshotUrl}
                       alt="Current page screenshot"
                       className="w-full object-cover object-top"
-                      style={{ minHeight: "440px" }}
+                      style={{ minHeight: "460px" }}
                       onError={() => setScreenshotError(true)}
                     />
                   ) : (
-                    <div className="flex flex-col items-center justify-center min-h-[440px] text-center p-8">
+                    <div className="flex flex-col items-center justify-center min-h-[460px] text-center p-8">
                       <p className="text-slate-400 font-medium text-lg mb-2">Screenshot unavailable</p>
                       <a
                         href={purchase.url ?? "#"}
@@ -822,7 +825,6 @@ ${mockupHtml || ""}
         </section>
       </div>
 
-      {/* Fullscreen modal */}
       {fullscreen && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex flex-col"
