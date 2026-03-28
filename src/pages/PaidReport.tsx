@@ -70,6 +70,29 @@ const scoreColor = (score?: number) => {
   return "text-red-500";
 };
 
+function injectHeroVisualSlot(mockupHtml: string, screenshotUrl?: string | null) {
+  if (!mockupHtml) return "";
+
+  const visualBlock = `
+    <div style="position:relative;width:100%;height:100%;min-height:320px;border-radius:18px;overflow:hidden;background:#111827;border:1px solid rgba(255,255,255,0.10);">
+      ${
+        screenshotUrl
+          ? `<img src="${screenshotUrl}" alt="Site visual" style="width:100%;height:100%;object-fit:cover;display:block;filter:brightness(0.78) saturate(1.05);" />`
+          : ""
+      }
+      <div style="position:absolute;inset:0;background:linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.28));"></div>
+      <div style="position:absolute;left:16px;bottom:16px;background:rgba(15,23,42,0.78);backdrop-filter:blur(8px);color:white;padding:10px 14px;border-radius:12px;font-size:12px;font-weight:600;letter-spacing:0.3px;">
+        Improved visual direction
+      </div>
+    </div>
+  `;
+
+  return mockupHtml.replace(
+    /<div id="conversiondoc-hero-visual"[\s\S]*?<\/div>/i,
+    visualBlock
+  );
+}
+
 export default function PaidReport() {
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session_id");
@@ -130,7 +153,7 @@ export default function PaidReport() {
   const scoreEntries = useMemo(() => Object.entries(scores), [scores]);
   const summary = auditData?.summary ?? {};
   const copyPack = auditData?.homepage_copy_pack ?? {};
-  const mockupHtml = auditData?.mockup_html ?? null;
+  const rawMockupHtml = auditData?.mockup_html ?? null;
 
   const topFixes = useMemo(() => {
     const t3 = auditData?.top_3_fixes;
@@ -150,13 +173,14 @@ export default function PaidReport() {
     return avg <= 10 ? Math.round(avg * 10) : Math.round(avg);
   }, [auditData, scoreEntries]);
 
-  const rewrittenCopyEntries = useMemo(() => {
-    return scoreEntries.filter(([, v]) => v?.rewritten_copy);
-  }, [scoreEntries]);
-
   const screenshotUrl = purchase?.url
     ? `https://image.thum.io/get/width/1400/crop/1200/${purchase.url}`
     : null;
+
+  const mockupHtml = useMemo(() => {
+    if (!rawMockupHtml) return null;
+    return injectHeroVisualSlot(rawMockupHtml, screenshotUrl);
+  }, [rawMockupHtml, screenshotUrl]);
 
   const handleCopyCode = async () => {
     if (!mockupHtml) return;
@@ -357,7 +381,6 @@ ${mockupHtml || ""}
     <div className="min-h-screen bg-gray-50 px-6 py-16">
       <div className="mx-auto max-w-5xl space-y-8">
 
-        {/* Header */}
         <div>
           <p className="text-sm font-semibold uppercase tracking-widest text-teal-600">
             Full Diagnosis
@@ -368,7 +391,6 @@ ${mockupHtml || ""}
           )}
         </div>
 
-        {/* Executive Summary */}
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="mb-5">
             <p className="text-xs font-semibold uppercase tracking-wide text-teal-600">
@@ -396,18 +418,14 @@ ${mockupHtml || ""}
             <div className="rounded-xl border border-gray-100 bg-gray-50 p-5">
               <p className="text-sm text-gray-500">Strongest Pillar</p>
               <p className="mt-2 text-xl font-semibold text-gray-900">
-                {summary.strongest_pillar
-                  ? prettyLabel(summary.strongest_pillar)
-                  : "N/A"}
+                {summary.strongest_pillar ? prettyLabel(summary.strongest_pillar) : "N/A"}
               </p>
             </div>
 
             <div className="rounded-xl border border-gray-100 bg-gray-50 p-5">
               <p className="text-sm text-gray-500">Weakest Pillar</p>
               <p className="mt-2 text-xl font-semibold text-gray-900">
-                {summary.weakest_pillar
-                  ? prettyLabel(summary.weakest_pillar)
-                  : "N/A"}
+                {summary.weakest_pillar ? prettyLabel(summary.weakest_pillar) : "N/A"}
               </p>
             </div>
           </div>
@@ -431,7 +449,6 @@ ${mockupHtml || ""}
           </div>
         </div>
 
-        {/* Top Fixes */}
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="text-2xl font-semibold text-gray-900 mb-5">
             🔥 Top Priority Fixes
@@ -470,14 +487,13 @@ ${mockupHtml || ""}
           )}
         </div>
 
-        {/* Score Breakdown */}
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="text-2xl font-semibold text-gray-900 mb-6">📊 Score Breakdown</h2>
-          {scoreEntries.length === 0 ? (
+          {Object.entries(scores).length === 0 ? (
             <p className="text-gray-600">No score data available.</p>
           ) : (
             <div className="space-y-5">
-              {scoreEntries.map(([pillar, value]) => (
+              {Object.entries(scores).map(([pillar, value]) => (
                 <div key={pillar} className="rounded-xl border border-gray-100 bg-gray-50 p-5">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-lg font-semibold text-gray-900">
@@ -503,20 +519,12 @@ ${mockupHtml || ""}
                       <p className="text-gray-800">{value.fix}</p>
                     </div>
                   )}
-
-                  {value?.verdict && (
-                    <div>
-                      <p className="text-xs font-semibold uppercase text-gray-400 mb-1">Verdict</p>
-                      <p className="text-gray-800">{value.verdict}</p>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Copy Pack */}
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div>
@@ -578,7 +586,6 @@ ${mockupHtml || ""}
           </div>
         </div>
 
-        {/* Before / After Mockup */}
         {mockupHtml && (
           <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
             <div className="bg-gray-900 px-6 py-5">
@@ -699,7 +706,6 @@ ${mockupHtml || ""}
           </div>
         )}
 
-        {/* Final CTA */}
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-teal-600 mb-2">
             Next Step
@@ -730,7 +736,6 @@ ${mockupHtml || ""}
         </div>
       </div>
 
-      {/* Fullscreen modal */}
       {fullscreen && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex flex-col"
