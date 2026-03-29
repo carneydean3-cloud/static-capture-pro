@@ -18,6 +18,7 @@ type TopFix = {
   impact?: string;
   issue?: string;
   fix?: string;
+  page_region?: string;
 };
 
 type SummaryData = {
@@ -47,7 +48,8 @@ type AuditData = {
   pexels_hero_image?: string;
   screenshot_url?: string;
   logo_url?: string;
-  detected_colors?: string[];
+  brand_name?: string;
+  primary_color?: string;
 };
 
 type PurchaseRow = {
@@ -72,69 +74,173 @@ const scoreColor = (score?: number) => {
   return "text-red-500";
 };
 
-function buildHeroVisualHtml(pexelsImageUrl?: string | null): string {
-  if (pexelsImageUrl) {
-    return `
-      <div style="position:relative;width:100%;height:100%;min-height:340px;border-radius:16px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.18);">
-        <img
-          src="${pexelsImageUrl}"
-          alt="Professional service"
-          style="width:100%;height:100%;object-fit:cover;object-position:center;display:block;"
-        />
-        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.04),rgba(0,0,0,0.22));border-radius:16px;"></div>
+// Region to vertical position mapping for annotations
+const regionToPosition: Record<string, { top: string; side: "left" | "right" }> = {
+  hero: { top: "8%", side: "left" },
+  nav: { top: "2%", side: "right" },
+  cta: { top: "42%", side: "left" },
+  trust: { top: "65%", side: "right" },
+  below_fold: { top: "78%", side: "left" },
+};
+
+const impactColor: Record<string, string> = {
+  High: "#ef4444",
+  Medium: "#f59e0b",
+  Low: "#6b7280",
+};
+
+function AnnotatedBefore({
+  screenshotUrl,
+  siteUrl,
+  topFixes,
+}: {
+  screenshotUrl: string | null;
+  siteUrl: string | null;
+  topFixes: TopFix[] | null;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
+  const [showAnnotations, setShowAnnotations] = useState(true);
+
+  const annotations = useMemo(() => {
+    if (!topFixes) return [];
+    return topFixes.slice(0, 3).map((fix, i) => {
+      const region = fix.page_region || ["hero", "cta", "trust"][i];
+      const pos = regionToPosition[region] || regionToPosition.hero;
+      return { ...fix, ...pos };
+    });
+  }, [topFixes]);
+
+  if (!screenshotUrl && !siteUrl) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[500px] bg-slate-100 text-center p-8">
+        <p className="text-slate-400 font-medium text-lg mb-2">Screenshot unavailable</p>
       </div>
-    `;
+    );
   }
-  return `
-    <div style="width:100%;min-height:340px;border-radius:16px;background:linear-gradient(135deg,#e2e8f0,#cbd5e1);display:flex;align-items:center;justify-content:center;">
-      <p style="color:#94a3b8;font-size:14px;font-family:system-ui,sans-serif;">Visual area</p>
+
+  return (
+    <div className="relative bg-slate-100">
+      {/* Toggle annotations button */}
+      {loaded && topFixes && (
+        <button
+          onClick={() => setShowAnnotations(!showAnnotations)}
+          className="absolute top-3 right-3 z-20 bg-slate-900/80 hover:bg-slate-900 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors backdrop-blur-sm"
+        >
+          {showAnnotations ? "Hide Annotations" : "Show Annotations"}
+        </button>
+      )}
+
+      {/* Loading state */}
+      {!loaded && !error && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-100 z-10">
+          <div className="w-8 h-8 border-4 border-teal-400 border-t-transparent rounded-full animate-spin" />
+          <p className="text-slate-400 text-sm font-medium">Loading screenshot…</p>
+        </div>
+      )}
+
+      {/* Screenshot */}
+      {screenshotUrl && !error ? (
+        <img
+          src={screenshotUrl}
+          alt="Current page screenshot"
+          className={`w-full object-cover object-top transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
+          style={{ minHeight: "500px", maxHeight: "700px" }}
+          onLoad={() => setLoaded(true)}
+          onError={() => setError(true)}
+        />
+      ) : (
+        // Iframe fallback
+        <div className="relative w-full" style={{ height: "600px" }}>
+          <iframe
+            src={siteUrl || ""}
+            className="w-full h-full border-0"
+            style={{
+              transform: "scale(0.75)",
+              transformOrigin: "top left",
+              width: "133.33%",
+              height: "133.33%",
+            }}
+            onLoad={() => setLoaded(true)}
+            title="Current website"
+          />
+          {!loaded && (
+            <div className="absolute inset-0 flex items-center justify-center bg-slate-100">
+              <div className="w-8 h-8 border-4 border-teal-400 border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Annotation overlays */}
+      {loaded && showAnnotations && annotations.map((ann, i) => (
+        <div
+          key={i}
+          className="absolute z-10"
+          style={{
+            top: ann.top,
+            [ann.side]: "12px",
+            maxWidth: "260px",
+          }}
+        >
+          <div
+            className="rounded-xl p-3 shadow-xl backdrop-blur-sm"
+            style={{
+              background: "rgba(15, 23, 42, 0.92)",
+              border: `1px solid ${impactColor[ann.impact || "Medium"]}50`,
+            }}
+          >
+            <div className="flex items-start gap-2">
+              <div
+                className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5"
+                style={{ background: impactColor[ann.impact || "Medium"] }}
+              >
+                {ann.priority}
+              </div>
+              <div>
+                <div
+                  className="text-xs font-bold uppercase tracking-wider mb-1"
+                  style={{ color: impactColor[ann.impact || "Medium"] }}
+                >
+                  {ann.impact} Impact
+                </div>
+                <p className="text-white text-xs font-semibold leading-snug mb-1">
+                  {ann.issue}
+                </p>
+                <p className="text-slate-300 text-xs leading-snug">
+                  Fix: {ann.fix}
+                </p>
+              </div>
+            </div>
+          </div>
+          {/* Arrow pointer */}
+          <div
+            className="absolute top-4"
+            style={{
+              [ann.side === "left" ? "right" : "left"]: "-8px",
+              width: 0,
+              height: 0,
+              borderTop: "6px solid transparent",
+              borderBottom: "6px solid transparent",
+              [ann.side === "left" ? "borderLeft" : "borderRight"]: "8px solid rgba(15,23,42,0.92)",
+            }}
+          />
+        </div>
+      ))}
+
+      {/* Fullscreen button */}
+      {loaded && (
+        <a
+          href={siteUrl || "#"}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute bottom-3 right-3 z-10 bg-black/60 hover:bg-black/80 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+        >
+          View Live Site →
+        </a>
+      )}
     </div>
-  `;
-}
-
-function injectHeroVisualSlot(
-  mockupHtml: string,
-  pexelsImageUrl?: string | null
-): string {
-  if (!mockupHtml) return "";
-  const visualHtml = buildHeroVisualHtml(pexelsImageUrl);
-
-  if (mockupHtml.includes("HERO_VISUAL_SLOT")) {
-    return mockupHtml.split("HERO_VISUAL_SLOT").join(visualHtml);
-  }
-
-  // DOM fallback
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(mockupHtml, "text/html");
-
-  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
-  const textNodesToReplace: Text[] = [];
-  let currentNode = walker.nextNode();
-  while (currentNode) {
-    const textNode = currentNode as Text;
-    if (textNode.textContent?.includes("HERO_VISUAL_SLOT")) {
-      textNodesToReplace.push(textNode);
-    }
-    currentNode = walker.nextNode();
-  }
-  textNodesToReplace.forEach((textNode) => {
-    const wrapper = doc.createElement("div");
-    wrapper.innerHTML = visualHtml;
-    textNode.parentNode?.replaceChild(wrapper.firstElementChild!, textNode);
-  });
-
-  Array.from(doc.body.querySelectorAll("*")).forEach((el) => {
-    if (
-      el.innerHTML?.includes("HERO_VISUAL_SLOT") ||
-      el.textContent?.includes("HERO_VISUAL_SLOT")
-    ) {
-      const wrapper = doc.createElement("div");
-      wrapper.innerHTML = visualHtml;
-      el.replaceWith(wrapper.firstElementChild!);
-    }
-  });
-
-  return doc.body.innerHTML;
+  );
 }
 
 export default function PaidReport() {
@@ -149,8 +255,6 @@ export default function PaidReport() {
   const [copySuccess, setCopySuccess] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadingKit, setDownloadingKit] = useState(false);
-  const [screenshotLoaded, setScreenshotLoaded] = useState(false);
-  const [screenshotError, setScreenshotError] = useState(false);
   const mockupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -190,15 +294,7 @@ export default function PaidReport() {
   const scores = auditData?.scores ?? {};
   const summary = auditData?.summary ?? {};
   const copyPack = auditData?.homepage_copy_pack ?? {};
-  const rawMockupHtml = auditData?.mockup_html ?? null;
-  const pexelsHeroImage = auditData?.pexels_hero_image ?? null;
-
-  // Use stored screenshot URL — instant load, no thum.io on page load
-  // Fall back to thum.io only if screenshot_url wasn't captured at audit time
-  const screenshotUrl = auditData?.screenshot_url ||
-    (purchase?.url
-      ? `https://image.thum.io/get/width/1400/crop/900/noanimate/${purchase.url}`
-      : null);
+  const mockupHtml = auditData?.mockup_html ?? null;
 
   const topFixes = useMemo(() => {
     const t3 = auditData?.top_3_fixes;
@@ -218,10 +314,11 @@ export default function PaidReport() {
     return avg <= 10 ? Math.round(avg * 10) : Math.round(avg);
   }, [auditData, scores]);
 
-  const mockupHtml = useMemo(() => {
-    if (!rawMockupHtml) return null;
-    return injectHeroVisualSlot(rawMockupHtml, pexelsHeroImage);
-  }, [rawMockupHtml, pexelsHeroImage]);
+  // Screenshot URL — stored version first, thum.io fallback
+  const screenshotUrl = auditData?.screenshot_url ||
+    (purchase?.url
+      ? `https://image.thum.io/get/width/1400/crop/900/noanimate/${purchase.url}`
+      : null);
 
   const handleCopyCode = async () => {
     if (!mockupHtml) return;
@@ -261,9 +358,9 @@ This kit contains your improved homepage assets generated by ConversionDoc.
 - homepage-mockup.html
 - homepage-mockup.png
 
-## How to use this
+## How to use
 1. Review the copy pack for your updated homepage messaging.
-2. Open homepage-mockup.html in your browser to preview the improved homepage.
+2. Open homepage-mockup.html in your browser to preview the improved direction.
 3. Share with your developer or designer.
 4. Apply the highest-impact changes first.
 
@@ -324,12 +421,10 @@ ${summary.executive_summary || "N/A"}
 
 ## Top 3 Priority Fixes
 ${(topFixes || [])
-  .map(
-    (fix) => `### Priority ${fix.priority || "-"}
+  .map((fix) => `### Priority ${fix.priority || "-"}
 Issue: ${fix.issue || "N/A"}
 Impact: ${fix.impact || "N/A"}
-Fix: ${fix.fix || "N/A"}`
-  )
+Fix: ${fix.fix || "N/A"}`)
   .join("\n\n")}
 `;
   };
@@ -339,7 +434,7 @@ Fix: ${fix.fix || "N/A"}`
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Homepage Mockup</title>
+  <title>Homepage Mockup — ConversionDoc</title>
 </head>
 <body style="margin:0;padding:0;background:#f8fafc;">
 ${mockupHtml || ""}
@@ -613,137 +708,104 @@ ${mockupHtml || ""}
           </div>
         </section>
 
-        {/* Homepage Mockup */}
-        {mockupHtml && (
-          <section className="rounded-[28px] border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <div className="bg-[linear-gradient(135deg,#020617,#0f172a)] px-6 py-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-400">Visual Deliverable</p>
-              <h2 className="mt-2 text-2xl font-bold text-white">🎨 Your Homepage Mockup</h2>
-              <p className="text-slate-400 text-sm mt-2">
-                Compare your current homepage with a more conversion-focused direction.
-              </p>
+        {/* Homepage Mockup — Before (Annotated) + After (Premium) */}
+        <section className="rounded-[28px] border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="bg-[linear-gradient(135deg,#020617,#0f172a)] px-6 py-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-400">Visual Deliverable</p>
+            <h2 className="mt-2 text-2xl font-bold text-white">🎨 Your Homepage Mockup</h2>
+            <p className="text-slate-400 text-sm mt-2">
+              See exactly what's wrong with your current site — and what it could look like improved.
+            </p>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex border-b border-slate-200">
+            <button
+              onClick={() => setActiveTab("before")}
+              className={`flex-1 py-4 text-sm font-semibold transition-colors ${
+                activeTab === "before"
+                  ? "bg-white text-red-500 border-b-2 border-red-500"
+                  : "bg-slate-50 text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              ❌ Before — Annotated Issues
+            </button>
+            <button
+              onClick={() => setActiveTab("after")}
+              className={`flex-1 py-4 text-sm font-semibold transition-colors ${
+                activeTab === "after"
+                  ? "bg-white text-teal-600 border-b-2 border-teal-500"
+                  : "bg-slate-50 text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              ✅ After — Improved Direction
+            </button>
+          </div>
+
+          {/* Before — annotated screenshot */}
+          {activeTab === "before" && (
+            <AnnotatedBefore
+              screenshotUrl={screenshotUrl}
+              siteUrl={purchase.url || null}
+              topFixes={topFixes}
+            />
+          )}
+
+          {/* After — premium template */}
+          {activeTab === "after" && mockupHtml && (
+            <div className="relative bg-white">
+              <div
+                ref={mockupRef}
+                className="w-full overflow-hidden"
+                dangerouslySetInnerHTML={{ __html: mockupHtml }}
+              />
+              <button
+                onClick={() => setFullscreen("after")}
+                className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+              >
+                ⛶ Fullscreen
+              </button>
             </div>
+          )}
 
-            <div className="flex border-b border-slate-200">
-              <button
-                onClick={() => setActiveTab("before")}
-                className={`flex-1 py-4 text-sm font-semibold transition-colors ${
-                  activeTab === "before"
-                    ? "bg-white text-red-500 border-b-2 border-red-500"
-                    : "bg-slate-50 text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                ❌ Before (Current Site)
-              </button>
-              <button
-                onClick={() => setActiveTab("after")}
-                className={`flex-1 py-4 text-sm font-semibold transition-colors ${
-                  activeTab === "after"
-                    ? "bg-white text-teal-600 border-b-2 border-teal-500"
-                    : "bg-slate-50 text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                ✅ After (ConversionDoc Fix)
-              </button>
-            </div>
-
-            <div className="relative">
-              {/* Before */}
-              {activeTab === "before" && (
-                <div className="relative bg-slate-100 min-h-[460px]">
-                  {!screenshotLoaded && !screenshotError && screenshotUrl && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                      <div className="w-8 h-8 border-4 border-teal-400 border-t-transparent rounded-full animate-spin" />
-                      <p className="text-slate-400 text-sm">Loading screenshot…</p>
-                    </div>
-                  )}
-                  {screenshotUrl && !screenshotError ? (
-                    <img
-                      src={screenshotUrl}
-                      alt="Current page screenshot"
-                      className={`w-full object-cover object-top transition-opacity duration-500 ${
-                        screenshotLoaded ? "opacity-100" : "opacity-0"
-                      }`}
-                      style={{ minHeight: "460px" }}
-                      onLoad={() => setScreenshotLoaded(true)}
-                      onError={() => setScreenshotError(true)}
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center min-h-[460px] text-center p-8">
-                      <p className="text-slate-400 font-medium text-lg mb-2">Screenshot unavailable</p>
-                      <a
-                        href={purchase.url ?? "#"}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-teal-600 text-sm underline"
-                      >
-                        View current site →
-                      </a>
-                    </div>
-                  )}
-                  {screenshotLoaded && (
-                    <button
-                      onClick={() => setFullscreen("before")}
-                      className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
-                    >
-                      ⛶ Fullscreen
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* After */}
-              {activeTab === "after" && (
-                <div className="relative bg-white">
-                  <div
-                    ref={mockupRef}
-                    className="w-full overflow-hidden"
-                    dangerouslySetInnerHTML={{ __html: mockupHtml }}
-                  />
-                  <button
-                    onClick={() => setFullscreen("after")}
-                    className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
-                  >
-                    ⛶ Fullscreen
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-wrap gap-3">
-              <button
-                onClick={handleCopyCode}
-                className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-3 transition-colors text-sm shadow-sm"
-              >
-                {copySuccess ? "✓ Copied!" : "Copy HTML"}
-              </button>
-              <button
-                onClick={handleDownloadPng}
-                disabled={downloading}
-                className="rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm disabled:opacity-50"
-              >
-                {downloading ? "Generating…" : "Download PNG"}
-              </button>
-              <button
-                onClick={handleDownloadKit}
-                disabled={downloadingKit}
-                className="rounded-xl bg-slate-900 hover:bg-black text-white font-semibold px-5 py-3 transition-colors text-sm shadow-sm disabled:opacity-50"
-              >
-                {downloadingKit ? "Building Kit…" : "Download Homepage Kit (.zip)"}
-              </button>
-              {purchase.url && (
-                <a
-                  href={purchase.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm"
+          {/* Action buttons */}
+          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-wrap gap-3">
+            {mockupHtml && (
+              <>
+                <button
+                  onClick={handleCopyCode}
+                  className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-3 transition-colors text-sm shadow-sm"
                 >
-                  View Current Site →
-                </a>
-              )}
-            </div>
-          </section>
-        )}
+                  {copySuccess ? "✓ Copied!" : "Copy HTML"}
+                </button>
+                <button
+                  onClick={handleDownloadPng}
+                  disabled={downloading}
+                  className="rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm disabled:opacity-50"
+                >
+                  {downloading ? "Generating…" : "Download PNG"}
+                </button>
+                <button
+                  onClick={handleDownloadKit}
+                  disabled={downloadingKit}
+                  className="rounded-xl bg-slate-900 hover:bg-black text-white font-semibold px-5 py-3 transition-colors text-sm shadow-sm disabled:opacity-50"
+                >
+                  {downloadingKit ? "Building Kit…" : "Download Homepage Kit (.zip)"}
+                </button>
+              </>
+            )}
+            {purchase.url && (
+              <a
+                href={purchase.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm"
+              >
+                View Current Site →
+              </a>
+            )}
+          </div>
+        </section>
 
         {/* Next Step */}
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
@@ -753,8 +815,7 @@ ${mockupHtml || ""}
           </h2>
           <p className="text-slate-600 mb-6 max-w-3xl leading-7">
             Join the Conversion Dashboard to rescan pages, track changes, and monitor improvements
-            over time. If you'd rather have help implementing these recommendations, get in touch
-            about implementation support.
+            over time. If you'd rather have help implementing these recommendations, get in touch.
           </p>
           <div className="flex flex-wrap gap-3">
             <a
@@ -774,8 +835,8 @@ ${mockupHtml || ""}
 
       </div>
 
-      {/* Fullscreen */}
-      {fullscreen && (
+      {/* Fullscreen overlay — After only */}
+      {fullscreen === "after" && mockupHtml && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex flex-col"
           onClick={() => setFullscreen(null)}
@@ -784,9 +845,7 @@ ${mockupHtml || ""}
             className="flex items-center justify-between px-6 py-4 bg-slate-950 shrink-0"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-white font-semibold">
-              {fullscreen === "before" ? "❌ Current Site" : "✅ ConversionDoc Fix"}
-            </p>
+            <p className="text-white font-semibold">✅ Improved Direction</p>
             <button
               onClick={() => setFullscreen(null)}
               className="text-slate-400 hover:text-white text-2xl leading-none"
@@ -798,22 +857,7 @@ ${mockupHtml || ""}
             className="flex-1 overflow-auto bg-white"
             onClick={(e) => e.stopPropagation()}
           >
-            {fullscreen === "before" ? (
-              screenshotUrl && !screenshotError ? (
-                <img
-                  src={screenshotUrl}
-                  alt="Current page"
-                  className="w-full"
-                  onError={() => setScreenshotError(true)}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full min-h-[400px]">
-                  <p className="text-slate-400">Screenshot unavailable</p>
-                </div>
-              )
-            ) : (
-              <div dangerouslySetInnerHTML={{ __html: mockupHtml || "" }} />
-            )}
+            <div dangerouslySetInnerHTML={{ __html: mockupHtml }} />
           </div>
         </div>
       )}
