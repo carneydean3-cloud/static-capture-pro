@@ -37,24 +37,21 @@ const scoreColor = (score: number) => {
   return "text-score-red";
 };
 
-const impactStyles: Record<string, { bg: string; text: string; border: string; dot: string }> = {
+const impactConfig: Record<string, { color: string; bg: string; label: string }> = {
   High: {
-    bg: "bg-red-500/10",
-    text: "text-red-400",
-    border: "border-red-500/30",
-    dot: "bg-red-500",
+    color: "#ef4444",
+    bg: "rgba(239,68,68,0.12)",
+    label: "High Impact",
   },
   Medium: {
-    bg: "bg-amber-500/10",
-    text: "text-amber-400",
-    border: "border-amber-500/30",
-    dot: "bg-amber-500",
+    color: "#f59e0b",
+    bg: "rgba(245,158,11,0.12)",
+    label: "Medium Impact",
   },
   Low: {
-    bg: "bg-slate-500/10",
-    text: "text-slate-400",
-    border: "border-slate-500/30",
-    dot: "bg-slate-500",
+    color: "#94a3b8",
+    bg: "rgba(148,163,184,0.12)",
+    label: "Low Impact",
   },
 };
 
@@ -90,11 +87,9 @@ const ResultsPreview = () => {
   const handleCheckout = async () => {
     setCheckoutLoading(true);
     setCheckoutError(null);
-
     try {
       const savedEmail = localStorage.getItem("conversiondoc_user_email") || "";
       const checkoutEmail = userEmail || savedEmail || "";
-
       if (!checkoutEmail) throw new Error("No email provided for checkout");
 
       const screenshotUrl = localStorage.getItem("conversiondoc_screenshot_url") ||
@@ -111,10 +106,7 @@ const ResultsPreview = () => {
           body: JSON.stringify({
             userEmail: checkoutEmail,
             url: url || "",
-            auditResult: {
-              ...result,
-              screenshot_url: screenshotUrl,
-            },
+            auditResult: { ...result, screenshot_url: screenshotUrl },
           }),
         }
       );
@@ -126,7 +118,6 @@ const ResultsPreview = () => {
 
       const data = await res.json();
       if (!data.url) throw new Error("No checkout URL returned");
-
       localStorage.removeItem("conversiondoc_screenshot_url");
       window.location.href = data.url;
     } catch (err: any) {
@@ -166,7 +157,7 @@ const ResultsPreview = () => {
             highlight ? "ring-2 ring-primary shadow-[0_0_40px_rgba(20,184,166,0.3)]" : ""
           }`}
         >
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-score-amber to-score-red"></div>
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-score-amber to-score-red" />
 
           <div className="w-full flex items-center justify-between mb-10">
             <h3 className="text-xl font-bold">Conversion Radar</h3>
@@ -234,58 +225,94 @@ const ResultsPreview = () => {
             </div>
           </div>
 
-          {/* TOP 3 FIXES — improved colours */}
+          {/* TOP 3 FIXES — fully inline styles to bypass glass-card overrides */}
           {hasRealResults && result?.top_3_fixes && (
-            <div className="w-full space-y-3 mb-8">
+            <div className="w-full mb-8">
               <h4 className="text-lg font-bold text-foreground mb-4">Top 3 Priority Fixes</h4>
-              {result.top_3_fixes.map((fix: any, i: number) => {
-                const impact = fix.impact || "Medium";
-                const style = impactStyles[impact] || impactStyles["Medium"];
-                return (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.15 }}
-                    className={`rounded-2xl border p-5 ${style.bg} ${style.border}`}
-                    style={{ borderLeftWidth: 4, borderLeftColor: style.dot.replace("bg-", "") }}
-                  >
-                    <div className="flex items-start gap-4">
-                      {/* Priority badge */}
-                      <div
-                        className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-bold text-white ${style.dot}`}
-                      >
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {result.top_3_fixes.map((fix: any, i: number) => {
+                  const impact = fix.impact || "Medium";
+                  const cfg = impactConfig[impact] || impactConfig["Medium"];
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.15 }}
+                      style={{
+                        background: cfg.bg,
+                        border: `1px solid ${cfg.color}40`,
+                        borderLeft: `4px solid ${cfg.color}`,
+                        borderRadius: 16,
+                        padding: "16px 20px",
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 14,
+                      }}
+                    >
+                      {/* Priority circle */}
+                      <div style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: "50%",
+                        background: cfg.color,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        fontWeight: 700,
+                        fontSize: 14,
+                        color: "#fff",
+                      }}>
                         {fix.priority ?? i + 1}
                       </div>
 
-                      <div className="flex-1 min-w-0">
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         {/* Impact pill */}
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${style.bg} ${style.text} border ${style.border}`}>
-                            {impact} Impact
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                          <span style={{
+                            display: "inline-block",
+                            background: cfg.color,
+                            color: "#fff",
+                            fontSize: 10,
+                            fontWeight: 700,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.08em",
+                            padding: "2px 8px",
+                            borderRadius: 999,
+                          }}>
+                            {cfg.label}
                           </span>
                           {fix.page_region && (
-                            <span className="text-[10px] text-caption capitalize">
+                            <span style={{ color: "#94a3b8", fontSize: 10 }}>
                               · {fix.page_region.replace("_", " ")}
                             </span>
                           )}
                         </div>
 
                         {/* Issue */}
-                        <p className="font-semibold text-foreground text-sm mb-2 leading-snug">
+                        <p style={{
+                          color: "#f1f5f9",
+                          fontSize: 14,
+                          fontWeight: 600,
+                          lineHeight: 1.4,
+                          margin: "0 0 8px 0",
+                        }}>
                           {fix.issue}
                         </p>
 
                         {/* Fix */}
-                        <div className="flex items-start gap-1.5">
-                          <span className="text-primary text-xs font-bold shrink-0 mt-0.5">→</span>
-                          <p className="text-xs text-body leading-relaxed">{fix.fix}</p>
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                          <span style={{ color: "#2dd4bf", fontWeight: 700, fontSize: 12, flexShrink: 0, marginTop: 1 }}>→</span>
+                          <p style={{ color: "#94a3b8", fontSize: 13, lineHeight: 1.5, margin: 0 }}>
+                            {fix.fix}
+                          </p>
                         </div>
                       </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
+                    </motion.div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -297,11 +324,9 @@ const ResultsPreview = () => {
                 <p className="text-sm text-body mb-4 text-center max-w-xs">
                   Get detailed issue + fix for every pillar, rewritten copy, and your improved homepage mockup.
                 </p>
-
                 {checkoutError && (
                   <p className="text-xs text-score-red mb-3">{checkoutError}</p>
                 )}
-
                 <button
                   type="button"
                   onClick={handleCheckout}
