@@ -86,147 +86,6 @@ const impactBg: Record<string, string> = {
   Low: "rgba(107,114,128,0.08)",
 };
 
-function BeforeTab({
-  screenshotUrl,
-  siteUrl,
-  topFixes,
-}: {
-  screenshotUrl: string | null;
-  siteUrl: string | null;
-  topFixes: TopFix[] | null;
-}) {
-  const [loaded, setLoaded] = useState(false);
-  const [errored, setErrored] = useState(false);
-
-  return (
-    <div>
-      {/* Screenshot */}
-      {screenshotUrl && (
-        <div style={{ background: "#0f172a", position: "relative" }}>
-          {!loaded && !errored && (
-            <div style={{
-              minHeight: 400,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 12,
-            }}>
-              <div style={{
-                width: 36, height: 36,
-                borderRadius: "50%",
-                border: "4px solid #2dd4bf",
-                borderTopColor: "transparent",
-                animation: "cdSpin 0.8s linear infinite",
-              }} />
-              <p style={{ color: "#94a3b8", fontSize: 14, fontWeight: 500, margin: 0 }}>
-                Loading screenshot…
-              </p>
-            </div>
-          )}
-
-          <div style={{
-            position: "relative",
-            width: "100%",
-            visibility: loaded ? "visible" : "hidden",
-            minHeight: loaded ? undefined : 0,
-          }}>
-            <img
-              src={screenshotUrl}
-              alt="Current site screenshot"
-              style={{
-                width: "100%",
-                display: "block",
-                maxHeight: 600,
-                objectFit: "cover",
-                objectPosition: "top",
-              }}
-              onLoad={() => setLoaded(true)}
-              onError={() => setErrored(true)}
-            />
-            {siteUrl && (
-              <a
-                href={siteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  position: "absolute",
-                  bottom: 12, right: 12,
-                  background: "rgba(0,0,0,0.7)",
-                  color: "#fff",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  padding: "6px 12px",
-                  borderRadius: 8,
-                  textDecoration: "none",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                }}
-              >
-                View Live Site →
-              </a>
-            )}
-          </div>
-
-          <style>{`@keyframes cdSpin { to { transform: rotate(360deg); } }`}</style>
-        </div>
-      )}
-
-      {/* Issue cards below screenshot */}
-      {topFixes && topFixes.length > 0 && (
-        <div className="p-6 bg-slate-50 space-y-3">
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">
-            Issues Identified on Current Site
-          </p>
-          {topFixes.map((fix, i) => {
-            const color = impactColor[fix.impact || "Medium"] || "#f59e0b";
-            const bg = impactBg[fix.impact || "Medium"] || impactBg["Medium"];
-            return (
-              <div
-                key={i}
-                className="rounded-2xl border bg-white p-5 flex gap-4"
-                style={{
-                  borderColor: `${color}30`,
-                  borderLeftWidth: 4,
-                  borderLeftColor: color,
-                }}
-              >
-                <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
-                  style={{ background: color }}
-                >
-                  {fix.priority ?? i + 1}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span
-                      className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border"
-                      style={{ color, background: bg, borderColor: `${color}30` }}
-                    >
-                      {fix.impact} Impact
-                    </span>
-                    {fix.page_region && (
-                      <span className="text-[10px] text-slate-400 capitalize">
-                        · {fix.page_region.replace("_", " ")}
-                      </span>
-                    )}
-                  </div>
-                  <p className="font-semibold text-slate-900 text-sm mb-1 leading-snug">
-                    {fix.issue}
-                  </p>
-                  <div className="flex items-start gap-1.5">
-                    <span className="text-teal-500 text-xs font-bold shrink-0 mt-0.5">→</span>
-                    <p className="text-xs text-slate-600 leading-relaxed">{fix.fix}</p>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function PaidReport() {
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session_id");
@@ -235,11 +94,16 @@ export default function PaidReport() {
   const [error, setError] = useState("");
   const [purchase, setPurchase] = useState<PurchaseRow | null>(null);
   const [activeTab, setActiveTab] = useState<"before" | "after">("before");
-  const [fullscreen, setFullscreen] = useState<boolean>(false);
+  const [fullscreen, setFullscreen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadingKit, setDownloadingKit] = useState(false);
-  const [screenshotPreloaded, setScreenshotPreloaded] = useState(false);
+
+  // Screenshot state lives HERE in parent — survives tab switches
+  const [screenshotLoaded, setScreenshotLoaded] = useState(false);
+  const [screenshotErrored, setScreenshotErrored] = useState(false);
+  const [screenshotDataUrl, setScreenshotDataUrl] = useState<string | null>(null);
+
   const mockupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -305,14 +169,41 @@ export default function PaidReport() {
       ? `https://image.thum.io/get/width/1400/crop/900/noanimate/${purchase.url}`
       : null;
 
-  // Preload screenshot in background
+  // Preload screenshot and convert to data URL so it persists forever
   useEffect(() => {
-    if (!screenshotUrl || screenshotPreloaded) return;
+    if (!screenshotUrl || screenshotLoaded || screenshotErrored) return;
+
     const img = new Image();
-    img.onload = () => setScreenshotPreloaded(true);
-    img.onerror = () => setScreenshotPreloaded(true);
+    img.crossOrigin = "anonymous";
+
+    img.onload = () => {
+      // Try to cache as data URL
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          setScreenshotDataUrl(dataUrl);
+        }
+      } catch {
+        // CORS blocked canvas — just use the original URL
+        setScreenshotDataUrl(screenshotUrl);
+      }
+      setScreenshotLoaded(true);
+    };
+
+    img.onerror = () => {
+      setScreenshotErrored(true);
+    };
+
     img.src = screenshotUrl;
   }, [screenshotUrl]);
+
+  // The actual src to use — cached data URL if available, otherwise original
+  const displayScreenshotUrl = screenshotDataUrl || screenshotUrl;
 
   const handleCopyCode = async () => {
     if (!mockupHtml) return;
@@ -492,8 +383,8 @@ ${mockupHtml || ""}
   return (
     <div className="min-h-screen bg-[#f5f8fc] px-6 py-16">
 
-      {/* Background preload indicator */}
-      {screenshotUrl && !screenshotPreloaded && (
+      {/* Loading indicator */}
+      {screenshotUrl && !screenshotLoaded && !screenshotErrored && (
         <div style={{
           position: "fixed",
           bottom: 20,
@@ -519,7 +410,7 @@ ${mockupHtml || ""}
             animation: "cdSpin 0.8s linear infinite",
             flexShrink: 0,
           }} />
-          Preparing your Before screenshot…
+          Preparing screenshot…
           <style>{`@keyframes cdSpin { to { transform: rotate(360deg); } }`}</style>
         </div>
       )}
@@ -595,35 +486,18 @@ ${mockupHtml || ""}
                 const color = impactColor[x.impact || "Medium"] || "#f59e0b";
                 const bg = impactBg[x.impact || "Medium"] || impactBg["Medium"];
                 return (
-                  <div
-                    key={idx}
-                    className="flex gap-4 rounded-2xl border p-5"
-                    style={{
-                      borderColor: `${color}25`,
-                      borderLeftWidth: 4,
-                      borderLeftColor: color,
-                      background: bg,
-                    }}
-                  >
-                    <div
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white text-sm font-bold shadow-sm"
-                      style={{ background: color }}
-                    >
+                  <div key={idx} className="flex gap-4 rounded-2xl border p-5"
+                    style={{ borderColor: `${color}25`, borderLeftWidth: 4, borderLeftColor: color, background: bg }}>
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white text-sm font-bold shadow-sm"
+                      style={{ background: color }}>
                       {x.priority ?? idx + 1}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <span
-                          className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border"
-                          style={{ color, background: `${color}15`, borderColor: `${color}30` }}
-                        >
+                        <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border"
+                          style={{ color, background: `${color}15`, borderColor: `${color}30` }}>
                           {x.impact ?? "—"} Impact
                         </span>
-                        {x.page_region && (
-                          <span className="text-[10px] text-slate-400 capitalize">
-                            · {x.page_region.replace("_", " ")}
-                          </span>
-                        )}
                       </div>
                       {x.issue && <p className="font-semibold text-slate-900 mb-1">{x.issue}</p>}
                       <div className="flex items-start gap-1.5">
@@ -733,9 +607,7 @@ ${mockupHtml || ""}
           <div className="bg-[linear-gradient(135deg,#020617,#0f172a)] px-6 py-5">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-400">Visual Deliverable</p>
             <h2 className="mt-2 text-2xl font-bold text-white">🎨 Your Homepage Mockup</h2>
-            <p className="text-slate-400 text-sm mt-2">
-              Compare your current site with a more conversion-focused direction.
-            </p>
+            <p className="text-slate-400 text-sm mt-2">Compare your current site with a more conversion-focused direction.</p>
           </div>
 
           <div className="flex border-b border-slate-200">
@@ -757,15 +629,111 @@ ${mockupHtml || ""}
             </button>
           </div>
 
-          {/* KEY FIX: Both tabs always mounted, just hidden with CSS */}
+          {/* BEFORE TAB */}
           <div style={{ display: activeTab === "before" ? "block" : "none" }}>
-            <BeforeTab
-              screenshotUrl={screenshotUrl}
-              siteUrl={purchase.url || null}
-              topFixes={topFixes}
-            />
+            <div>
+              {/* Screenshot section */}
+              {displayScreenshotUrl && (
+                <div style={{ background: "#0f172a", position: "relative" }}>
+                  {/* Loading spinner — only if not yet loaded */}
+                  {!screenshotLoaded && !screenshotErrored && (
+                    <div style={{
+                      minHeight: 400,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 12,
+                    }}>
+                      <div style={{
+                        width: 36, height: 36,
+                        borderRadius: "50%",
+                        border: "4px solid #2dd4bf",
+                        borderTopColor: "transparent",
+                        animation: "cdSpin 0.8s linear infinite",
+                      }} />
+                      <p style={{ color: "#94a3b8", fontSize: 14, fontWeight: 500, margin: 0 }}>
+                        Loading screenshot…
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Screenshot image — shown when loaded */}
+                  {screenshotLoaded && (
+                    <div style={{ position: "relative", width: "100%" }}>
+                      <img
+                        src={displayScreenshotUrl}
+                        alt="Current site screenshot"
+                        style={{
+                          width: "100%",
+                          display: "block",
+                          maxHeight: 600,
+                          objectFit: "cover",
+                          objectPosition: "top",
+                        }}
+                      />
+                      {purchase.url && (
+                        <a href={purchase.url} target="_blank" rel="noopener noreferrer"
+                          style={{
+                            position: "absolute",
+                            bottom: 12, right: 12,
+                            background: "rgba(0,0,0,0.7)",
+                            color: "#fff",
+                            fontSize: 11,
+                            fontWeight: 600,
+                            padding: "6px 12px",
+                            borderRadius: 8,
+                            textDecoration: "none",
+                            border: "1px solid rgba(255,255,255,0.15)",
+                          }}>
+                          View Live Site →
+                        </a>
+                      )}
+                    </div>
+                  )}
+
+                  <style>{`@keyframes cdSpin { to { transform: rotate(360deg); } }`}</style>
+                </div>
+              )}
+
+              {/* Issue cards */}
+              {topFixes && topFixes.length > 0 && (
+                <div className="p-6 bg-slate-50 space-y-3">
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">
+                    Issues Identified on Current Site
+                  </p>
+                  {topFixes.map((fix, i) => {
+                    const color = impactColor[fix.impact || "Medium"] || "#f59e0b";
+                    const bg = impactBg[fix.impact || "Medium"] || impactBg["Medium"];
+                    return (
+                      <div key={i} className="rounded-2xl border bg-white p-5 flex gap-4"
+                        style={{ borderColor: `${color}30`, borderLeftWidth: 4, borderLeftColor: color }}>
+                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
+                          style={{ background: color }}>
+                          {fix.priority ?? i + 1}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border"
+                              style={{ color, background: bg, borderColor: `${color}30` }}>
+                              {fix.impact} Impact
+                            </span>
+                          </div>
+                          <p className="font-semibold text-slate-900 text-sm mb-1 leading-snug">{fix.issue}</p>
+                          <div className="flex items-start gap-1.5">
+                            <span className="text-teal-500 text-xs font-bold shrink-0 mt-0.5">→</span>
+                            <p className="text-xs text-slate-600 leading-relaxed">{fix.fix}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
+          {/* AFTER TAB */}
           <div style={{ display: activeTab === "after" ? "block" : "none" }}>
             {mockupHtml ? (
               <div className="relative bg-white">
