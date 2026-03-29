@@ -75,11 +75,11 @@ const scoreColor = (score?: number) => {
 };
 
 const regionToPosition: Record<string, { top: string; side: "left" | "right" }> = {
-  hero: { top: "8%", side: "left" },
-  nav: { top: "2%", side: "right" },
-  cta: { top: "42%", side: "left" },
-  trust: { top: "65%", side: "right" },
-  below_fold: { top: "78%", side: "left" },
+  hero: { top: "15%", side: "left" },
+  nav: { top: "3%", side: "right" },
+  cta: { top: "45%", side: "left" },
+  trust: { top: "62%", side: "right" },
+  below_fold: { top: "75%", side: "left" },
 };
 
 const impactColor: Record<string, string> = {
@@ -97,8 +97,7 @@ function AnnotatedBefore({
   siteUrl: string | null;
   topFixes: TopFix[] | null;
 }) {
-  const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState(false);
+  const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
   const [showAnnotations, setShowAnnotations] = useState(true);
 
   const annotations = useMemo(() => {
@@ -110,28 +109,19 @@ function AnnotatedBefore({
     });
   }, [topFixes]);
 
-  // Fallback when screenshot unavailable
-  if (error || !screenshotUrl) {
+  // No screenshot available at all
+  if (!screenshotUrl) {
     return (
       <div className="bg-slate-50 p-6 min-h-[400px]">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
-              <span className="text-slate-400 text-lg">🌐</span>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-700">Current Website</p>
-              <p className="text-xs text-slate-400 truncate max-w-[240px]">{siteUrl || "N/A"}</p>
-            </div>
-          </div>
-          {siteUrl && (
-            <a href={siteUrl} target="_blank" rel="noopener noreferrer"
-              className="rounded-lg bg-slate-900 hover:bg-black text-white text-xs font-semibold px-4 py-2 transition-colors">
-              View Current Site →
-            </a>
-          )}
-        </div>
+        <FallbackAnnotations annotations={annotations} siteUrl={siteUrl} />
+      </div>
+    );
+  }
 
+  // Screenshot errored
+  if (status === "error") {
+    return (
+      <div className="bg-slate-50 p-6 min-h-[400px]">
         <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 mb-6 flex items-start gap-3">
           <span className="text-amber-500 text-lg shrink-0">⚠️</span>
           <div>
@@ -141,166 +131,291 @@ function AnnotatedBefore({
             </p>
           </div>
         </div>
-
-        {annotations.length > 0 && (
-          <div className="space-y-4">
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">
-              Issues Identified on Current Site
-            </p>
-            {annotations.map((ann, i) => (
-              <div key={i} className="rounded-2xl border bg-white p-5 flex gap-4"
-                style={{ borderColor: `${impactColor[ann.impact || "Medium"]}30` }}>
-                <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
-                  style={{ background: impactColor[ann.impact || "Medium"] }}>
-                  {ann.priority}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider"
-                      style={{ color: impactColor[ann.impact || "Medium"] }}>
-                      {ann.impact} Impact
-                    </span>
-                    {ann.page_region && (
-                      <span className="text-xs text-slate-400 capitalize">
-                        · {ann.page_region.replace("_", " ")} area
-                      </span>
-                    )}
-                  </div>
-                  <p className="font-semibold text-slate-900 mb-1">{ann.issue}</p>
-                  <p className="text-sm text-slate-600">
-                    <span className="font-medium text-teal-600">Fix: </span>{ann.fix}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <FallbackAnnotations annotations={annotations} siteUrl={siteUrl} />
       </div>
     );
   }
 
   return (
-    <div className="bg-slate-100">
+    <div className="bg-slate-900">
 
-      {/* Loading state */}
-      {!loaded && (
-        <div className="flex flex-col items-center justify-center gap-3 bg-slate-100 py-24">
+      {/* Loading spinner — shown until image loads */}
+      {status === "loading" && (
+        <div className="flex flex-col items-center justify-center gap-3 py-20">
           <div className="w-8 h-8 border-4 border-teal-400 border-t-transparent rounded-full animate-spin" />
           <p className="text-slate-400 text-sm font-medium">Loading screenshot…</p>
         </div>
       )}
 
-      {/* Screenshot + annotations wrapper */}
+      {/* Wrapper — always in DOM once we have a URL, opacity controlled */}
       <div
-        className="relative w-full"
-        style={{ display: loaded ? "block" : "none" }}
+        style={{
+          position: "relative",
+          width: "100%",
+          opacity: status === "loaded" ? 1 : 0,
+          transition: "opacity 0.4s ease",
+          minHeight: status === "loaded" ? undefined : 0,
+          overflow: "hidden",
+        }}
       >
+        {/* Screenshot */}
         <img
           src={screenshotUrl}
           alt="Current page screenshot"
-          className="w-full object-cover object-top"
           style={{
+            width: "100%",
             display: "block",
-            minHeight: "500px",
-            maxHeight: "700px",
+            maxHeight: "680px",
+            objectFit: "cover",
+            objectPosition: "top",
           }}
-          onLoad={() => setLoaded(true)}
-          onError={() => setError(true)}
+          onLoad={() => setStatus("loaded")}
+          onError={() => setStatus("error")}
         />
 
-        {/* Dark overlay to make annotations readable */}
-        {showAnnotations && (
+        {/* Dark overlay */}
+        {status === "loaded" && showAnnotations && (
           <div
-            className="absolute inset-0"
-            style={{ background: "rgba(0,0,0,0.25)" }}
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "rgba(0,0,0,0.3)",
+              pointerEvents: "none",
+            }}
           />
         )}
 
         {/* Toggle button */}
-        {topFixes && (
+        {status === "loaded" && (
           <button
-            onClick={() => setShowAnnotations(!showAnnotations)}
-            className="absolute top-3 right-3 z-20 bg-slate-900/80 hover:bg-slate-900 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors backdrop-blur-sm"
+            onClick={() => setShowAnnotations((v) => !v)}
+            style={{
+              position: "absolute",
+              top: 12,
+              right: 12,
+              zIndex: 30,
+              background: "rgba(15,23,42,0.85)",
+              color: "#fff",
+              fontSize: 12,
+              fontWeight: 600,
+              padding: "6px 12px",
+              borderRadius: 8,
+              border: "none",
+              cursor: "pointer",
+            }}
           >
             {showAnnotations ? "Hide Annotations" : "Show Annotations"}
           </button>
         )}
 
-        {/* Annotations */}
-        {showAnnotations && annotations.map((ann, i) => (
-          <div
-            key={i}
-            className="absolute z-10"
-            style={{
-              top: ann.top,
-              [ann.side]: "16px",
-              maxWidth: "240px",
-            }}
-          >
-            <div className="flex items-start gap-2">
+        {/* Annotation callouts */}
+        {status === "loaded" && showAnnotations && annotations.map((ann, i) => {
+          const color = impactColor[ann.impact || "Medium"] || "#f59e0b";
+          return (
+            <div
+              key={i}
+              style={{
+                position: "absolute",
+                top: ann.top,
+                [ann.side]: 16,
+                zIndex: 20,
+                maxWidth: 240,
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 8,
+              }}
+            >
               {/* Pulsing dot */}
-              <div className="relative mt-1 shrink-0">
+              <div style={{ position: "relative", flexShrink: 0, marginTop: 4 }}>
                 <div
-                  className="w-4 h-4 rounded-full animate-ping absolute"
                   style={{
-                    background: impactColor[ann.impact || "Medium"],
-                    opacity: 0.6,
+                    position: "absolute",
+                    width: 14,
+                    height: 14,
+                    borderRadius: "50%",
+                    background: color,
+                    opacity: 0.5,
+                    animation: "ping 1.5s cubic-bezier(0,0,0.2,1) infinite",
                   }}
                 />
                 <div
-                  className="w-4 h-4 rounded-full relative"
-                  style={{ background: impactColor[ann.impact || "Medium"] }}
+                  style={{
+                    position: "relative",
+                    width: 14,
+                    height: 14,
+                    borderRadius: "50%",
+                    background: color,
+                  }}
                 />
               </div>
 
-              {/* Callout box */}
+              {/* Callout */}
               <div
-                className="rounded-xl p-3 shadow-2xl"
                 style={{
-                  background: "rgba(2, 6, 23, 0.92)",
-                  border: `1.5px solid ${impactColor[ann.impact || "Medium"]}`,
-                  backdropFilter: "blur(12px)",
-                  minWidth: "180px",
+                  background: "rgba(2,6,23,0.93)",
+                  border: `1.5px solid ${color}`,
+                  borderRadius: 12,
+                  padding: "10px 12px",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                  backdropFilter: "blur(10px)",
+                  minWidth: 170,
                 }}
               >
-                <div className="flex items-center gap-2 mb-1.5">
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
                   <div
-                    className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
-                    style={{ background: impactColor[ann.impact || "Medium"] }}
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: "50%",
+                      background: color,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
                   >
-                    {ann.priority}
+                    <span style={{ color: "#fff", fontSize: 10, fontWeight: 700 }}>
+                      {ann.priority ?? i + 1}
+                    </span>
                   </div>
+                  <span
+                    style={{
+                      color,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                    }}
+                  >
+                    {ann.impact} Impact
+                  </span>
+                </div>
+                <p
+                  style={{
+                    color: "#fff",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    lineHeight: 1.4,
+                    margin: "0 0 6px 0",
+                  }}
+                >
+                  {ann.issue}
+                </p>
+                <p style={{ color: "#94a3b8", fontSize: 11, lineHeight: 1.4, margin: 0 }}>
+                  <span style={{ color: "#2dd4bf", fontWeight: 600 }}>Fix: </span>
+                  {ann.fix}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* View live site */}
+        {status === "loaded" && siteUrl && (
+          <a
+            href={siteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              position: "absolute",
+              bottom: 12,
+              right: 12,
+              zIndex: 20,
+              background: "rgba(0,0,0,0.65)",
+              color: "#fff",
+              fontSize: 11,
+              fontWeight: 600,
+              padding: "6px 12px",
+              borderRadius: 8,
+              textDecoration: "none",
+            }}
+          >
+            View Live Site →
+          </a>
+        )}
+      </div>
+
+      {/* Ping animation keyframes */}
+      <style>{`
+        @keyframes ping {
+          75%, 100% { transform: scale(2); opacity: 0; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function FallbackAnnotations({
+  annotations,
+  siteUrl,
+}: {
+  annotations: Array<TopFix & { top: string; side: "left" | "right" }>;
+  siteUrl: string | null;
+}) {
+  return (
+    <div>
+      {siteUrl && (
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
+              <span className="text-slate-400 text-lg">🌐</span>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-700">Current Website</p>
+              <p className="text-xs text-slate-400 truncate max-w-[240px]">{siteUrl}</p>
+            </div>
+          </div>
+          <a
+            href={siteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg bg-slate-900 hover:bg-black text-white text-xs font-semibold px-4 py-2 transition-colors"
+          >
+            View Current Site →
+          </a>
+        </div>
+      )}
+      {annotations.length > 0 && (
+        <div className="space-y-4">
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">
+            Issues Identified on Current Site
+          </p>
+          {annotations.map((ann, i) => (
+            <div
+              key={i}
+              className="rounded-2xl border bg-white p-5 flex gap-4"
+              style={{ borderColor: `${impactColor[ann.impact || "Medium"]}30` }}
+            >
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
+                style={{ background: impactColor[ann.impact || "Medium"] }}
+              >
+                {ann.priority ?? i + 1}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-2">
                   <span
                     className="text-xs font-bold uppercase tracking-wider"
                     style={{ color: impactColor[ann.impact || "Medium"] }}
                   >
                     {ann.impact} Impact
                   </span>
+                  {ann.page_region && (
+                    <span className="text-xs text-slate-400 capitalize">
+                      · {ann.page_region.replace("_", " ")} area
+                    </span>
+                  )}
                 </div>
-                <p className="text-white text-xs font-semibold leading-snug mb-1.5">
-                  {ann.issue}
-                </p>
-                <p className="text-slate-300 text-xs leading-snug">
-                  <span className="text-teal-400 font-medium">Fix: </span>
+                <p className="font-semibold text-slate-900 mb-1">{ann.issue}</p>
+                <p className="text-sm text-slate-600">
+                  <span className="font-medium text-teal-600">Fix: </span>
                   {ann.fix}
                 </p>
               </div>
             </div>
-          </div>
-        ))}
-
-        {/* View live site link */}
-        {siteUrl && (
-          <a
-            href={siteUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="absolute bottom-3 right-3 z-10 bg-black/60 hover:bg-black/80 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
-          >
-            View Live Site →
-          </a>
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
