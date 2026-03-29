@@ -75,11 +75,11 @@ const scoreColor = (score?: number) => {
 };
 
 const regionToPosition: Record<string, { top: string; side: "left" | "right" }> = {
-  hero: { top: "15%", side: "left" },
+  hero: { top: "18%", side: "left" },
   nav: { top: "3%", side: "right" },
-  cta: { top: "45%", side: "left" },
-  trust: { top: "62%", side: "right" },
-  below_fold: { top: "75%", side: "left" },
+  cta: { top: "44%", side: "left" },
+  trust: { top: "60%", side: "right" },
+  below_fold: { top: "74%", side: "left" },
 };
 
 const impactColor: Record<string, string> = {
@@ -87,6 +87,16 @@ const impactColor: Record<string, string> = {
   Medium: "#f59e0b",
   Low: "#6b7280",
 };
+
+// Preload an image URL and return a promise
+function preloadImage(url: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve();
+    img.onerror = () => reject();
+    img.src = url;
+  });
+}
 
 function AnnotatedBefore({
   screenshotUrl,
@@ -97,8 +107,19 @@ function AnnotatedBefore({
   siteUrl: string | null;
   topFixes: TopFix[] | null;
 }) {
-  const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+  const [imgReady, setImgReady] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const [showAnnotations, setShowAnnotations] = useState(true);
+
+  // Preload the screenshot as soon as we have the URL
+  useEffect(() => {
+    if (!screenshotUrl) return;
+    setImgReady(false);
+    setImgError(false);
+    preloadImage(screenshotUrl)
+      .then(() => setImgReady(true))
+      .catch(() => setImgError(true));
+  }, [screenshotUrl]);
 
   const annotations = useMemo(() => {
     if (!topFixes) return [];
@@ -109,25 +130,25 @@ function AnnotatedBefore({
     });
   }, [topFixes]);
 
-  // No screenshot available at all
+  // No URL at all
   if (!screenshotUrl) {
     return (
-      <div className="bg-slate-50 p-6 min-h-[400px]">
+      <div className="bg-slate-50 p-6">
         <FallbackAnnotations annotations={annotations} siteUrl={siteUrl} />
       </div>
     );
   }
 
-  // Screenshot errored
-  if (status === "error") {
+  // Image failed
+  if (imgError) {
     return (
-      <div className="bg-slate-50 p-6 min-h-[400px]">
+      <div className="bg-slate-50 p-6">
         <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 mb-6 flex items-start gap-3">
           <span className="text-amber-500 text-lg shrink-0">⚠️</span>
           <div>
             <p className="text-sm font-semibold text-amber-800 mb-1">Screenshot unavailable</p>
             <p className="text-xs text-amber-700">
-              This site's security settings prevented a screenshot. The issues below are still accurate.
+              This site blocked automated screenshots. The issues below are still accurate.
             </p>
           </div>
         </div>
@@ -136,209 +157,229 @@ function AnnotatedBefore({
     );
   }
 
-  return (
-    <div className="bg-slate-900">
-
-      {/* Loading spinner — shown until image loads */}
-      {status === "loading" && (
-        <div className="flex flex-col items-center justify-center gap-3 py-20">
-          <div className="w-8 h-8 border-4 border-teal-400 border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-400 text-sm font-medium">Loading screenshot…</p>
-        </div>
-      )}
-
-      {/* Wrapper — always in DOM once we have a URL, opacity controlled */}
+  // Loading
+  if (!imgReady) {
+    return (
       <div
         style={{
-          position: "relative",
-          width: "100%",
-          opacity: status === "loaded" ? 1 : 0,
-          transition: "opacity 0.4s ease",
-          minHeight: status === "loaded" ? undefined : 0,
-          overflow: "hidden",
+          background: "#0f172a",
+          minHeight: 400,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 12,
         }}
       >
-        {/* Screenshot */}
-        <img
-          src={screenshotUrl}
-          alt="Current page screenshot"
+        <div
           style={{
-            width: "100%",
-            display: "block",
-            maxHeight: "680px",
-            objectFit: "cover",
-            objectPosition: "top",
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            border: "4px solid #2dd4bf",
+            borderTopColor: "transparent",
+            animation: "spin 0.8s linear infinite",
           }}
-          onLoad={() => setStatus("loaded")}
-          onError={() => setStatus("error")}
         />
+        <p style={{ color: "#94a3b8", fontSize: 14, fontWeight: 500 }}>
+          Loading screenshot…
+        </p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
-        {/* Dark overlay */}
-        {status === "loaded" && showAnnotations && (
+  // Loaded — show screenshot + annotations
+  return (
+    <div style={{ position: "relative", width: "100%", background: "#0f172a", lineHeight: 0 }}>
+
+      {/* Screenshot */}
+      <img
+        src={screenshotUrl}
+        alt="Current page screenshot"
+        style={{
+          width: "100%",
+          display: "block",
+          maxHeight: 680,
+          objectFit: "cover",
+          objectPosition: "top",
+          lineHeight: 0,
+        }}
+      />
+
+      {/* Dark overlay */}
+      {showAnnotations && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: "rgba(0,0,0,0.35)",
+            pointerEvents: "none",
+          }}
+        />
+      )}
+
+      {/* Toggle */}
+      <button
+        onClick={() => setShowAnnotations((v) => !v)}
+        style={{
+          position: "absolute",
+          top: 12,
+          right: 12,
+          zIndex: 30,
+          background: "rgba(15,23,42,0.9)",
+          color: "#fff",
+          fontSize: 12,
+          fontWeight: 600,
+          padding: "7px 14px",
+          borderRadius: 8,
+          border: "1px solid rgba(255,255,255,0.15)",
+          cursor: "pointer",
+          backdropFilter: "blur(8px)",
+        }}
+      >
+        {showAnnotations ? "Hide Annotations" : "Show Annotations"}
+      </button>
+
+      {/* Annotations */}
+      {showAnnotations && annotations.map((ann, i) => {
+        const color = impactColor[ann.impact || "Medium"] || "#f59e0b";
+        const isRight = ann.side === "right";
+        return (
           <div
+            key={i}
             style={{
               position: "absolute",
-              inset: 0,
-              background: "rgba(0,0,0,0.3)",
-              pointerEvents: "none",
-            }}
-          />
-        )}
-
-        {/* Toggle button */}
-        {status === "loaded" && (
-          <button
-            onClick={() => setShowAnnotations((v) => !v)}
-            style={{
-              position: "absolute",
-              top: 12,
-              right: 12,
-              zIndex: 30,
-              background: "rgba(15,23,42,0.85)",
-              color: "#fff",
-              fontSize: 12,
-              fontWeight: 600,
-              padding: "6px 12px",
-              borderRadius: 8,
-              border: "none",
-              cursor: "pointer",
+              top: ann.top,
+              ...(isRight ? { right: 16 } : { left: 16 }),
+              zIndex: 20,
+              maxWidth: 250,
+              display: "flex",
+              flexDirection: isRight ? "row-reverse" : "row",
+              alignItems: "flex-start",
+              gap: 8,
             }}
           >
-            {showAnnotations ? "Hide Annotations" : "Show Annotations"}
-          </button>
-        )}
-
-        {/* Annotation callouts */}
-        {status === "loaded" && showAnnotations && annotations.map((ann, i) => {
-          const color = impactColor[ann.impact || "Medium"] || "#f59e0b";
-          return (
-            <div
-              key={i}
-              style={{
+            {/* Dot */}
+            <div style={{ position: "relative", flexShrink: 0, marginTop: 6 }}>
+              <div style={{
                 position: "absolute",
-                top: ann.top,
-                [ann.side]: 16,
-                zIndex: 20,
-                maxWidth: 240,
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 8,
-              }}
-            >
-              {/* Pulsing dot */}
-              <div style={{ position: "relative", flexShrink: 0, marginTop: 4 }}>
-                <div
-                  style={{
-                    position: "absolute",
-                    width: 14,
-                    height: 14,
-                    borderRadius: "50%",
-                    background: color,
-                    opacity: 0.5,
-                    animation: "ping 1.5s cubic-bezier(0,0,0.2,1) infinite",
-                  }}
-                />
-                <div
-                  style={{
-                    position: "relative",
-                    width: 14,
-                    height: 14,
-                    borderRadius: "50%",
-                    background: color,
-                  }}
-                />
-              </div>
+                inset: -4,
+                borderRadius: "50%",
+                background: color,
+                opacity: 0.3,
+                animation: "ripple 1.8s ease-out infinite",
+              }} />
+              <div style={{
+                width: 14,
+                height: 14,
+                borderRadius: "50%",
+                background: color,
+                border: "2px solid #fff",
+                position: "relative",
+              }} />
+            </div>
 
-              {/* Callout */}
-              <div
-                style={{
-                  background: "rgba(2,6,23,0.93)",
-                  border: `1.5px solid ${color}`,
-                  borderRadius: 12,
-                  padding: "10px 12px",
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-                  backdropFilter: "blur(10px)",
-                  minWidth: 170,
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                  <div
-                    style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: "50%",
-                      background: color,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <span style={{ color: "#fff", fontSize: 10, fontWeight: 700 }}>
-                      {ann.priority ?? i + 1}
-                    </span>
-                  </div>
-                  <span
-                    style={{
-                      color,
-                      fontSize: 10,
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                    }}
-                  >
-                    {ann.impact} Impact
+            {/* Callout */}
+            <div style={{
+              background: "rgba(2,6,23,0.94)",
+              border: `1.5px solid ${color}`,
+              borderRadius: 12,
+              padding: "10px 14px",
+              boxShadow: `0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px ${color}20`,
+              backdropFilter: "blur(12px)",
+              minWidth: 180,
+            }}>
+              {/* Badge row */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                <div style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: "50%",
+                  background: color,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}>
+                  <span style={{ color: "#fff", fontSize: 11, fontWeight: 700, lineHeight: 1 }}>
+                    {ann.priority ?? i + 1}
                   </span>
                 </div>
-                <p
-                  style={{
-                    color: "#fff",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    lineHeight: 1.4,
-                    margin: "0 0 6px 0",
-                  }}
-                >
-                  {ann.issue}
-                </p>
-                <p style={{ color: "#94a3b8", fontSize: 11, lineHeight: 1.4, margin: 0 }}>
-                  <span style={{ color: "#2dd4bf", fontWeight: 600 }}>Fix: </span>
-                  {ann.fix}
-                </p>
+                <span style={{
+                  color,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                }}>
+                  {ann.impact} Impact
+                </span>
+                {ann.page_region && (
+                  <span style={{ color: "#64748b", fontSize: 10, marginLeft: "auto" }}>
+                    {ann.page_region.replace("_", " ")}
+                  </span>
+                )}
               </div>
+
+              {/* Issue */}
+              <p style={{
+                color: "#f1f5f9",
+                fontSize: 12,
+                fontWeight: 600,
+                lineHeight: 1.45,
+                margin: "0 0 6px 0",
+              }}>
+                {ann.issue}
+              </p>
+
+              {/* Fix */}
+              <p style={{
+                color: "#94a3b8",
+                fontSize: 11,
+                lineHeight: 1.45,
+                margin: 0,
+              }}>
+                <span style={{ color: "#2dd4bf", fontWeight: 600 }}>Fix: </span>
+                {ann.fix}
+              </p>
             </div>
-          );
-        })}
+          </div>
+        );
+      })}
 
-        {/* View live site */}
-        {status === "loaded" && siteUrl && (
-          <a
-            href={siteUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              position: "absolute",
-              bottom: 12,
-              right: 12,
-              zIndex: 20,
-              background: "rgba(0,0,0,0.65)",
-              color: "#fff",
-              fontSize: 11,
-              fontWeight: 600,
-              padding: "6px 12px",
-              borderRadius: 8,
-              textDecoration: "none",
-            }}
-          >
-            View Live Site →
-          </a>
-        )}
-      </div>
+      {/* View live site */}
+      {siteUrl && (
+        <a
+          href={siteUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            position: "absolute",
+            bottom: 12,
+            right: 12,
+            zIndex: 20,
+            background: "rgba(0,0,0,0.7)",
+            color: "#fff",
+            fontSize: 11,
+            fontWeight: 600,
+            padding: "6px 12px",
+            borderRadius: 8,
+            textDecoration: "none",
+            border: "1px solid rgba(255,255,255,0.15)",
+          }}
+        >
+          View Live Site →
+        </a>
+      )}
 
-      {/* Ping animation keyframes */}
       <style>{`
-        @keyframes ping {
-          75%, 100% { transform: scale(2); opacity: 0; }
+        @keyframes ripple {
+          0% { transform: scale(1); opacity: 0.4; }
+          100% { transform: scale(2.5); opacity: 0; }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>
