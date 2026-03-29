@@ -80,7 +80,6 @@ const impactColor: Record<string, string> = {
   Low: "#6b7280",
 };
 
-// Fixed positions — always spread evenly, ignore page_region stacking
 const FIXED_POSITIONS = [
   { top: "10%", side: "left" as const },
   { top: "42%", side: "right" as const },
@@ -123,7 +122,9 @@ function AnnotatedBefore({
           <span className="text-amber-500 text-lg shrink-0">⚠️</span>
           <div>
             <p className="text-sm font-semibold text-amber-800 mb-1">Screenshot unavailable</p>
-            <p className="text-xs text-amber-700">This site blocked automated screenshots. The issues below are still accurate.</p>
+            <p className="text-xs text-amber-700">
+              This site blocked automated screenshots. The issues below are still accurate.
+            </p>
           </div>
         </div>
         <FallbackAnnotations annotations={annotations} siteUrl={siteUrl} />
@@ -134,7 +135,7 @@ function AnnotatedBefore({
   return (
     <div style={{ background: "#0f172a", position: "relative" }}>
 
-      {/* Spinner — absolutely positioned, hidden once loaded */}
+      {/* Spinner shown until loaded */}
       {!loaded && (
         <div style={{
           position: "absolute",
@@ -162,7 +163,7 @@ function AnnotatedBefore({
         </div>
       )}
 
-      {/* Screenshot container — always in DOM so onLoad fires */}
+      {/* Always in DOM so onLoad fires */}
       <div style={{
         position: "relative",
         width: "100%",
@@ -183,7 +184,6 @@ function AnnotatedBefore({
           onError={() => setErrored(true)}
         />
 
-        {/* Dark overlay */}
         {showAnnotations && (
           <div style={{
             position: "absolute",
@@ -193,13 +193,11 @@ function AnnotatedBefore({
           }} />
         )}
 
-        {/* Toggle */}
         <button
           onClick={() => setShowAnnotations(v => !v)}
           style={{
             position: "absolute",
-            top: 12,
-            right: 12,
+            top: 12, right: 12,
             zIndex: 30,
             background: "rgba(15,23,42,0.88)",
             color: "#fff",
@@ -214,26 +212,21 @@ function AnnotatedBefore({
           {showAnnotations ? "Hide Annotations" : "Show Annotations"}
         </button>
 
-        {/* Annotations */}
         {showAnnotations && annotations.map((ann, i) => {
           const color = impactColor[ann.impact || "Medium"] || "#f59e0b";
           const isRight = ann.side === "right";
           return (
-            <div
-              key={i}
-              style={{
-                position: "absolute",
-                top: ann.top,
-                ...(isRight ? { right: 16 } : { left: 16 }),
-                zIndex: 20,
-                maxWidth: 248,
-                display: "flex",
-                flexDirection: isRight ? "row-reverse" : "row",
-                alignItems: "flex-start",
-                gap: 8,
-              }}
-            >
-              {/* Dot */}
+            <div key={i} style={{
+              position: "absolute",
+              top: ann.top,
+              ...(isRight ? { right: 16 } : { left: 16 }),
+              zIndex: 20,
+              maxWidth: 248,
+              display: "flex",
+              flexDirection: isRight ? "row-reverse" : "row",
+              alignItems: "flex-start",
+              gap: 8,
+            }}>
               <div style={{ position: "relative", flexShrink: 0, marginTop: 6 }}>
                 <div style={{
                   position: "absolute",
@@ -244,16 +237,13 @@ function AnnotatedBefore({
                   animation: "cdRipple 1.8s ease-out infinite",
                 }} />
                 <div style={{
-                  width: 14,
-                  height: 14,
+                  width: 14, height: 14,
                   borderRadius: "50%",
                   background: color,
                   border: "2px solid #fff",
                   position: "relative",
                 }} />
               </div>
-
-              {/* Callout */}
               <div style={{
                 background: "rgba(2,6,23,0.94)",
                 border: `1.5px solid ${color}`,
@@ -264,8 +254,7 @@ function AnnotatedBefore({
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                   <div style={{
-                    width: 20,
-                    height: 20,
+                    width: 20, height: 20,
                     borderRadius: "50%",
                     background: color,
                     display: "flex",
@@ -277,13 +266,7 @@ function AnnotatedBefore({
                       {ann.priority ?? i + 1}
                     </span>
                   </div>
-                  <span style={{
-                    color,
-                    fontSize: 10,
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.1em",
-                  }}>
+                  <span style={{ color, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>
                     {ann.impact} Impact
                   </span>
                 </div>
@@ -299,27 +282,20 @@ function AnnotatedBefore({
           );
         })}
 
-        {/* View live */}
         {siteUrl && (
-          <a
-            href={siteUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              position: "absolute",
-              bottom: 12,
-              right: 12,
-              zIndex: 20,
-              background: "rgba(0,0,0,0.7)",
-              color: "#fff",
-              fontSize: 11,
-              fontWeight: 600,
-              padding: "6px 12px",
-              borderRadius: 8,
-              textDecoration: "none",
-              border: "1px solid rgba(255,255,255,0.15)",
-            }}
-          >
+          <a href={siteUrl} target="_blank" rel="noopener noreferrer" style={{
+            position: "absolute",
+            bottom: 12, right: 12,
+            zIndex: 20,
+            background: "rgba(0,0,0,0.7)",
+            color: "#fff",
+            fontSize: 11,
+            fontWeight: 600,
+            padding: "6px 12px",
+            borderRadius: 8,
+            textDecoration: "none",
+            border: "1px solid rgba(255,255,255,0.15)",
+          }}>
             View Live Site →
           </a>
         )}
@@ -411,6 +387,7 @@ export default function PaidReport() {
   const [copySuccess, setCopySuccess] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadingKit, setDownloadingKit] = useState(false);
+  const [screenshotPreloaded, setScreenshotPreloaded] = useState(false);
   const mockupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -470,12 +447,21 @@ export default function PaidReport() {
     return avg <= 10 ? Math.round(avg * 10) : Math.round(avg);
   }, [auditData, scores]);
 
-  // Treat empty string as null
   const screenshotUrl = (auditData?.screenshot_url || "").length > 0
     ? auditData!.screenshot_url!
     : purchase?.url
       ? `https://image.thum.io/get/width/1400/crop/900/noanimate/${purchase.url}`
       : null;
+
+  // KEY FIX: Preload screenshot in background as soon as we have the URL
+  // This means by the time user clicks Before tab it's already cached
+  useEffect(() => {
+    if (!screenshotUrl || screenshotPreloaded) return;
+    const img = new Image();
+    img.onload = () => setScreenshotPreloaded(true);
+    img.onerror = () => setScreenshotPreloaded(true); // mark done even on error
+    img.src = screenshotUrl;
+  }, [screenshotUrl]);
 
   const handleCopyCode = async () => {
     if (!mockupHtml) return;
@@ -654,6 +640,39 @@ ${mockupHtml || ""}
 
   return (
     <div className="min-h-screen bg-[#f5f8fc] px-6 py-16">
+
+      {/* Hidden preload indicator — shows user screenshot is loading in background */}
+      {screenshotUrl && !screenshotPreloaded && (
+        <div style={{
+          position: "fixed",
+          bottom: 20,
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 50,
+          background: "rgba(15,23,42,0.85)",
+          color: "#fff",
+          fontSize: 12,
+          fontWeight: 600,
+          padding: "8px 16px",
+          borderRadius: 999,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          backdropFilter: "blur(8px)",
+        }}>
+          <div style={{
+            width: 12, height: 12,
+            borderRadius: "50%",
+            border: "2px solid #2dd4bf",
+            borderTopColor: "transparent",
+            animation: "cdSpin 0.8s linear infinite",
+            flexShrink: 0,
+          }} />
+          Preparing your Before screenshot…
+          <style>{`@keyframes cdSpin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      )}
+
       <div className="mx-auto max-w-6xl space-y-8">
 
         {/* Header */}
@@ -665,7 +684,8 @@ ${mockupHtml || ""}
               <p className="mt-4 text-lg text-slate-300 italic max-w-3xl">"{auditData.verdict}"</p>
             )}
             {purchase.url && (
-              <a href={purchase.url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-teal-400 text-sm hover:underline">
+              <a href={purchase.url} target="_blank" rel="noopener noreferrer"
+                className="mt-3 inline-block text-teal-400 text-sm hover:underline">
                 {purchase.url} →
               </a>
             )}
@@ -924,7 +944,8 @@ ${mockupHtml || ""}
             If you'd rather have help implementing these recommendations, get in touch.
           </p>
           <div className="flex flex-wrap gap-3">
-            <a href="/dashboard" className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-3 transition-colors text-sm shadow-sm">
+            <a href="/dashboard"
+              className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-3 transition-colors text-sm shadow-sm">
               Join the Dashboard
             </a>
             <a href="mailto:hello@conversiondoc.co.uk?subject=Implementation Support Request"
