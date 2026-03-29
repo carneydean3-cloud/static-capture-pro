@@ -74,9 +74,12 @@ const ResultsPreview = () => {
       const savedEmail = localStorage.getItem("conversiondoc_user_email") || "";
       const checkoutEmail = userEmail || savedEmail || "";
 
-      if (!checkoutEmail) {
-        throw new Error("No email provided for checkout");
-      }
+      if (!checkoutEmail) throw new Error("No email provided for checkout");
+
+      // Grab screenshot URL from localStorage — most reliable source
+      // since the background capture may have finished after setResult was called
+      const screenshotUrl = localStorage.getItem("conversiondoc_screenshot_url") || 
+                            result?.screenshot_url || "";
 
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
@@ -89,7 +92,10 @@ const ResultsPreview = () => {
           body: JSON.stringify({
             userEmail: checkoutEmail,
             url: url || "",
-            auditResult: result,
+            auditResult: {
+              ...result,
+              screenshot_url: screenshotUrl,
+            },
           }),
         }
       );
@@ -100,10 +106,10 @@ const ResultsPreview = () => {
       }
 
       const data = await res.json();
+      if (!data.url) throw new Error("No checkout URL returned");
 
-      if (!data.url) {
-        throw new Error("No checkout URL returned");
-      }
+      // Clean up localStorage before redirecting
+      localStorage.removeItem("conversiondoc_screenshot_url");
 
       window.location.href = data.url;
     } catch (err: any) {
@@ -144,6 +150,7 @@ const ResultsPreview = () => {
           }`}
         >
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-score-amber to-score-red"></div>
+
           <div className="w-full flex items-center justify-between mb-10">
             <h3 className="text-xl font-bold">Conversion Radar</h3>
             <div className="text-xs font-bold uppercase tracking-widest text-caption">
@@ -157,11 +164,7 @@ const ResultsPreview = () => {
                 <PolarGrid stroke="rgba(255,255,255,0.1)" />
                 <PolarAngleAxis
                   dataKey="name"
-                  tick={{
-                    fill: "hsl(203 41% 79%)",
-                    fontSize: 13,
-                    fontWeight: 600,
-                  }}
+                  tick={{ fill: "hsl(203 41% 79%)", fontSize: 13, fontWeight: 600 }}
                   tickLine={false}
                 />
                 <Radar
@@ -182,11 +185,11 @@ const ResultsPreview = () => {
           )}
 
           <div className="w-full grid md:grid-cols-2 gap-6 mb-8">
-            <div
-              className={`rounded-xl p-8 border text-center ${
-                hasRealResults ? verdictBg[verdict] || verdictBg["Needs Attention"] : "bg-score-amber/10 border-score-amber/20"
-              }`}
-            >
+            <div className={`rounded-xl p-8 border text-center ${
+              hasRealResults
+                ? verdictBg[verdict] || verdictBg["Needs Attention"]
+                : "bg-score-amber/10 border-score-amber/20"
+            }`}>
               <div className={`text-4xl font-bold mb-2 ${scoreColor(overallScore)}`}>
                 {overallScore}/100
               </div>
@@ -194,6 +197,7 @@ const ResultsPreview = () => {
                 Conversion Score
               </div>
             </div>
+
             <div className="bg-white/5 rounded-xl p-8 border border-white/10 flex flex-col justify-center">
               <div className="flex items-center gap-3 mb-2">
                 {verdict === "Healthy" ? (
@@ -254,7 +258,7 @@ const ResultsPreview = () => {
                 <Lock className="w-8 h-8 text-primary mb-3" />
                 <h4 className="font-bold text-lg mb-2">Unlock Full Diagnosis</h4>
                 <p className="text-sm text-body mb-4 text-center max-w-xs">
-                  Get detailed issue + fix for every pillar, rewritten copy, and visual mockups.
+                  Get detailed issue + fix for every pillar, rewritten copy, and your improved homepage mockup.
                 </p>
 
                 {checkoutError && (
@@ -271,6 +275,7 @@ const ResultsPreview = () => {
                   {!checkoutLoading && <ArrowRight className="w-4 h-4" />}
                 </button>
               </div>
+
               <div className="grid md:grid-cols-2 gap-4 p-4">
                 {Object.entries(result.scores).map(([key, pillar]: any) => (
                   <div key={key} className="glass-card p-5">
