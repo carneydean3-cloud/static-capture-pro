@@ -37,12 +37,6 @@ const scoreColor = (score: number) => {
   return "text-score-red";
 };
 
-const impactTextColor: Record<string, string> = {
-  High: "#ef4444",
-  Medium: "#f59e0b",
-  Low: "#94a3b8",
-};
-
 const ResultsPreview = () => {
   const { stage, result, url, userEmail } = useAudit() as any;
   const hasRealResults = stage === "done" && result;
@@ -116,8 +110,27 @@ const ResultsPreview = () => {
     }
   };
 
+  const getImpactColor = (impact: string) => {
+    if (impact === "High") return "#ef4444";
+    if (impact === "Medium") return "#f59e0b";
+    return "#94a3b8";
+  };
+
   return (
     <section id="results" className="py-24 px-6">
+      {/* Inject styles to force impact colours */}
+      <style>{`
+        .impact-high { color: #ef4444 !important; }
+        .impact-medium { color: #f59e0b !important; }
+        .impact-low { color: #94a3b8 !important; }
+        .fix-badge-high { background: #ef4444 !important; }
+        .fix-badge-medium { background: #f59e0b !important; }
+        .fix-badge-low { background: #94a3b8 !important; }
+        .fix-card-high { border-left: 3px solid #ef4444 !important; }
+        .fix-card-medium { border-left: 3px solid #f59e0b !important; }
+        .fix-card-low { border-left: 3px solid #94a3b8 !important; }
+      `}</style>
+
       <div className="max-w-3xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -220,44 +233,30 @@ const ResultsPreview = () => {
               <div className="space-y-3">
                 {result.top_3_fixes.map((fix: any, i: number) => {
                   const impact = fix.impact || "Medium";
-                  const color = impactTextColor[impact] || impactTextColor["Medium"];
+                  const impactClass = impact.toLowerCase();
                   return (
                     <motion.div
                       key={i}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.15 }}
-                      className="glass-card p-5"
-                      style={{ borderLeft: `3px solid ${color}` }}
+                      className={`glass-card p-5 fix-card-${impactClass}`}
                     >
                       <div className="flex items-start gap-4">
-                        {/* Priority badge */}
-                        <div
-                          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-sm font-bold text-white"
-                          style={{ background: color }}
-                        >
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-sm font-bold text-white fix-badge-${impactClass}`}>
                           {fix.priority ?? i + 1}
                         </div>
-
                         <div className="flex-1 min-w-0 space-y-2">
-                          {/* Issue */}
                           <div>
                             <span className="text-[10px] font-bold uppercase tracking-widest text-caption">Issue</span>
                             <p className="font-semibold text-foreground text-sm leading-snug">{fix.issue}</p>
                           </div>
-
-                          {/* Impact */}
                           <div>
                             <span className="text-[10px] font-bold uppercase tracking-widest text-caption">Impact</span>
-                            <p
-                              className="text-sm font-bold"
-                              style={{ color }}
-                            >
+                            <p className={`text-sm font-bold impact-${impactClass}`}>
                               {impact}
                             </p>
                           </div>
-
-                          {/* Fix */}
                           <div>
                             <span className="text-[10px] font-bold uppercase tracking-widest text-caption">Fix</span>
                             <p className="text-sm text-body leading-relaxed">{fix.fix}</p>
