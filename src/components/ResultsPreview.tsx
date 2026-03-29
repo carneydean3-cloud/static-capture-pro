@@ -37,6 +37,27 @@ const scoreColor = (score: number) => {
   return "text-score-red";
 };
 
+const impactStyles: Record<string, { bg: string; text: string; border: string; dot: string }> = {
+  High: {
+    bg: "bg-red-500/10",
+    text: "text-red-400",
+    border: "border-red-500/30",
+    dot: "bg-red-500",
+  },
+  Medium: {
+    bg: "bg-amber-500/10",
+    text: "text-amber-400",
+    border: "border-amber-500/30",
+    dot: "bg-amber-500",
+  },
+  Low: {
+    bg: "bg-slate-500/10",
+    text: "text-slate-400",
+    border: "border-slate-500/30",
+    dot: "bg-slate-500",
+  },
+};
+
 const ResultsPreview = () => {
   const { stage, result, url, userEmail } = useAudit() as any;
   const hasRealResults = stage === "done" && result;
@@ -76,10 +97,8 @@ const ResultsPreview = () => {
 
       if (!checkoutEmail) throw new Error("No email provided for checkout");
 
-      // Grab screenshot URL from localStorage — most reliable source
-      // since the background capture may have finished after setResult was called
-      const screenshotUrl = localStorage.getItem("conversiondoc_screenshot_url") || 
-                            result?.screenshot_url || "";
+      const screenshotUrl = localStorage.getItem("conversiondoc_screenshot_url") ||
+        result?.screenshot_url || "";
 
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
@@ -108,9 +127,7 @@ const ResultsPreview = () => {
       const data = await res.json();
       if (!data.url) throw new Error("No checkout URL returned");
 
-      // Clean up localStorage before redirecting
       localStorage.removeItem("conversiondoc_screenshot_url");
-
       window.location.href = data.url;
     } catch (err: any) {
       console.error("Checkout error:", err);
@@ -217,38 +234,58 @@ const ResultsPreview = () => {
             </div>
           </div>
 
+          {/* TOP 3 FIXES — improved colours */}
           {hasRealResults && result?.top_3_fixes && (
-            <div className="w-full space-y-4 mb-8">
-              <h4 className="text-lg font-bold text-foreground">Top 3 Priority Fixes</h4>
-              {result.top_3_fixes.map((fix: any, i: number) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.15 }}
-                  className="glass-card p-6"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-primary/30 flex items-center justify-center shrink-0 text-base font-bold text-white">
-                      {fix.priority}
+            <div className="w-full space-y-3 mb-8">
+              <h4 className="text-lg font-bold text-foreground mb-4">Top 3 Priority Fixes</h4>
+              {result.top_3_fixes.map((fix: any, i: number) => {
+                const impact = fix.impact || "Medium";
+                const style = impactStyles[impact] || impactStyles["Medium"];
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.15 }}
+                    className={`rounded-2xl border p-5 ${style.bg} ${style.border}`}
+                    style={{ borderLeftWidth: 4, borderLeftColor: style.dot.replace("bg-", "") }}
+                  >
+                    <div className="flex items-start gap-4">
+                      {/* Priority badge */}
+                      <div
+                        className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-bold text-white ${style.dot}`}
+                      >
+                        {fix.priority ?? i + 1}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        {/* Impact pill */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${style.bg} ${style.text} border ${style.border}`}>
+                            {impact} Impact
+                          </span>
+                          {fix.page_region && (
+                            <span className="text-[10px] text-caption capitalize">
+                              · {fix.page_region.replace("_", " ")}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Issue */}
+                        <p className="font-semibold text-foreground text-sm mb-2 leading-snug">
+                          {fix.issue}
+                        </p>
+
+                        {/* Fix */}
+                        <div className="flex items-start gap-1.5">
+                          <span className="text-primary text-xs font-bold shrink-0 mt-0.5">→</span>
+                          <p className="text-xs text-body leading-relaxed">{fix.fix}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1 space-y-2">
-                      <div>
-                        <span className="text-xs font-bold uppercase tracking-widest text-caption">Issue</span>
-                        <h5 className="font-bold text-foreground">{fix.issue}</h5>
-                      </div>
-                      <div>
-                        <span className="text-xs font-bold uppercase tracking-widest text-caption">Impact</span>
-                        <p className="text-sm text-body font-medium">{fix.impact}</p>
-                      </div>
-                      <div>
-                        <span className="text-xs font-bold uppercase tracking-widest text-caption">Fix</span>
-                        <p className="text-sm text-card-text">{fix.fix}</p>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                );
+              })}
             </div>
           )}
 
