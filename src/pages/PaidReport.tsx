@@ -80,13 +80,13 @@ const impactColor: Record<string, string> = {
   Low: "#6b7280",
 };
 
-const FIXED_POSITIONS = [
-  { top: "10%", side: "left" as const },
-  { top: "42%", side: "right" as const },
-  { top: "70%", side: "left" as const },
-];
+const impactBg: Record<string, string> = {
+  High: "rgba(239,68,68,0.08)",
+  Medium: "rgba(245,158,11,0.08)",
+  Low: "rgba(107,114,128,0.08)",
+};
 
-function AnnotatedBefore({
+function BeforeTab({
   screenshotUrl,
   siteUrl,
   topFixes,
@@ -97,278 +97,130 @@ function AnnotatedBefore({
 }) {
   const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
-  const [showAnnotations, setShowAnnotations] = useState(true);
 
-  const annotations = useMemo(() => {
-    if (!topFixes || topFixes.length === 0) return [];
-    return topFixes.slice(0, 3).map((fix, i) => ({
-      ...fix,
-      ...FIXED_POSITIONS[i],
-    }));
-  }, [topFixes]);
-
-  if (!screenshotUrl) {
-    return (
-      <div className="bg-slate-50 p-6">
-        <FallbackAnnotations annotations={annotations} siteUrl={siteUrl} />
-      </div>
-    );
-  }
-
-  if (errored) {
-    return (
-      <div className="bg-slate-50 p-6">
-        <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 mb-6 flex items-start gap-3">
-          <span className="text-amber-500 text-lg shrink-0">⚠️</span>
-          <div>
-            <p className="text-sm font-semibold text-amber-800 mb-1">Screenshot unavailable</p>
-            <p className="text-xs text-amber-700">
-              This site blocked automated screenshots. The issues below are still accurate.
-            </p>
-          </div>
-        </div>
-        <FallbackAnnotations annotations={annotations} siteUrl={siteUrl} />
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ background: "#0f172a", position: "relative" }}>
-
-      {/* Spinner shown until loaded */}
-      {!loaded && (
-        <div style={{
-          position: "absolute",
-          inset: 0,
-          minHeight: 400,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 12,
-          zIndex: 5,
-          background: "#0f172a",
-        }}>
-          <div style={{
-            width: 36,
-            height: 36,
-            borderRadius: "50%",
-            border: "4px solid #2dd4bf",
-            borderTopColor: "transparent",
-            animation: "cdSpin 0.8s linear infinite",
-          }} />
-          <p style={{ color: "#94a3b8", fontSize: 14, fontWeight: 500, margin: 0 }}>
-            Loading screenshot…
-          </p>
-        </div>
-      )}
-
-      {/* Always in DOM so onLoad fires */}
-      <div style={{
-        position: "relative",
-        width: "100%",
-        minHeight: loaded ? undefined : 400,
-        visibility: loaded ? "visible" : "hidden",
-      }}>
-        <img
-          src={screenshotUrl}
-          alt="Current site screenshot"
-          style={{
-            width: "100%",
-            display: "block",
-            maxHeight: 680,
-            objectFit: "cover",
-            objectPosition: "top",
-          }}
-          onLoad={() => setLoaded(true)}
-          onError={() => setErrored(true)}
-        />
-
-        {showAnnotations && (
-          <div style={{
-            position: "absolute",
-            top: 0, left: 0, right: 0, bottom: 0,
-            background: "rgba(0,0,0,0.38)",
-            pointerEvents: "none",
-          }} />
-        )}
-
-        <button
-          onClick={() => setShowAnnotations(v => !v)}
-          style={{
-            position: "absolute",
-            top: 12, right: 12,
-            zIndex: 30,
-            background: "rgba(15,23,42,0.88)",
-            color: "#fff",
-            fontSize: 12,
-            fontWeight: 600,
-            padding: "7px 14px",
-            borderRadius: 8,
-            border: "1px solid rgba(255,255,255,0.15)",
-            cursor: "pointer",
-          }}
-        >
-          {showAnnotations ? "Hide Annotations" : "Show Annotations"}
-        </button>
-
-        {showAnnotations && annotations.map((ann, i) => {
-          const color = impactColor[ann.impact || "Medium"] || "#f59e0b";
-          const isRight = ann.side === "right";
-          return (
-            <div key={i} style={{
-              position: "absolute",
-              top: ann.top,
-              ...(isRight ? { right: 16 } : { left: 16 }),
-              zIndex: 20,
-              maxWidth: 248,
-              display: "flex",
-              flexDirection: isRight ? "row-reverse" : "row",
-              alignItems: "flex-start",
-              gap: 8,
-            }}>
-              <div style={{ position: "relative", flexShrink: 0, marginTop: 6 }}>
-                <div style={{
-                  position: "absolute",
-                  inset: -5,
-                  borderRadius: "50%",
-                  background: color,
-                  opacity: 0.25,
-                  animation: "cdRipple 1.8s ease-out infinite",
-                }} />
-                <div style={{
-                  width: 14, height: 14,
-                  borderRadius: "50%",
-                  background: color,
-                  border: "2px solid #fff",
-                  position: "relative",
-                }} />
-              </div>
-              <div style={{
-                background: "rgba(2,6,23,0.94)",
-                border: `1.5px solid ${color}`,
-                borderRadius: 12,
-                padding: "10px 14px",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.55)",
-                minWidth: 180,
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                  <div style={{
-                    width: 20, height: 20,
-                    borderRadius: "50%",
-                    background: color,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}>
-                    <span style={{ color: "#fff", fontSize: 11, fontWeight: 700 }}>
-                      {ann.priority ?? i + 1}
-                    </span>
-                  </div>
-                  <span style={{ color, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                    {ann.impact} Impact
-                  </span>
-                </div>
-                <p style={{ color: "#f1f5f9", fontSize: 12, fontWeight: 600, lineHeight: 1.45, margin: "0 0 6px 0" }}>
-                  {ann.issue}
-                </p>
-                <p style={{ color: "#94a3b8", fontSize: 11, lineHeight: 1.45, margin: 0 }}>
-                  <span style={{ color: "#2dd4bf", fontWeight: 600 }}>Fix: </span>
-                  {ann.fix}
-                </p>
-              </div>
-            </div>
-          );
-        })}
-
-        {siteUrl && (
-          <a href={siteUrl} target="_blank" rel="noopener noreferrer" style={{
-            position: "absolute",
-            bottom: 12, right: 12,
-            zIndex: 20,
-            background: "rgba(0,0,0,0.7)",
-            color: "#fff",
-            fontSize: 11,
-            fontWeight: 600,
-            padding: "6px 12px",
-            borderRadius: 8,
-            textDecoration: "none",
-            border: "1px solid rgba(255,255,255,0.15)",
-          }}>
-            View Live Site →
-          </a>
-        )}
-      </div>
-
-      <style>{`
-        @keyframes cdSpin { to { transform: rotate(360deg); } }
-        @keyframes cdRipple {
-          0% { transform: scale(1); opacity: 0.3; }
-          100% { transform: scale(2.8); opacity: 0; }
-        }
-      `}</style>
-    </div>
-  );
-}
-
-function FallbackAnnotations({
-  annotations,
-  siteUrl,
-}: {
-  annotations: Array<TopFix & { top: string; side: "left" | "right" }>;
-  siteUrl: string | null;
-}) {
   return (
     <div>
-      {siteUrl && (
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
-              <span className="text-slate-400 text-lg">🌐</span>
+      {/* Screenshot */}
+      {screenshotUrl && (
+        <div style={{ background: "#0f172a", position: "relative" }}>
+          {!loaded && !errored && (
+            <div style={{
+              minHeight: 400,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+            }}>
+              <div style={{
+                width: 36, height: 36,
+                borderRadius: "50%",
+                border: "4px solid #2dd4bf",
+                borderTopColor: "transparent",
+                animation: "cdSpin 0.8s linear infinite",
+              }} />
+              <p style={{ color: "#94a3b8", fontSize: 14, fontWeight: 500, margin: 0 }}>
+                Loading screenshot…
+              </p>
             </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-700">Current Website</p>
-              <p className="text-xs text-slate-400 truncate max-w-[240px]">{siteUrl}</p>
-            </div>
+          )}
+
+          <div style={{
+            position: "relative",
+            width: "100%",
+            visibility: loaded ? "visible" : "hidden",
+            minHeight: loaded ? undefined : 0,
+          }}>
+            <img
+              src={screenshotUrl}
+              alt="Current site screenshot"
+              style={{
+                width: "100%",
+                display: "block",
+                maxHeight: 600,
+                objectFit: "cover",
+                objectPosition: "top",
+              }}
+              onLoad={() => setLoaded(true)}
+              onError={() => setErrored(true)}
+            />
+            {siteUrl && (
+              <a
+                href={siteUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  position: "absolute",
+                  bottom: 12, right: 12,
+                  background: "rgba(0,0,0,0.7)",
+                  color: "#fff",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  textDecoration: "none",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                }}
+              >
+                View Live Site →
+              </a>
+            )}
           </div>
-          <a href={siteUrl} target="_blank" rel="noopener noreferrer"
-            className="rounded-lg bg-slate-900 hover:bg-black text-white text-xs font-semibold px-4 py-2 transition-colors">
-            View Current Site →
-          </a>
+
+          <style>{`@keyframes cdSpin { to { transform: rotate(360deg); } }`}</style>
         </div>
       )}
-      {annotations.length > 0 && (
-        <div className="space-y-4">
+
+      {/* Issue cards below screenshot */}
+      {topFixes && topFixes.length > 0 && (
+        <div className="p-6 bg-slate-50 space-y-3">
           <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">
             Issues Identified on Current Site
           </p>
-          {annotations.map((ann, i) => (
-            <div key={i} className="rounded-2xl border bg-white p-5 flex gap-4"
-              style={{ borderColor: `${impactColor[ann.impact || "Medium"]}30` }}>
-              <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
-                style={{ background: impactColor[ann.impact || "Medium"] }}>
-                {ann.priority ?? i + 1}
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-bold uppercase tracking-wider"
-                    style={{ color: impactColor[ann.impact || "Medium"] }}>
-                    {ann.impact} Impact
-                  </span>
-                  {ann.page_region && (
-                    <span className="text-xs text-slate-400 capitalize">
-                      · {ann.page_region.replace("_", " ")} area
-                    </span>
-                  )}
+          {topFixes.map((fix, i) => {
+            const color = impactColor[fix.impact || "Medium"] || "#f59e0b";
+            const bg = impactBg[fix.impact || "Medium"] || impactBg["Medium"];
+            return (
+              <div
+                key={i}
+                className="rounded-2xl border bg-white p-5 flex gap-4"
+                style={{
+                  borderColor: `${color}30`,
+                  borderLeftWidth: 4,
+                  borderLeftColor: color,
+                }}
+              >
+                <div
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
+                  style={{ background: color }}
+                >
+                  {fix.priority ?? i + 1}
                 </div>
-                <p className="font-semibold text-slate-900 mb-1">{ann.issue}</p>
-                <p className="text-sm text-slate-600">
-                  <span className="font-medium text-teal-600">Fix: </span>{ann.fix}
-                </p>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span
+                      className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border"
+                      style={{ color, background: bg, borderColor: `${color}30` }}
+                    >
+                      {fix.impact} Impact
+                    </span>
+                    {fix.page_region && (
+                      <span className="text-[10px] text-slate-400 capitalize">
+                        · {fix.page_region.replace("_", " ")}
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-semibold text-slate-900 text-sm mb-1 leading-snug">
+                    {fix.issue}
+                  </p>
+                  <div className="flex items-start gap-1.5">
+                    <span className="text-teal-500 text-xs font-bold shrink-0 mt-0.5">→</span>
+                    <p className="text-xs text-slate-600 leading-relaxed">{fix.fix}</p>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -453,13 +305,12 @@ export default function PaidReport() {
       ? `https://image.thum.io/get/width/1400/crop/900/noanimate/${purchase.url}`
       : null;
 
-  // KEY FIX: Preload screenshot in background as soon as we have the URL
-  // This means by the time user clicks Before tab it's already cached
+  // Preload screenshot in background
   useEffect(() => {
     if (!screenshotUrl || screenshotPreloaded) return;
     const img = new Image();
     img.onload = () => setScreenshotPreloaded(true);
-    img.onerror = () => setScreenshotPreloaded(true); // mark done even on error
+    img.onerror = () => setScreenshotPreloaded(true);
     img.src = screenshotUrl;
   }, [screenshotUrl]);
 
@@ -641,7 +492,7 @@ ${mockupHtml || ""}
   return (
     <div className="min-h-screen bg-[#f5f8fc] px-6 py-16">
 
-      {/* Hidden preload indicator — shows user screenshot is loading in background */}
+      {/* Background preload indicator */}
       {screenshotUrl && !screenshotPreloaded && (
         <div style={{
           position: "fixed",
@@ -740,27 +591,49 @@ ${mockupHtml || ""}
           </div>
           {topFixes ? (
             <div className="space-y-4">
-              {topFixes.map((x, idx) => (
-                <div key={idx} className="flex gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-500 text-white text-sm font-bold shadow-sm">
-                    {x.priority ?? idx + 1}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Impact</span>
-                      <span className={`text-[11px] font-bold uppercase tracking-[0.18em] ${
-                        x.impact === "High" ? "text-red-500"
-                        : x.impact === "Medium" ? "text-amber-500"
-                        : "text-slate-400"
-                      }`}>
-                        {x.impact ?? "—"}
-                      </span>
+              {topFixes.map((x, idx) => {
+                const color = impactColor[x.impact || "Medium"] || "#f59e0b";
+                const bg = impactBg[x.impact || "Medium"] || impactBg["Medium"];
+                return (
+                  <div
+                    key={idx}
+                    className="flex gap-4 rounded-2xl border p-5"
+                    style={{
+                      borderColor: `${color}25`,
+                      borderLeftWidth: 4,
+                      borderLeftColor: color,
+                      background: bg,
+                    }}
+                  >
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white text-sm font-bold shadow-sm"
+                      style={{ background: color }}
+                    >
+                      {x.priority ?? idx + 1}
                     </div>
-                    {x.issue && <p className="font-semibold text-slate-900 text-lg mb-1">{x.issue}</p>}
-                    <p className="text-slate-700">{x.fix}</p>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span
+                          className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border"
+                          style={{ color, background: `${color}15`, borderColor: `${color}30` }}
+                        >
+                          {x.impact ?? "—"} Impact
+                        </span>
+                        {x.page_region && (
+                          <span className="text-[10px] text-slate-400 capitalize">
+                            · {x.page_region.replace("_", " ")}
+                          </span>
+                        )}
+                      </div>
+                      {x.issue && <p className="font-semibold text-slate-900 mb-1">{x.issue}</p>}
+                      <div className="flex items-start gap-1.5">
+                        <span className="text-teal-500 font-bold text-sm shrink-0">→</span>
+                        <p className="text-sm text-slate-700">{x.fix}</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <p className="text-slate-600">No fixes available.</p>
@@ -861,7 +734,7 @@ ${mockupHtml || ""}
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-400">Visual Deliverable</p>
             <h2 className="mt-2 text-2xl font-bold text-white">🎨 Your Homepage Mockup</h2>
             <p className="text-slate-400 text-sm mt-2">
-              See exactly what's wrong with your current site — and what it could look like improved.
+              Compare your current site with a more conversion-focused direction.
             </p>
           </div>
 
@@ -872,7 +745,7 @@ ${mockupHtml || ""}
                   ? "bg-white text-red-500 border-b-2 border-red-500"
                   : "bg-slate-50 text-slate-500 hover:text-slate-700"
               }`}>
-              ❌ Before — Annotated Issues
+              ❌ Before (Current Site)
             </button>
             <button onClick={() => setActiveTab("after")}
               className={`flex-1 py-4 text-sm font-semibold transition-colors ${
@@ -880,34 +753,35 @@ ${mockupHtml || ""}
                   ? "bg-white text-teal-600 border-b-2 border-teal-500"
                   : "bg-slate-50 text-slate-500 hover:text-slate-700"
               }`}>
-              ✅ After — Improved Direction
+              ✅ After (ConversionDoc Fix)
             </button>
           </div>
 
-          {activeTab === "before" && (
-            <AnnotatedBefore
+          {/* KEY FIX: Both tabs always mounted, just hidden with CSS */}
+          <div style={{ display: activeTab === "before" ? "block" : "none" }}>
+            <BeforeTab
               screenshotUrl={screenshotUrl}
               siteUrl={purchase.url || null}
               topFixes={topFixes}
             />
-          )}
+          </div>
 
-          {activeTab === "after" && mockupHtml && (
-            <div className="relative bg-white">
-              <div ref={mockupRef} className="w-full overflow-hidden"
-                dangerouslySetInnerHTML={{ __html: mockupHtml }} />
-              <button onClick={() => setFullscreen(true)}
-                className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
-                ⛶ Fullscreen
-              </button>
-            </div>
-          )}
-
-          {activeTab === "after" && !mockupHtml && (
-            <div className="flex items-center justify-center min-h-[400px] bg-slate-50">
-              <p className="text-slate-400">Mockup not available</p>
-            </div>
-          )}
+          <div style={{ display: activeTab === "after" ? "block" : "none" }}>
+            {mockupHtml ? (
+              <div className="relative bg-white">
+                <div ref={mockupRef} className="w-full overflow-hidden"
+                  dangerouslySetInnerHTML={{ __html: mockupHtml }} />
+                <button onClick={() => setFullscreen(true)}
+                  className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
+                  ⛶ Fullscreen
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center min-h-[400px] bg-slate-50">
+                <p className="text-slate-400">Mockup not available</p>
+              </div>
+            )}
+          </div>
 
           <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-wrap gap-3">
             {mockupHtml && (
