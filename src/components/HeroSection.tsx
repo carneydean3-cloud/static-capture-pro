@@ -39,7 +39,6 @@ const getFriendlyErrorMessage = (err: unknown): string => {
   return "We couldn't audit this page. Please make sure the URL is public and try again.";
 };
 
-// Capture screenshot client-side and upload to Supabase Storage
 const captureScreenshotToStorage = async (pageUrl: string): Promise<string> => {
   try {
     const supabaseUrl = (supabase as any).supabaseUrl as string;
@@ -52,7 +51,7 @@ const captureScreenshotToStorage = async (pageUrl: string): Promise<string> => {
     if (!imgRes.ok) return "";
 
     const blob = await imgRes.blob();
-    if (blob.size < 5000) return ""; // blank/error image
+    if (blob.size < 5000) return "";
 
     const fileName = `screenshot-${Date.now()}.jpg`;
 
@@ -110,6 +109,9 @@ const HeroSection = () => {
     setUrl(normalizedUrl);
     setStage("capturing");
 
+    // Clear any previous screenshot from localStorage
+    localStorage.removeItem("conversiondoc_screenshot_url");
+
     const timer1 = setTimeout(() => setStage("analysing"), 2000);
     const timer2 = setTimeout(() => setStage("generating"), 5000);
 
@@ -146,14 +148,16 @@ const HeroSection = () => {
       const data = await response.json();
       if (data?.error) throw new Error(data.error);
 
-      // Set result immediately so user sees their results
+      // Set result immediately — user sees their results right away
       setResult(data);
       setStage("email_capture");
 
-      // Capture screenshot in background — don't block the UI
-      // When done, update result with screenshot_url
+      // Capture screenshot in background — doesn't block the UI
       captureScreenshotToStorage(normalizedUrl).then((screenshotUrl) => {
         if (screenshotUrl) {
+          // Store in localStorage so checkout can pick it up reliably
+          localStorage.setItem("conversiondoc_screenshot_url", screenshotUrl);
+          // Also update the result in context
           setResult({ ...data, screenshot_url: screenshotUrl });
           console.log("Screenshot ready:", screenshotUrl);
         }
@@ -179,7 +183,9 @@ const HeroSection = () => {
           transition={{ duration: 0.6 }}
           className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-1.5 mb-8"
         >
-          <span className="text-xs font-bold uppercase tracking-widest text-primary">⚡ AI CONVERSION DIAGNOSTICS</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-primary">
+            ⚡ AI CONVERSION DIAGNOSTICS
+          </span>
         </motion.div>
 
         <motion.h1
@@ -198,7 +204,8 @@ const HeroSection = () => {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="text-xl text-body max-w-3xl mx-auto mb-12 leading-relaxed"
         >
-          ConversionDoc analyses your page across 6 conversion pillars and delivers a precise diagnosis — with every fix included.
+          ConversionDoc analyses your page across 6 conversion pillars and delivers a precise
+          diagnosis — with every fix included.
         </motion.p>
 
         <motion.div
@@ -240,7 +247,9 @@ const HeroSection = () => {
             <div className="flex items-center gap-2 mt-2 px-2">
               <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
               <p className="text-sm text-destructive text-left">
-                {countdown !== null ? `We're busy right now. Try again in ${countdown} seconds.` : urlError}
+                {countdown !== null
+                  ? `We're busy right now. Try again in ${countdown} seconds.`
+                  : urlError}
               </p>
             </div>
           )}
@@ -300,7 +309,9 @@ const HeroSection = () => {
                     />
                   ))}
                 </div>
-                <div className="text-sm font-bold text-foreground/80">⭐⭐⭐⭐⭐ Trusted by 300+ founders</div>
+                <div className="text-sm font-bold text-foreground/80">
+                  ⭐⭐⭐⭐⭐ Trusted by 300+ founders
+                </div>
               </div>
             </div>
           )}
