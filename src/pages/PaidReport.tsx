@@ -80,11 +80,11 @@ const impactColor: Record<string, string> = {
   Low: "#6b7280",
 };
 
-// Always spread 3 annotations evenly regardless of page_region
+// Fixed positions — always spread evenly, ignore page_region stacking
 const FIXED_POSITIONS = [
-  { top: "12%", side: "left" as const },
+  { top: "10%", side: "left" as const },
   { top: "42%", side: "right" as const },
-  { top: "68%", side: "left" as const },
+  { top: "70%", side: "left" as const },
 ];
 
 function AnnotatedBefore({
@@ -123,9 +123,7 @@ function AnnotatedBefore({
           <span className="text-amber-500 text-lg shrink-0">⚠️</span>
           <div>
             <p className="text-sm font-semibold text-amber-800 mb-1">Screenshot unavailable</p>
-            <p className="text-xs text-amber-700">
-              This site blocked automated screenshots. The issues below are still accurate.
-            </p>
+            <p className="text-xs text-amber-700">This site blocked automated screenshots. The issues below are still accurate.</p>
           </div>
         </div>
         <FallbackAnnotations annotations={annotations} siteUrl={siteUrl} />
@@ -134,16 +132,21 @@ function AnnotatedBefore({
   }
 
   return (
-    <div style={{ background: "#0f172a" }}>
-      {/* Spinner — shown until image loads */}
+    <div style={{ background: "#0f172a", position: "relative" }}>
+
+      {/* Spinner — absolutely positioned, hidden once loaded */}
       {!loaded && (
         <div style={{
+          position: "absolute",
+          inset: 0,
           minHeight: 400,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           gap: 12,
+          zIndex: 5,
+          background: "#0f172a",
         }}>
           <div style={{
             width: 36,
@@ -159,12 +162,12 @@ function AnnotatedBefore({
         </div>
       )}
 
-      {/* Screenshot + annotations — always in DOM so onLoad fires */}
+      {/* Screenshot container — always in DOM so onLoad fires */}
       <div style={{
         position: "relative",
         width: "100%",
-        display: loaded ? "block" : "none",
-        lineHeight: 0,
+        minHeight: loaded ? undefined : 400,
+        visibility: loaded ? "visible" : "hidden",
       }}>
         <img
           src={screenshotUrl}
@@ -190,7 +193,7 @@ function AnnotatedBefore({
           }} />
         )}
 
-        {/* Toggle button */}
+        {/* Toggle */}
         <button
           onClick={() => setShowAnnotations(v => !v)}
           style={{
@@ -211,7 +214,7 @@ function AnnotatedBefore({
           {showAnnotations ? "Hide Annotations" : "Show Annotations"}
         </button>
 
-        {/* Annotation callouts */}
+        {/* Annotations */}
         {showAnnotations && annotations.map((ann, i) => {
           const color = impactColor[ann.impact || "Medium"] || "#f59e0b";
           const isRight = ann.side === "right";
@@ -250,7 +253,7 @@ function AnnotatedBefore({
                 }} />
               </div>
 
-              {/* Callout box */}
+              {/* Callout */}
               <div style={{
                 background: "rgba(2,6,23,0.94)",
                 border: `1.5px solid ${color}`,
@@ -259,12 +262,7 @@ function AnnotatedBefore({
                 boxShadow: "0 8px 32px rgba(0,0,0,0.55)",
                 minWidth: 180,
               }}>
-                <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  marginBottom: 8,
-                }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                   <div style={{
                     width: 20,
                     height: 20,
@@ -289,23 +287,10 @@ function AnnotatedBefore({
                     {ann.impact} Impact
                   </span>
                 </div>
-
-                <p style={{
-                  color: "#f1f5f9",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  lineHeight: 1.45,
-                  margin: "0 0 6px 0",
-                }}>
+                <p style={{ color: "#f1f5f9", fontSize: 12, fontWeight: 600, lineHeight: 1.45, margin: "0 0 6px 0" }}>
                   {ann.issue}
                 </p>
-
-                <p style={{
-                  color: "#94a3b8",
-                  fontSize: 11,
-                  lineHeight: 1.45,
-                  margin: 0,
-                }}>
+                <p style={{ color: "#94a3b8", fontSize: 11, lineHeight: 1.45, margin: 0 }}>
                   <span style={{ color: "#2dd4bf", fontWeight: 600 }}>Fix: </span>
                   {ann.fix}
                 </p>
@@ -314,7 +299,7 @@ function AnnotatedBefore({
           );
         })}
 
-        {/* View live site */}
+        {/* View live */}
         {siteUrl && (
           <a
             href={siteUrl}
@@ -341,9 +326,7 @@ function AnnotatedBefore({
       </div>
 
       <style>{`
-        @keyframes cdSpin {
-          to { transform: rotate(360deg); }
-        }
+        @keyframes cdSpin { to { transform: rotate(360deg); } }
         @keyframes cdRipple {
           0% { transform: scale(1); opacity: 0.3; }
           100% { transform: scale(2.8); opacity: 0; }
@@ -373,12 +356,8 @@ function FallbackAnnotations({
               <p className="text-xs text-slate-400 truncate max-w-[240px]">{siteUrl}</p>
             </div>
           </div>
-          <a
-            href={siteUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-lg bg-slate-900 hover:bg-black text-white text-xs font-semibold px-4 py-2 transition-colors"
-          >
+          <a href={siteUrl} target="_blank" rel="noopener noreferrer"
+            className="rounded-lg bg-slate-900 hover:bg-black text-white text-xs font-semibold px-4 py-2 transition-colors">
             View Current Site →
           </a>
         </div>
@@ -389,23 +368,16 @@ function FallbackAnnotations({
             Issues Identified on Current Site
           </p>
           {annotations.map((ann, i) => (
-            <div
-              key={i}
-              className="rounded-2xl border bg-white p-5 flex gap-4"
-              style={{ borderColor: `${impactColor[ann.impact || "Medium"]}30` }}
-            >
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
-                style={{ background: impactColor[ann.impact || "Medium"] }}
-              >
+            <div key={i} className="rounded-2xl border bg-white p-5 flex gap-4"
+              style={{ borderColor: `${impactColor[ann.impact || "Medium"]}30` }}>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
+                style={{ background: impactColor[ann.impact || "Medium"] }}>
                 {ann.priority ?? i + 1}
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-2">
-                  <span
-                    className="text-xs font-bold uppercase tracking-wider"
-                    style={{ color: impactColor[ann.impact || "Medium"] }}
-                  >
+                  <span className="text-xs font-bold uppercase tracking-wider"
+                    style={{ color: impactColor[ann.impact || "Medium"] }}>
                     {ann.impact} Impact
                   </span>
                   {ann.page_region && (
@@ -416,8 +388,7 @@ function FallbackAnnotations({
                 </div>
                 <p className="font-semibold text-slate-900 mb-1">{ann.issue}</p>
                 <p className="text-sm text-slate-600">
-                  <span className="font-medium text-teal-600">Fix: </span>
-                  {ann.fix}
+                  <span className="font-medium text-teal-600">Fix: </span>{ann.fix}
                 </p>
               </div>
             </div>
@@ -499,8 +470,8 @@ export default function PaidReport() {
     return avg <= 10 ? Math.round(avg * 10) : Math.round(avg);
   }, [auditData, scores]);
 
-  // Fix: treat empty string screenshot_url as null
-  const screenshotUrl = (auditData?.screenshot_url || "") !== ""
+  // Treat empty string as null
+  const screenshotUrl = (auditData?.screenshot_url || "").length > 0
     ? auditData!.screenshot_url!
     : purchase?.url
       ? `https://image.thum.io/get/width/1400/crop/900/noanimate/${purchase.url}`
@@ -820,10 +791,8 @@ ${mockupHtml || ""}
               <h2 className="mt-2 text-3xl font-bold text-slate-900">✍️ Copy Pack</h2>
               <p className="text-slate-500 text-sm mt-2">Homepage-ready copy written to improve clarity, trust, and action.</p>
             </div>
-            <button
-              onClick={handleDownloadCopyPack}
-              className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm"
-            >
+            <button onClick={handleDownloadCopyPack}
+              className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm">
               Download Copy Pack
             </button>
           </div>
@@ -877,24 +846,20 @@ ${mockupHtml || ""}
           </div>
 
           <div className="flex border-b border-slate-200">
-            <button
-              onClick={() => setActiveTab("before")}
+            <button onClick={() => setActiveTab("before")}
               className={`flex-1 py-4 text-sm font-semibold transition-colors ${
                 activeTab === "before"
                   ? "bg-white text-red-500 border-b-2 border-red-500"
                   : "bg-slate-50 text-slate-500 hover:text-slate-700"
-              }`}
-            >
+              }`}>
               ❌ Before — Annotated Issues
             </button>
-            <button
-              onClick={() => setActiveTab("after")}
+            <button onClick={() => setActiveTab("after")}
               className={`flex-1 py-4 text-sm font-semibold transition-colors ${
                 activeTab === "after"
                   ? "bg-white text-teal-600 border-b-2 border-teal-500"
                   : "bg-slate-50 text-slate-500 hover:text-slate-700"
-              }`}
-            >
+              }`}>
               ✅ After — Improved Direction
             </button>
           </div>
@@ -909,15 +874,10 @@ ${mockupHtml || ""}
 
           {activeTab === "after" && mockupHtml && (
             <div className="relative bg-white">
-              <div
-                ref={mockupRef}
-                className="w-full overflow-hidden"
-                dangerouslySetInnerHTML={{ __html: mockupHtml }}
-              />
-              <button
-                onClick={() => setFullscreen(true)}
-                className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
-              >
+              <div ref={mockupRef} className="w-full overflow-hidden"
+                dangerouslySetInnerHTML={{ __html: mockupHtml }} />
+              <button onClick={() => setFullscreen(true)}
+                className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
                 ⛶ Fullscreen
               </button>
             </div>
@@ -932,35 +892,23 @@ ${mockupHtml || ""}
           <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-wrap gap-3">
             {mockupHtml && (
               <>
-                <button
-                  onClick={handleCopyCode}
-                  className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-3 transition-colors text-sm shadow-sm"
-                >
+                <button onClick={handleCopyCode}
+                  className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-3 transition-colors text-sm shadow-sm">
                   {copySuccess ? "✓ Copied!" : "Copy HTML"}
                 </button>
-                <button
-                  onClick={handleDownloadPng}
-                  disabled={downloading}
-                  className="rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm disabled:opacity-50"
-                >
+                <button onClick={handleDownloadPng} disabled={downloading}
+                  className="rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm disabled:opacity-50">
                   {downloading ? "Generating…" : "Download PNG"}
                 </button>
-                <button
-                  onClick={handleDownloadKit}
-                  disabled={downloadingKit}
-                  className="rounded-xl bg-slate-900 hover:bg-black text-white font-semibold px-5 py-3 transition-colors text-sm shadow-sm disabled:opacity-50"
-                >
+                <button onClick={handleDownloadKit} disabled={downloadingKit}
+                  className="rounded-xl bg-slate-900 hover:bg-black text-white font-semibold px-5 py-3 transition-colors text-sm shadow-sm disabled:opacity-50">
                   {downloadingKit ? "Building Kit…" : "Download Homepage Kit (.zip)"}
                 </button>
               </>
             )}
             {purchase.url && (
-              <a
-                href={purchase.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm"
-              >
+              <a href={purchase.url} target="_blank" rel="noopener noreferrer"
+                className="rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm">
                 View Current Site →
               </a>
             )}
@@ -979,10 +927,8 @@ ${mockupHtml || ""}
             <a href="/dashboard" className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-3 transition-colors text-sm shadow-sm">
               Join the Dashboard
             </a>
-            <a
-              href="mailto:hello@conversiondoc.co.uk?subject=Implementation Support Request"
-              className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm"
-            >
+            <a href="mailto:hello@conversiondoc.co.uk?subject=Implementation Support Request"
+              className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm">
               Contact for Implementation Help
             </a>
           </div>
@@ -992,26 +938,14 @@ ${mockupHtml || ""}
 
       {/* Fullscreen */}
       {fullscreen && mockupHtml && (
-        <div
-          className="fixed inset-0 z-50 bg-black/90 flex flex-col"
-          onClick={() => setFullscreen(false)}
-        >
-          <div
-            className="flex items-center justify-between px-6 py-4 bg-slate-950 shrink-0"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-50 bg-black/90 flex flex-col" onClick={() => setFullscreen(false)}>
+          <div className="flex items-center justify-between px-6 py-4 bg-slate-950 shrink-0"
+            onClick={(e) => e.stopPropagation()}>
             <p className="text-white font-semibold">✅ Improved Direction</p>
-            <button
-              onClick={() => setFullscreen(false)}
-              className="text-slate-400 hover:text-white text-2xl leading-none"
-            >
-              ✕
-            </button>
+            <button onClick={() => setFullscreen(false)}
+              className="text-slate-400 hover:text-white text-2xl leading-none">✕</button>
           </div>
-          <div
-            className="flex-1 overflow-auto bg-white"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="flex-1 overflow-auto bg-white" onClick={(e) => e.stopPropagation()}>
             <div dangerouslySetInnerHTML={{ __html: mockupHtml }} />
           </div>
         </div>
