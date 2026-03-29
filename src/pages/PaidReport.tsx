@@ -74,7 +74,6 @@ const scoreColor = (score?: number) => {
   return "text-red-500";
 };
 
-// Region to vertical position mapping for annotations
 const regionToPosition: Record<string, { top: string; side: "left" | "right" }> = {
   hero: { top: "8%", side: "left" },
   nav: { top: "2%", side: "right" },
@@ -111,17 +110,89 @@ function AnnotatedBefore({
     });
   }, [topFixes]);
 
-  if (!screenshotUrl && !siteUrl) {
+  // Fallback when screenshot unavailable — show annotation list
+  if (error || !screenshotUrl) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[500px] bg-slate-100 text-center p-8">
-        <p className="text-slate-400 font-medium text-lg mb-2">Screenshot unavailable</p>
+      <div className="bg-slate-50 p-6 min-h-[400px]">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
+              <span className="text-slate-400 text-lg">🌐</span>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-700">Current Website</p>
+              <p className="text-xs text-slate-400 truncate max-w-[240px]">{siteUrl || "N/A"}</p>
+            </div>
+          </div>
+          {siteUrl && (
+            <a
+              href={siteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg bg-slate-900 hover:bg-black text-white text-xs font-semibold px-4 py-2 transition-colors"
+            >
+              View Current Site →
+            </a>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 mb-6 flex items-start gap-3">
+          <span className="text-amber-500 text-lg shrink-0">⚠️</span>
+          <div>
+            <p className="text-sm font-semibold text-amber-800 mb-1">Screenshot unavailable</p>
+            <p className="text-xs text-amber-700">
+              This site's security settings prevented a screenshot. The issues identified below are still accurate — visit the site directly to see them in context.
+            </p>
+          </div>
+        </div>
+
+        {annotations.length > 0 && (
+          <div className="space-y-4">
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">
+              Issues Identified on Current Site
+            </p>
+            {annotations.map((ann, i) => (
+              <div
+                key={i}
+                className="rounded-2xl border bg-white p-5 flex gap-4"
+                style={{ borderColor: `${impactColor[ann.impact || "Medium"]}30` }}
+              >
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
+                  style={{ background: impactColor[ann.impact || "Medium"] }}
+                >
+                  {ann.priority}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span
+                      className="text-xs font-bold uppercase tracking-wider"
+                      style={{ color: impactColor[ann.impact || "Medium"] }}
+                    >
+                      {ann.impact} Impact
+                    </span>
+                    {ann.page_region && (
+                      <span className="text-xs text-slate-400 capitalize">
+                        · {ann.page_region.replace("_", " ")} area
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-semibold text-slate-900 mb-1">{ann.issue}</p>
+                  <p className="text-sm text-slate-600">
+                    <span className="font-medium text-teal-600">Fix: </span>
+                    {ann.fix}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
 
   return (
     <div className="relative bg-slate-100">
-      {/* Toggle annotations button */}
       {loaded && topFixes && (
         <button
           onClick={() => setShowAnnotations(!showAnnotations)}
@@ -131,48 +202,22 @@ function AnnotatedBefore({
         </button>
       )}
 
-      {/* Loading state */}
-      {!loaded && !error && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-100 z-10">
+      {!loaded && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-100 z-10" style={{ minHeight: "500px" }}>
           <div className="w-8 h-8 border-4 border-teal-400 border-t-transparent rounded-full animate-spin" />
           <p className="text-slate-400 text-sm font-medium">Loading screenshot…</p>
         </div>
       )}
 
-      {/* Screenshot */}
-      {screenshotUrl && !error ? (
-        <img
-          src={screenshotUrl}
-          alt="Current page screenshot"
-          className={`w-full object-cover object-top transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
-          style={{ minHeight: "500px", maxHeight: "700px" }}
-          onLoad={() => setLoaded(true)}
-          onError={() => setError(true)}
-        />
-      ) : (
-        // Iframe fallback
-        <div className="relative w-full" style={{ height: "600px" }}>
-          <iframe
-            src={siteUrl || ""}
-            className="w-full h-full border-0"
-            style={{
-              transform: "scale(0.75)",
-              transformOrigin: "top left",
-              width: "133.33%",
-              height: "133.33%",
-            }}
-            onLoad={() => setLoaded(true)}
-            title="Current website"
-          />
-          {!loaded && (
-            <div className="absolute inset-0 flex items-center justify-center bg-slate-100">
-              <div className="w-8 h-8 border-4 border-teal-400 border-t-transparent rounded-full animate-spin" />
-            </div>
-          )}
-        </div>
-      )}
+      <img
+        src={screenshotUrl}
+        alt="Current page screenshot"
+        className={`w-full object-cover object-top transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
+        style={{ minHeight: "500px", maxHeight: "700px" }}
+        onLoad={() => setLoaded(true)}
+        onError={() => setError(true)}
+      />
 
-      {/* Annotation overlays */}
       {loaded && showAnnotations && annotations.map((ann, i) => (
         <div
           key={i}
@@ -184,10 +229,11 @@ function AnnotatedBefore({
           }}
         >
           <div
-            className="rounded-xl p-3 shadow-xl backdrop-blur-sm"
+            className="rounded-xl p-3 shadow-xl"
             style={{
               background: "rgba(15, 23, 42, 0.92)",
               border: `1px solid ${impactColor[ann.impact || "Medium"]}50`,
+              backdropFilter: "blur(8px)",
             }}
           >
             <div className="flex items-start gap-2">
@@ -213,7 +259,6 @@ function AnnotatedBefore({
               </div>
             </div>
           </div>
-          {/* Arrow pointer */}
           <div
             className="absolute top-4"
             style={{
@@ -228,10 +273,9 @@ function AnnotatedBefore({
         </div>
       ))}
 
-      {/* Fullscreen button */}
-      {loaded && (
+      {loaded && siteUrl && (
         <a
-          href={siteUrl || "#"}
+          href={siteUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="absolute bottom-3 right-3 z-10 bg-black/60 hover:bg-black/80 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
@@ -251,7 +295,7 @@ export default function PaidReport() {
   const [error, setError] = useState("");
   const [purchase, setPurchase] = useState<PurchaseRow | null>(null);
   const [activeTab, setActiveTab] = useState<"before" | "after">("before");
-  const [fullscreen, setFullscreen] = useState<"before" | "after" | null>(null);
+  const [fullscreen, setFullscreen] = useState<boolean>(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadingKit, setDownloadingKit] = useState(false);
@@ -284,7 +328,7 @@ export default function PaidReport() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setFullscreen(null);
+      if (e.key === "Escape") setFullscreen(false);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -314,7 +358,6 @@ export default function PaidReport() {
     return avg <= 10 ? Math.round(avg * 10) : Math.round(avg);
   }, [auditData, scores]);
 
-  // Screenshot URL — stored version first, thum.io fallback
   const screenshotUrl = auditData?.screenshot_url ||
     (purchase?.url
       ? `https://image.thum.io/get/width/1400/crop/900/noanimate/${purchase.url}`
@@ -469,7 +512,6 @@ ${mockupHtml || ""}
     }
   };
 
-  // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f5f8fc] flex items-center justify-center">
@@ -481,7 +523,6 @@ ${mockupHtml || ""}
     );
   }
 
-  // ── Error ──────────────────────────────────────────────────────────────────
   if (error || !purchase) {
     return (
       <div className="min-h-screen bg-[#f5f8fc] flex items-center justify-center px-6">
@@ -497,7 +538,6 @@ ${mockupHtml || ""}
     );
   }
 
-  // ── Main ───────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#f5f8fc] px-6 py-16">
       <div className="mx-auto max-w-6xl space-y-8">
@@ -505,24 +545,13 @@ ${mockupHtml || ""}
         {/* Header */}
         <section className="rounded-[32px] overflow-hidden border border-slate-900/10 shadow-[0_20px_60px_rgba(15,23,42,0.12)]">
           <div className="bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.18),_transparent_30%),linear-gradient(135deg,#020617,#0f172a_50%,#111827)] px-8 py-10 md:px-10 md:py-12">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-400">
-              Full Diagnosis
-            </p>
-            <h1 className="mt-3 text-4xl md:text-5xl font-bold text-white tracking-tight">
-              Conversion Report
-            </h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-400">Full Diagnosis</p>
+            <h1 className="mt-3 text-4xl md:text-5xl font-bold text-white tracking-tight">Conversion Report</h1>
             {auditData?.verdict && (
-              <p className="mt-4 text-lg text-slate-300 italic max-w-3xl">
-                "{auditData.verdict}"
-              </p>
+              <p className="mt-4 text-lg text-slate-300 italic max-w-3xl">"{auditData.verdict}"</p>
             )}
             {purchase.url && (
-              <a
-                href={purchase.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-block text-teal-400 text-sm hover:underline"
-              >
+              <a href={purchase.url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-teal-400 text-sm hover:underline">
                 {purchase.url} →
               </a>
             )}
@@ -532,12 +561,8 @@ ${mockupHtml || ""}
         {/* Executive Summary */}
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
           <div className="mb-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">
-              Executive Summary
-            </p>
-            <h2 className="mt-2 text-3xl font-bold text-slate-900">
-              Your strongest opportunity to improve conversions
-            </h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">Executive Summary</p>
+            <h2 className="mt-2 text-3xl font-bold text-slate-900">Your strongest opportunity to improve conversions</h2>
           </div>
           <div className="grid gap-5 md:grid-cols-3 mb-6">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
@@ -564,20 +589,12 @@ ${mockupHtml || ""}
             </div>
           </div>
           <div className="rounded-2xl border border-teal-100 bg-teal-50 p-5 mb-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-700 mb-2">
-              Biggest Opportunity
-            </p>
-            <p className="text-slate-900 font-medium text-lg">
-              {summary.biggest_opportunity || "No summary available."}
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-700 mb-2">Biggest Opportunity</p>
+            <p className="text-slate-900 font-medium text-lg">{summary.biggest_opportunity || "No summary available."}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">
-              Diagnosis
-            </p>
-            <p className="text-slate-700 leading-8">
-              {summary.executive_summary || "No executive summary available."}
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">Diagnosis</p>
+            <p className="text-slate-700 leading-8">{summary.executive_summary || "No executive summary available."}</p>
           </div>
         </section>
 
@@ -658,9 +675,7 @@ ${mockupHtml || ""}
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">Deliverable</p>
               <h2 className="mt-2 text-3xl font-bold text-slate-900">✍️ Copy Pack</h2>
-              <p className="text-slate-500 text-sm mt-2">
-                Homepage-ready copy written to improve clarity, trust, and action.
-              </p>
+              <p className="text-slate-500 text-sm mt-2">Homepage-ready copy written to improve clarity, trust, and action.</p>
             </div>
             <button
               onClick={handleDownloadCopyPack}
@@ -708,7 +723,7 @@ ${mockupHtml || ""}
           </div>
         </section>
 
-        {/* Homepage Mockup — Before (Annotated) + After (Premium) */}
+        {/* Visual Deliverable */}
         <section className="rounded-[28px] border border-slate-200 bg-white shadow-sm overflow-hidden">
           <div className="bg-[linear-gradient(135deg,#020617,#0f172a)] px-6 py-5">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-400">Visual Deliverable</p>
@@ -718,7 +733,6 @@ ${mockupHtml || ""}
             </p>
           </div>
 
-          {/* Tabs */}
           <div className="flex border-b border-slate-200">
             <button
               onClick={() => setActiveTab("before")}
@@ -742,7 +756,6 @@ ${mockupHtml || ""}
             </button>
           </div>
 
-          {/* Before — annotated screenshot */}
           {activeTab === "before" && (
             <AnnotatedBefore
               screenshotUrl={screenshotUrl}
@@ -751,7 +764,6 @@ ${mockupHtml || ""}
             />
           )}
 
-          {/* After — premium template */}
           {activeTab === "after" && mockupHtml && (
             <div className="relative bg-white">
               <div
@@ -760,7 +772,7 @@ ${mockupHtml || ""}
                 dangerouslySetInnerHTML={{ __html: mockupHtml }}
               />
               <button
-                onClick={() => setFullscreen("after")}
+                onClick={() => setFullscreen(true)}
                 className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
               >
                 ⛶ Fullscreen
@@ -768,7 +780,12 @@ ${mockupHtml || ""}
             </div>
           )}
 
-          {/* Action buttons */}
+          {activeTab === "after" && !mockupHtml && (
+            <div className="flex items-center justify-center min-h-[400px] bg-slate-50">
+              <p className="text-slate-400">Mockup not available</p>
+            </div>
+          )}
+
           <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-wrap gap-3">
             {mockupHtml && (
               <>
@@ -810,18 +827,13 @@ ${mockupHtml || ""}
         {/* Next Step */}
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600 mb-2">Next Step</p>
-          <h2 className="text-3xl font-bold text-slate-900 mb-3">
-            Keep improving your conversions over time
-          </h2>
+          <h2 className="text-3xl font-bold text-slate-900 mb-3">Keep improving your conversions over time</h2>
           <p className="text-slate-600 mb-6 max-w-3xl leading-7">
-            Join the Conversion Dashboard to rescan pages, track changes, and monitor improvements
-            over time. If you'd rather have help implementing these recommendations, get in touch.
+            Join the Conversion Dashboard to rescan pages, track changes, and monitor improvements over time.
+            If you'd rather have help implementing these recommendations, get in touch.
           </p>
           <div className="flex flex-wrap gap-3">
-            <a
-              href="/dashboard"
-              className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-3 transition-colors text-sm shadow-sm"
-            >
+            <a href="/dashboard" className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-3 transition-colors text-sm shadow-sm">
               Join the Dashboard
             </a>
             <a
@@ -835,11 +847,11 @@ ${mockupHtml || ""}
 
       </div>
 
-      {/* Fullscreen overlay — After only */}
-      {fullscreen === "after" && mockupHtml && (
+      {/* Fullscreen overlay */}
+      {fullscreen && mockupHtml && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex flex-col"
-          onClick={() => setFullscreen(null)}
+          onClick={() => setFullscreen(false)}
         >
           <div
             className="flex items-center justify-between px-6 py-4 bg-slate-950 shrink-0"
@@ -847,7 +859,7 @@ ${mockupHtml || ""}
           >
             <p className="text-white font-semibold">✅ Improved Direction</p>
             <button
-              onClick={() => setFullscreen(null)}
+              onClick={() => setFullscreen(false)}
               className="text-slate-400 hover:text-white text-2xl leading-none"
             >
               ✕
