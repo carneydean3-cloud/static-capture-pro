@@ -37,6 +37,24 @@ const scoreColor = (score: number) => {
   return "text-score-red";
 };
 
+const getImpactStyles = (impact: string) => {
+  if (impact === "High") return {
+    borderLeft: "4px solid #ef4444",
+    badgeBg: "#ef4444",
+    textColor: "#ef4444",
+  };
+  if (impact === "Medium") return {
+    borderLeft: "4px solid #f59e0b",
+    badgeBg: "#f59e0b",
+    textColor: "#f59e0b",
+  };
+  return {
+    borderLeft: "4px solid #94a3b8",
+    badgeBg: "#94a3b8",
+    textColor: "#94a3b8",
+  };
+};
+
 const ResultsPreview = () => {
   const { stage, result, url, userEmail } = useAudit() as any;
   const hasRealResults = stage === "done" && result;
@@ -108,27 +126,6 @@ const ResultsPreview = () => {
     } finally {
       setCheckoutLoading(false);
     }
-  };
-
-  const getImpactStyles = (impact: string) => {
-    if (impact === "High") return {
-      border: "border-l-4 border-l-red-500",
-      badge: "bg-red-500",
-      text: "text-red-400",
-      label: "text-red-400",
-    };
-    if (impact === "Medium") return {
-      border: "border-l-4 border-l-amber-400",
-      badge: "bg-amber-400",
-      text: "text-amber-400",
-      label: "text-amber-400",
-    };
-    return {
-      border: "border-l-4 border-l-slate-400",
-      badge: "bg-slate-400",
-      text: "text-slate-400",
-      label: "text-slate-400",
-    };
   };
 
   return (
@@ -242,34 +239,38 @@ const ResultsPreview = () => {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.15 }}
-                      className={`glass-card p-5 ${styles.border}`}
+                      className="glass-card p-5"
+                      style={{ borderLeft: styles.borderLeft }}
                     >
                       <div className="flex items-start gap-4">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-sm font-bold text-white ${styles.badge}`}>
+                        <div
+                          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-sm font-bold text-white"
+                          style={{ backgroundColor: styles.badgeBg }}
+                        >
                           {fix.priority ?? i + 1}
                         </div>
                         <div className="flex-1 min-w-0 space-y-3">
                           <div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                            <span style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#94a3b8" }}>
                               Issue
                             </span>
-                            <p className="font-semibold text-white text-sm leading-snug mt-0.5">
+                            <p style={{ fontWeight: 600, color: "#ffffff", fontSize: "14px", lineHeight: "1.4", marginTop: "2px" }}>
                               {fix.issue}
                             </p>
                           </div>
                           <div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                            <span style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#94a3b8" }}>
                               Impact
                             </span>
-                            <p className={`text-sm font-bold mt-0.5 ${styles.text}`}>
+                            <p style={{ fontSize: "14px", fontWeight: 700, color: styles.textColor, marginTop: "2px" }}>
                               {impact}
                             </p>
                           </div>
                           <div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-teal-400">
+                            <span style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#14b8a6" }}>
                               Fix
                             </span>
-                            <p className="text-sm text-slate-200 leading-relaxed mt-0.5">
+                            <p style={{ fontSize: "14px", color: "#e2e8f0", lineHeight: "1.6", marginTop: "2px" }}>
                               {fix.fix}
                             </p>
                           </div>
