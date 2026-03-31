@@ -12,6 +12,12 @@ import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
 
+const TestRoute = () => (
+  <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div style={{ fontSize: 28, fontWeight: 900 }}>TEST ROUTE WORKING</div>
+  </main>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -24,6 +30,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/paid-report" element={<PaidReport />} />
               <Route path="/subscription-success" element={<SubscriptionSuccess />} />
+              <Route path="/test-route" element={<TestRoute />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
