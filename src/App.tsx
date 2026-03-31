@@ -7,6 +7,7 @@ import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { AuditProvider } from "@/contexts/AuditContext";
 import Index from "./pages/Index.tsx";
 import PaidReport from "./pages/PaidReport.tsx";
+import SubscriptionSuccess from "./pages/SubscriptionSuccess.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/paid-report" element={<PaidReport />} />
+              <Route path="/subscription-success" element={<SubscriptionSuccess />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
