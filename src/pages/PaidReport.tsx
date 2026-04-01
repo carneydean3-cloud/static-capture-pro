@@ -99,7 +99,6 @@ export default function PaidReport() {
   const [downloading, setDownloading] = useState(false);
   const [downloadingKit, setDownloadingKit] = useState(false);
 
-  // Screenshot state lives HERE in parent — survives tab switches
   const [screenshotLoaded, setScreenshotLoaded] = useState(false);
   const [screenshotErrored, setScreenshotErrored] = useState(false);
   const [screenshotDataUrl, setScreenshotDataUrl] = useState<string | null>(null);
@@ -169,15 +168,11 @@ export default function PaidReport() {
       ? `https://image.thum.io/get/width/1400/crop/900/noanimate/${purchase.url}`
       : null;
 
-  // Preload screenshot and convert to data URL so it persists forever
   useEffect(() => {
     if (!screenshotUrl || screenshotLoaded || screenshotErrored) return;
-
     const img = new Image();
     img.crossOrigin = "anonymous";
-
     img.onload = () => {
-      // Try to cache as data URL
       try {
         const canvas = document.createElement("canvas");
         canvas.width = img.naturalWidth;
@@ -189,20 +184,14 @@ export default function PaidReport() {
           setScreenshotDataUrl(dataUrl);
         }
       } catch {
-        // CORS blocked canvas — just use the original URL
         setScreenshotDataUrl(screenshotUrl);
       }
       setScreenshotLoaded(true);
     };
-
-    img.onerror = () => {
-      setScreenshotErrored(true);
-    };
-
+    img.onerror = () => { setScreenshotErrored(true); };
     img.src = screenshotUrl;
   }, [screenshotUrl]);
 
-  // The actual src to use — cached data URL if available, otherwise original
   const displayScreenshotUrl = screenshotDataUrl || screenshotUrl;
 
   const handleCopyCode = async () => {
@@ -383,32 +372,17 @@ ${mockupHtml || ""}
   return (
     <div className="min-h-screen bg-[#f5f8fc] px-6 py-16">
 
-      {/* Loading indicator */}
       {screenshotUrl && !screenshotLoaded && !screenshotErrored && (
         <div style={{
-          position: "fixed",
-          bottom: 20,
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: 50,
-          background: "rgba(15,23,42,0.85)",
-          color: "#fff",
-          fontSize: 12,
-          fontWeight: 600,
-          padding: "8px 16px",
-          borderRadius: 999,
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          backdropFilter: "blur(8px)",
+          position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)",
+          zIndex: 50, background: "rgba(15,23,42,0.85)", color: "#fff",
+          fontSize: 12, fontWeight: 600, padding: "8px 16px", borderRadius: 999,
+          display: "flex", alignItems: "center", gap: 8, backdropFilter: "blur(8px)",
         }}>
           <div style={{
-            width: 12, height: 12,
-            borderRadius: "50%",
-            border: "2px solid #2dd4bf",
-            borderTopColor: "transparent",
-            animation: "cdSpin 0.8s linear infinite",
-            flexShrink: 0,
+            width: 12, height: 12, borderRadius: "50%",
+            border: "2px solid #2dd4bf", borderTopColor: "transparent",
+            animation: "cdSpin 0.8s linear infinite", flexShrink: 0,
           }} />
           Preparing screenshot…
           <style>{`@keyframes cdSpin { to { transform: rotate(360deg); } }`}</style>
@@ -632,24 +606,16 @@ ${mockupHtml || ""}
           {/* BEFORE TAB */}
           <div style={{ display: activeTab === "before" ? "block" : "none" }}>
             <div>
-              {/* Screenshot section */}
               {displayScreenshotUrl && (
                 <div style={{ background: "#0f172a", position: "relative" }}>
-                  {/* Loading spinner — only if not yet loaded */}
                   {!screenshotLoaded && !screenshotErrored && (
                     <div style={{
-                      minHeight: 400,
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 12,
+                      minHeight: 400, display: "flex", flexDirection: "column",
+                      alignItems: "center", justifyContent: "center", gap: 12,
                     }}>
                       <div style={{
-                        width: 36, height: 36,
-                        borderRadius: "50%",
-                        border: "4px solid #2dd4bf",
-                        borderTopColor: "transparent",
+                        width: 36, height: 36, borderRadius: "50%",
+                        border: "4px solid #2dd4bf", borderTopColor: "transparent",
                         animation: "cdSpin 0.8s linear infinite",
                       }} />
                       <p style={{ color: "#94a3b8", fontSize: 14, fontWeight: 500, margin: 0 }}>
@@ -657,33 +623,23 @@ ${mockupHtml || ""}
                       </p>
                     </div>
                   )}
-
-                  {/* Screenshot image — shown when loaded */}
                   {screenshotLoaded && (
                     <div style={{ position: "relative", width: "100%" }}>
                       <img
                         src={displayScreenshotUrl}
                         alt="Current site screenshot"
                         style={{
-                          width: "100%",
-                          display: "block",
-                          maxHeight: 600,
-                          objectFit: "cover",
-                          objectPosition: "top",
+                          width: "100%", display: "block",
+                          maxHeight: 600, objectFit: "cover", objectPosition: "top",
                         }}
                       />
                       {purchase.url && (
                         <a href={purchase.url} target="_blank" rel="noopener noreferrer"
                           style={{
-                            position: "absolute",
-                            bottom: 12, right: 12,
-                            background: "rgba(0,0,0,0.7)",
-                            color: "#fff",
-                            fontSize: 11,
-                            fontWeight: 600,
-                            padding: "6px 12px",
-                            borderRadius: 8,
-                            textDecoration: "none",
+                            position: "absolute", bottom: 12, right: 12,
+                            background: "rgba(0,0,0,0.7)", color: "#fff",
+                            fontSize: 11, fontWeight: 600, padding: "6px 12px",
+                            borderRadius: 8, textDecoration: "none",
                             border: "1px solid rgba(255,255,255,0.15)",
                           }}>
                           View Live Site →
@@ -691,12 +647,10 @@ ${mockupHtml || ""}
                       )}
                     </div>
                   )}
-
                   <style>{`@keyframes cdSpin { to { transform: rotate(360deg); } }`}</style>
                 </div>
               )}
 
-              {/* Issue cards */}
               {topFixes && topFixes.length > 0 && (
                 <div className="p-6 bg-slate-50 space-y-3">
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">
@@ -780,19 +734,14 @@ ${mockupHtml || ""}
         {/* Next Step */}
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600 mb-2">Next Step</p>
-          <h2 className="text-3xl font-bold text-slate-900 mb-3">Keep improving your conversions over time</h2>
+          <h2 className="text-3xl font-bold text-slate-900 mb-3">Need help implementing these recommendations?</h2>
           <p className="text-slate-600 mb-6 max-w-3xl leading-7">
-            Join the Conversion Dashboard to rescan pages, track changes, and monitor improvements over time.
-            If you'd rather have help implementing these recommendations, get in touch.
+            If you'd like expert help putting these fixes into action — from copy rewrites to full page redesigns — we're here to help. Get in touch and we'll talk through your options.
           </p>
           <div className="flex flex-wrap gap-3">
-            <a href="/dashboard"
+            <a href="mailto:hello@conversiondoc.co.uk?subject=Implementation Help Request"
               className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-3 transition-colors text-sm shadow-sm">
-              Join the Dashboard
-            </a>
-            <a href="mailto:hello@conversiondoc.co.uk?subject=Implementation Support Request"
-              className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm">
-              Contact for Implementation Help
+              Get in Touch
             </a>
           </div>
         </section>
