@@ -9,14 +9,11 @@ import Index from "./pages/Index.tsx";
 import PaidReport from "./pages/PaidReport.tsx";
 import SubscriptionSuccess from "./pages/SubscriptionSuccess.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import Terms from "./pages/Terms.tsx";
+import Privacy from "./pages/Privacy.tsx";
+import Refund from "./pages/Refund.tsx";
 
 const queryClient = new QueryClient();
-
-const TestRoute = () => (
-  <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-    <div style={{ fontSize: 28, fontWeight: 900 }}>TEST ROUTE WORKING</div>
-  </main>
-);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -30,7 +27,9 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/paid-report" element={<PaidReport />} />
               <Route path="/subscription-success" element={<SubscriptionSuccess />} />
-              <Route path="/test-route" element={<TestRoute />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/refund" element={<Refund />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
