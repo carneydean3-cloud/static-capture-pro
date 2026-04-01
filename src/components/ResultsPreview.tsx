@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { AlertCircle, CheckCircle2, Lock, ArrowRight } from "lucide-react";
+import { AlertCircle, CheckCircle2, Lock, ArrowRight, Zap } from "lucide-react";
 import {
   Radar,
   RadarChart,
@@ -62,6 +62,14 @@ const ResultsPreview = () => {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
+  // Subscription state
+  const [subscriptionChecked, setSubscriptionChecked] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
+  const [auditsRemaining, setAuditsRemaining] = useState<number | null>(null);
+  const [limitReached, setLimitReached] = useState(false);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+
   useEffect(() => {
     if (stage === "done") {
       setHighlight(true);
@@ -69,6 +77,47 @@ const ResultsPreview = () => {
       return () => clearTimeout(timer);
     }
   }, [stage]);
+
+  // Check subscription when results are ready and email is available
+  useEffect(() => {
+    if (!hasRealResults || subscriptionChecked) return;
+
+    const email = userEmail || localStorage.getItem("conversiondoc_user_email") || "";
+    if (!email) {
+      setSubscriptionChecked(true);
+      return;
+    }
+
+    const checkSubscription = async () => {
+      setSubscriptionLoading(true);
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-subscription`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({ email }),
+          }
+        );
+        const data = await res.json();
+        setIsSubscribed(data.subscribed === true);
+        setSubscriptionPlan(data.plan || null);
+        setAuditsRemaining(data.audits_remaining ?? null);
+        setLimitReached(data.limit_reached === true);
+      } catch (err) {
+        console.error("Subscription check failed:", err);
+        setIsSubscribed(false);
+      } finally {
+        setSubscriptionChecked(true);
+        setSubscriptionLoading(false);
+      }
+    };
+
+    checkSubscription();
+  }, [hasRealResults, userEmail, subscriptionChecked]);
 
   const pillars = hasRealResults
     ? [
@@ -125,6 +174,39 @@ const ResultsPreview = () => {
       setCheckoutError(err.message || "Something went wrong. Please try again.");
     } finally {
       setCheckoutLoading(false);
+    }
+  };
+
+  // Save audit result to purchases table for subscribers
+  const handleViewFullReport = async () => {
+    try {
+      const email = userEmail || localStorage.getItem("conversiondoc_user_email") || "";
+      const screenshotUrl = localStorage.getItem("conversiondoc_screenshot_url") ||
+        result?.screenshot_url || "";
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            userEmail: email,
+            url: url || "",
+            auditResult: { ...result, screenshot_url: screenshotUrl },
+            isSubscription: true,
+          }),
+        }
+      );
+
+      const data = await res.json();
+      if (data.session_id) {
+        window.location.href = `/paid-report?session_id=${data.session_id}`;
+      }
+    } catch (err) {
+      console.error("Error saving audit for subscriber:", err);
     }
   };
 
@@ -283,27 +365,77 @@ const ResultsPreview = () => {
             </div>
           )}
 
+          {/* FULL REPORT SECTION */}
           {hasRealResults && result?.scores && (
             <div className="w-full relative">
-              <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 rounded-xl flex flex-col items-center justify-center px-4 text-center">
-                <Lock className="w-8 h-8 text-primary mb-3" />
-                <h4 className="font-bold text-lg mb-2">Unlock Full Diagnosis</h4>
-                <p className="text-sm text-body mb-4 text-center max-w-xs">
-                  Get detailed issue + fix for every pillar, rewritten copy, and your improved homepage mockup.
-                </p>
-                {checkoutError && (
-                  <p className="text-xs text-score-red mb-3">{checkoutError}</p>
-                )}
-                <button
-                  type="button"
-                  onClick={handleCheckout}
-                  disabled={checkoutLoading}
-                  className="btn-primary flex items-center gap-2 whitespace-nowrap text-sm md:text-base disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {checkoutLoading ? "Processing..." : "Get Full Diagnosis £149"}
-                  {!checkoutLoading && <ArrowRight className="w-4 h-4" />}
-                </button>
-              </div>
+
+              {/* SUBSCRIBER — show full report button */}
+              {subscriptionChecked && isSubscribed && !limitReached && (
+                <div className="mb-6 rounded-xl p-6 text-center"
+                  style={{ background: "rgba(20,184,166,0.1)", border: "1px solid rgba(20,184,166,0.3)" }}>
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Zap className="w-5 h-5 text-primary" />
+                    <span className="font-bold text-primary">
+                      {subscriptionPlan === "agency_pro" ? "Agency Pro" : "Starter Pro"} Active
+                    </span>
+                  </div>
+                  <p className="text-sm text-body mb-4">
+                    {auditsRemaining === 999999
+                      ? "Unlimited audits — view your full report below."
+                      : `${auditsRemaining} full audit${auditsRemaining === 1 ? "" : "s"} remaining this month.`}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleViewFullReport}
+                    className="btn-primary flex items-center gap-2 mx-auto"
+                  >
+                    View Full Report <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* LIMIT REACHED */}
+              {subscriptionChecked && isSubscribed && limitReached && (
+                <div className="mb-6 rounded-xl p-6 text-center"
+                  style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)" }}>
+                  <p className="font-bold text-score-amber mb-2">Monthly audit limit reached</p>
+                  <p className="text-sm text-body">
+                    You've used all your audits for this month. Upgrade to Agency Pro for unlimited audits,
+                    or wait until your plan renews.
+                  </p>
+                </div>
+              )}
+
+              {/* NOT SUBSCRIBED — show pay button */}
+              {subscriptionChecked && !isSubscribed && (
+                <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 rounded-xl flex flex-col items-center justify-center px-4 text-center">
+                  <Lock className="w-8 h-8 text-primary mb-3" />
+                  <h4 className="font-bold text-lg mb-2">Unlock Full Diagnosis</h4>
+                  <p className="text-sm text-body mb-4 text-center max-w-xs">
+                    Get detailed issue + fix for every pillar, rewritten copy, and your improved homepage mockup.
+                  </p>
+                  {checkoutError && (
+                    <p className="text-xs text-score-red mb-3">{checkoutError}</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleCheckout}
+                    disabled={checkoutLoading}
+                    className="btn-primary flex items-center gap-2 whitespace-nowrap text-sm md:text-base disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {checkoutLoading ? "Processing..." : "Get Full Diagnosis £149"}
+                    {!checkoutLoading && <ArrowRight className="w-4 h-4" />}
+                  </button>
+                </div>
+              )}
+
+              {/* Loading subscription check */}
+              {!subscriptionChecked && subscriptionLoading && (
+                <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 rounded-xl flex flex-col items-center justify-center">
+                  <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-3" />
+                  <p className="text-sm text-body">Checking your account…</p>
+                </div>
+              )}
 
               <div className="grid md:grid-cols-2 gap-4 p-4">
                 {Object.entries(result.scores).map(([key, pillar]: any) => (
