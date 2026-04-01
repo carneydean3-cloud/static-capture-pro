@@ -5,23 +5,25 @@ type Currency = "USD" | "EUR" | "GBP";
 interface CurrencyContextType {
   currency: Currency;
   setCurrency: (c: Currency) => void;
-  formatPrice: (usdPrice: number) => string;
+  formatPrice: (gbpPrice: number) => string;
 }
 
+// Base currency is GBP — all prices are stored in GBP
+// Rates are GBP → other currencies
 const rates: Record<Currency, { rate: number; symbol: string }> = {
-  USD: { rate: 1, symbol: "$" },
-  EUR: { rate: 0.92, symbol: "€" },
-  GBP: { rate: 0.79, symbol: "£" },
+  GBP: { rate: 1, symbol: "£" },
+  USD: { rate: 1.27, symbol: "$" },
+  EUR: { rate: 1.17, symbol: "€" },
 };
 
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
 
 export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
-  const [currency, setCurrency] = useState<Currency>("USD");
+  const [currency, setCurrency] = useState<Currency>("GBP");
 
-  const formatPrice = (usdPrice: number) => {
+  const formatPrice = (gbpPrice: number) => {
     const { rate, symbol } = rates[currency];
-    const converted = Math.round(usdPrice * rate);
+    const converted = Math.round(gbpPrice * rate);
     return `${symbol}${converted}`;
   };
 
