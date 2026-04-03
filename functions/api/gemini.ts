@@ -1,6 +1,3 @@
-// Cloudflare Pages Function: POST /api/gemini
-// Calls Gemini via Vertex AI using a Service Account (uses GCP free trial credits)
-
 let cachedToken: { accessToken: string; expiresAtMs: number } | null = null;
 
 function json(res: unknown, init?: ResponseInit) {
@@ -107,7 +104,7 @@ export const onRequestPost = async (context: any) => {
     const prompt = (body.prompt || "").toString().trim();
     if (!prompt) return json({ error: "Missing prompt" }, { status: 400 });
 
-    const model = ((body.model || "gemini-1.5-flash-002") as string).trim();
+    const model = ((body.model || "gemini-2.0-flash") as string).trim();
     const temperature = typeof body.temperature === "number" ? body.temperature : 0.4;
     const maxOutputTokens = typeof body.maxOutputTokens === "number" ? body.maxOutputTokens : 2048;
 
