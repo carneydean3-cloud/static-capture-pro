@@ -104,7 +104,7 @@ export const onRequestPost = async (context: any) => {
     const prompt = (body.prompt || "").toString().trim();
     if (!prompt) return json({ error: "Missing prompt" }, { status: 400 });
 
-    const model = ((body.model || "gemini-2.0-flash") as string).trim();
+    const model = ((body.model || "gemini-3.1-flash-lite-001") as string).trim();
     const temperature = typeof body.temperature === "number" ? body.temperature : 0.4;
     const maxOutputTokens = typeof body.maxOutputTokens === "number" ? body.maxOutputTokens : 2048;
 
