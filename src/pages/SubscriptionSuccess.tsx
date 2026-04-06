@@ -15,21 +15,15 @@ export default function SubscriptionSuccess() {
   }, []);
 
   useEffect(() => {
-    // We *could* verify using a dedicated verify endpoint later.
-    // For now: just show success + instruct user to run audits.
-    // Webhook will populate subscriptions table.
     if (!sessionId) {
       setStatus("error");
       setMessage("Missing session_id from Stripe.");
       return;
     }
-
-    // Light delay so it feels intentional (and gives webhook time)
     const t = setTimeout(() => {
       setStatus("active");
-      setMessage("Subscription activated. You can now generate full reports.");
+      setMessage("Subscription activated. You can now generate full reports from your dashboard.");
     }, 800);
-
     return () => clearTimeout(t);
   }, [sessionId]);
 
@@ -43,7 +37,7 @@ export default function SubscriptionSuccess() {
             </div>
             <div className="text-2xl font-bold">Just a moment</div>
             <p className="text-sm text-muted-foreground mt-4">
-              We’re confirming your payment with Stripe.
+              We're confirming your payment with Stripe.
             </p>
           </>
         )}
@@ -53,23 +47,27 @@ export default function SubscriptionSuccess() {
             <div className="flex justify-center mb-4">
               <CheckCircle2 className="w-10 h-10 text-score-green" />
             </div>
-            <h1 className="text-2xl font-bold mb-2">You’re subscribed!</h1>
+            <h1 className="text-2xl font-bold mb-2">You're subscribed!</h1>
             <p className="text-sm text-muted-foreground mb-6">{message}</p>
 
             {email && (
               <p className="text-xs text-muted-foreground mb-6">
-                Subscription email: <span className="font-semibold">{email}</span>
+                Subscription email:{" "}
+                <span className="font-semibold">{email}</span>
               </p>
             )}
 
-            <Link to="/#hero-cta" className="btn-primary inline-flex items-center gap-2">
-              Run an audit
+            <Link
+              to="/dashboard"
+              className="btn-primary inline-flex items-center gap-2"
+            >
+              Go to Dashboard
               <ArrowRight className="w-4 h-4" />
             </Link>
 
             <div className="mt-4">
-              <Link to="/#pricing" className="text-xs text-muted-foreground underline">
-                Back to pricing
+              <Link to="/login" className="text-xs text-muted-foreground underline">
+                Sign in to your account
               </Link>
             </div>
           </>
@@ -77,12 +75,15 @@ export default function SubscriptionSuccess() {
 
         {status === "error" && (
           <>
-            <h1 className="text-2xl font-bold mb-2">We couldn’t verify that</h1>
+            <h1 className="text-2xl font-bold mb-2">We couldn't verify that</h1>
             <p className="text-sm text-muted-foreground mb-6">
               {message || "Please contact support if your payment went through."}
             </p>
-            <Link to="/#pricing" className="btn-outline-primary inline-flex items-center gap-2">
-              Back to pricing
+            <Link
+              to="/login"
+              className="btn-outline-primary inline-flex items-center gap-2"
+            >
+              Sign in to your account
             </Link>
           </>
         )}
