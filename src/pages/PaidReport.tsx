@@ -43,6 +43,7 @@ type AuditData = {
   top_3_fixes?: TopFix[];
   scores?: Record<string, ScoreItem>;
   mockup_html?: string;
+  mockup_html_b?: string;
   summary?: SummaryData;
   homepage_copy_pack?: HomepageCopyPack;
   pexels_hero_image?: string;
@@ -94,6 +95,7 @@ export default function PaidReport() {
   const [error, setError] = useState("");
   const [purchase, setPurchase] = useState<PurchaseRow | null>(null);
   const [activeTab, setActiveTab] = useState<"before" | "after">("before");
+  const [mockupVersion, setMockupVersion] = useState<"a" | "b">("a");
   const [fullscreen, setFullscreen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -143,6 +145,8 @@ export default function PaidReport() {
   const summary = auditData?.summary ?? {};
   const copyPack = auditData?.homepage_copy_pack ?? {};
   const mockupHtml = auditData?.mockup_html ?? null;
+  const mockupHtmlB = auditData?.mockup_html_b ?? null;
+  const activeMockupHtml = mockupVersion === "a" ? mockupHtml : (mockupHtmlB || mockupHtml);
 
   const topFixes = useMemo(() => {
     const t3 = auditData?.top_3_fixes;
@@ -195,9 +199,9 @@ export default function PaidReport() {
   const displayScreenshotUrl = screenshotDataUrl || screenshotUrl;
 
   const handleCopyCode = async () => {
-    if (!mockupHtml) return;
+    if (!activeMockupHtml) return;
     try {
-      await navigator.clipboard.writeText(mockupHtml);
+      await navigator.clipboard.writeText(activeMockupHtml);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2500);
     } catch {
@@ -311,7 +315,7 @@ Fix: ${fix.fix || "N/A"}`)
   <title>Homepage Mockup — ConversionDoc</title>
 </head>
 <body style="margin:0;padding:0;background:#f8fafc;">
-${mockupHtml || ""}
+${activeMockupHtml || ""}
 </body>
 </html>`;
 
@@ -584,6 +588,7 @@ ${mockupHtml || ""}
             <p className="text-slate-400 text-sm mt-2">Compare your current site with a more conversion-focused direction.</p>
           </div>
 
+          {/* Before / After tabs */}
           <div className="flex border-b border-slate-200">
             <button onClick={() => setActiveTab("before")}
               className={`flex-1 py-4 text-sm font-semibold transition-colors ${
@@ -690,13 +695,47 @@ ${mockupHtml || ""}
           {/* AFTER TAB */}
           <div style={{ display: activeTab === "after" ? "block" : "none" }}>
             {mockupHtml ? (
-              <div className="relative bg-white">
-                <div ref={mockupRef} className="w-full overflow-hidden"
-                  dangerouslySetInnerHTML={{ __html: mockupHtml }} />
-                <button onClick={() => setFullscreen(true)}
-                  className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
-                  ⛶ Fullscreen
-                </button>
+              <div className="bg-white">
+
+                {/* Version A / B tabs */}
+                <div className="flex items-center gap-2 px-6 pt-4 pb-0 bg-slate-50 border-b border-slate-100">
+                  <button
+                    onClick={() => setMockupVersion("a")}
+                    className={`px-4 py-2 rounded-t-lg text-sm font-semibold transition-colors border-b-2 -mb-px ${
+                      mockupVersion === "a"
+                        ? "bg-white text-teal-600 border-teal-500 shadow-sm"
+                        : "bg-transparent text-slate-500 border-transparent hover:text-slate-700"
+                    }`}
+                  >
+                    ★ Version A
+                  </button>
+                  {mockupHtmlB && (
+                    <button
+                      onClick={() => setMockupVersion("b")}
+                      className={`px-4 py-2 rounded-t-lg text-sm font-semibold transition-colors border-b-2 -mb-px ${
+                        mockupVersion === "b"
+                          ? "bg-white text-teal-600 border-teal-500 shadow-sm"
+                          : "bg-transparent text-slate-500 border-transparent hover:text-slate-700"
+                      }`}
+                    >
+                      Version B
+                    </button>
+                  )}
+                  <span className="ml-auto text-xs text-slate-400 pb-2">
+                    {mockupVersion === "a" ? "Recommended layout" : "Alternative layout"}
+                  </span>
+                </div>
+
+                {/* Mockup render */}
+                <div className="relative">
+                  <div ref={mockupRef} className="w-full overflow-hidden"
+                    dangerouslySetInnerHTML={{ __html: activeMockupHtml || "" }} />
+                  <button onClick={() => setFullscreen(true)}
+                    className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
+                    ⛶ Fullscreen
+                  </button>
+                </div>
+
               </div>
             ) : (
               <div className="flex items-center justify-center min-h-[400px] bg-slate-50">
@@ -705,6 +744,7 @@ ${mockupHtml || ""}
             )}
           </div>
 
+          {/* Action buttons */}
           <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-wrap gap-3">
             {mockupHtml && (
               <>
@@ -749,16 +789,18 @@ ${mockupHtml || ""}
       </div>
 
       {/* Fullscreen */}
-      {fullscreen && mockupHtml && (
+      {fullscreen && activeMockupHtml && (
         <div className="fixed inset-0 z-50 bg-black/90 flex flex-col" onClick={() => setFullscreen(false)}>
           <div className="flex items-center justify-between px-6 py-4 bg-slate-950 shrink-0"
             onClick={(e) => e.stopPropagation()}>
-            <p className="text-white font-semibold">✅ Improved Direction</p>
+            <p className="text-white font-semibold">
+              ✅ Improved Direction — {mockupVersion === "a" ? "Version A (Recommended)" : "Version B (Alternative)"}
+            </p>
             <button onClick={() => setFullscreen(false)}
               className="text-slate-400 hover:text-white text-2xl leading-none">✕</button>
           </div>
           <div className="flex-1 overflow-auto bg-white" onClick={(e) => e.stopPropagation()}>
-            <div dangerouslySetInnerHTML={{ __html: mockupHtml }} />
+            <div dangerouslySetInnerHTML={{ __html: activeMockupHtml }} />
           </div>
         </div>
       )}
