@@ -2,15 +2,31 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { Globe } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const { currency, setCurrency } = useCurrency();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    // Check if user is logged in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsLoggedIn(!!session);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   return (
@@ -49,7 +65,26 @@ const Navbar = () => {
               <option value="GBP" className="bg-navy-dark text-foreground">GBP</option>
             </select>
           </div>
-          <a href="#hero-cta" className="btn-primary text-sm py-2 px-4 whitespace-nowrap"><span className="hidden sm:inline">Get </span>Free Audit</a>
+
+          {isLoggedIn ? (
+            <a
+              href="/dashboard"
+              className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+            >
+              Dashboard →
+            </a>
+          ) : (
+            <a
+              href="/login"
+              className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+            >
+              Sign In
+            </a>
+          )}
+
+          <a href="#hero-cta" className="btn-primary text-sm py-2 px-4 whitespace-nowrap">
+            <span className="hidden sm:inline">Get </span>Free Audit
+          </a>
         </div>
       </div>
     </nav>
