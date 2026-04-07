@@ -75,16 +75,32 @@ const EmailModal = () => {
       // 3) AUDIT INSERT
       try {
         if (currentResult) {
-          const { error: auditError } = await supabase.from("audits").insert({
-            email: trimmedEmail,
-            url,
-            overall_score: currentResult.overall_score ?? null,
-            verdict: currentResult.verdict ?? null,
-          });
+          const { data: auditData, error: auditError } = await supabase
+            .from("audits")
+            .insert({
+              email: trimmedEmail,
+              url,
+              overall_score: currentResult.overall_score ?? null,
+              verdict: currentResult.verdict ?? null,
+              tier: "free",
+              full_results: currentResult,
+              top_3_fixes: currentResult.top_3_fixes ?? null,
+              clarity_score: currentResult.scores?.clarity?.score ?? null,
+              hook_score: currentResult.scores?.hook?.score ?? null,
+              trust_score: currentResult.scores?.trust?.score ?? null,
+              desire_score: currentResult.scores?.desire?.score ?? null,
+              action_score: currentResult.scores?.action?.score ?? null,
+              objections_score: currentResult.scores?.objections?.score ?? null,
+            })
+            .select("id")
+            .single();
 
           if (auditError) {
             console.error("Audits save error:", auditError.message);
-            toast.error(`Results unlocked — audit save failed. (${auditError.message})`);
+          } else if (auditData?.id) {
+            supabase.functions.invoke("send-audit-email", {
+              body: { audit_id: auditData.id }
+            }).catch(console.error);
           }
         }
       } catch (err) {
