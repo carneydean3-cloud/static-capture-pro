@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Index from "./pages/Index.tsx";
 import PaidReport from "./pages/PaidReport.tsx";
 import ReportById from "./pages/ReportById.tsx";
+import FreeAuditReport from "./pages/FreeAuditReport.tsx";
 import SubscriptionSuccess from "./pages/SubscriptionSuccess.tsx";
 import Login from "./pages/Login.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
@@ -20,15 +21,12 @@ import Refund from "./pages/Refund.tsx";
 
 const queryClient = new QueryClient();
 
-// Handles magic link token in URL hash and redirects to /dashboard
 function AuthHandler() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Listen for auth state changes (magic link click triggers this)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
-        // Only redirect if we're not already on dashboard or report pages
         const path = window.location.pathname;
         if (path === "/" || path === "/login") {
           navigate("/dashboard");
@@ -55,6 +53,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/paid-report" element={<PaidReport />} />
               <Route path="/report/:id" element={<ReportById />} />
+              <Route path="/free-audit/:id" element={<FreeAuditReport />} />
               <Route path="/login" element={<Login />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/subscription-success" element={<SubscriptionSuccess />} />
