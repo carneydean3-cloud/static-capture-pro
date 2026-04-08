@@ -109,7 +109,6 @@ const HeroSection = () => {
     setUrl(normalizedUrl);
     setStage("capturing");
 
-    // Clear any previous screenshot from localStorage
     localStorage.removeItem("conversiondoc_screenshot_url");
 
     const timer1 = setTimeout(() => setStage("analysing"), 2000);
@@ -148,16 +147,12 @@ const HeroSection = () => {
       const data = await response.json();
       if (data?.error) throw new Error(data.error);
 
-      // Set result immediately — user sees their results right away
       setResult(data);
       setStage("email_capture");
 
-      // Capture screenshot in background — doesn't block the UI
       captureScreenshotToStorage(normalizedUrl).then((screenshotUrl) => {
         if (screenshotUrl) {
-          // Store in localStorage so checkout can pick it up reliably
           localStorage.setItem("conversiondoc_screenshot_url", screenshotUrl);
-          // Also update the result in context
           setResult({ ...data, screenshot_url: screenshotUrl });
           console.log("Screenshot ready:", screenshotUrl);
         }
@@ -177,6 +172,8 @@ const HeroSection = () => {
   return (
     <section id="hero-cta" className="relative pt-32 pb-20 px-6 overflow-hidden">
       <div className="max-w-7xl mx-auto text-center relative z-10">
+
+        {/* Badge */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -184,30 +181,44 @@ const HeroSection = () => {
           className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-1.5 mb-8"
         >
           <span className="text-xs font-bold uppercase tracking-widest text-primary">
-            ⚡ AI CONVERSION DIAGNOSTICS
+            ⚡ AI Conversion Diagnostics
           </span>
         </motion.div>
 
+        {/* Headline */}
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
           className="text-5xl md:text-7xl font-bold tracking-tight mb-8 leading-[1.1]"
         >
-          Find out exactly why your <br />
-          landing page isn't converting.
+          Other tools diagnose.<br />
+          We fix.
         </motion.h1>
 
+        {/* Subheadline */}
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-xl text-body max-w-3xl mx-auto mb-12 leading-relaxed"
+          className="text-xl text-body max-w-3xl mx-auto mb-6 leading-relaxed"
         >
-          ConversionDoc analyses your page across 6 conversion pillars and delivers a precise
-          diagnosis — with every fix included.
+          ConversionDoc audits your landing page across 7 conversion pillars, identifies
+          exactly what's blocking action, and prescribes the fixes — including a check
+          for AI search readiness.
         </motion.p>
 
+        {/* Supporting proof line */}
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.25 }}
+          className="text-sm text-caption max-w-2xl mx-auto mb-12"
+        >
+          Built for humans. Ready for AI.
+        </motion.p>
+
+        {/* Audit form */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -316,10 +327,42 @@ const HeroSection = () => {
             </div>
           )}
         </motion.div>
+
+        {/* Three-pillar trust strip */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto"
+        >
+          {[
+            {
+              label: "7-Pillar Diagnosis",
+              description: "Clarity, trust, desire, action, objections, hooks, and AI search readiness.",
+            },
+            {
+              label: "Exact Fixes Included",
+              description: "Not vague advice. Rewritten copy, mockups, and ready-to-use code.",
+            },
+            {
+              label: "Built for Humans. Ready for AI.",
+              description: "We check how your page performs for visitors and AI search engines.",
+            },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="glass-card p-6 text-left"
+            >
+              <p className="text-sm font-bold text-primary mb-1">{item.label}</p>
+              <p className="text-xs text-body leading-relaxed">{item.description}</p>
+            </div>
+          ))}
+        </motion.div>
       </div>
 
       <EmailModal />
 
+      {/* Background glows */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full"></div>
         <div className="absolute bottom-[10%] right-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full"></div>
