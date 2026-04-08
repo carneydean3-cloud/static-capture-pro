@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { AlertCircle, CheckCircle2, Lock, ArrowRight, Zap } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Lock,
+  ArrowRight,
+  Zap,
+} from "lucide-react";
 import {
   Radar,
   RadarChart,
@@ -17,6 +23,7 @@ const defaultPillars = [
   { name: "Desire", score: 60, fullMark: 100 },
   { name: "Action", score: 80, fullMark: 100 },
   { name: "Objections", score: 30, fullMark: 100 },
+  { name: "AI Readiness", score: 45, fullMark: 100 },
 ];
 
 const verdictColor: Record<string, string> = {
@@ -38,16 +45,18 @@ const scoreColor = (score: number) => {
 };
 
 const getImpactStyles = (impact: string) => {
-  if (impact === "High") return {
-    borderLeft: "4px solid #ef4444",
-    badgeBg: "#ef4444",
-    textColor: "#ef4444",
-  };
-  if (impact === "Medium") return {
-    borderLeft: "4px solid #f59e0b",
-    badgeBg: "#f59e0b",
-    textColor: "#f59e0b",
-  };
+  if (impact === "High")
+    return {
+      borderLeft: "4px solid #ef4444",
+      badgeBg: "#ef4444",
+      textColor: "#ef4444",
+    };
+  if (impact === "Medium")
+    return {
+      borderLeft: "4px solid #f59e0b",
+      badgeBg: "#f59e0b",
+      textColor: "#f59e0b",
+    };
   return {
     borderLeft: "4px solid #94a3b8",
     badgeBg: "#94a3b8",
@@ -62,7 +71,6 @@ const ResultsPreview = () => {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
-  // Subscription state
   const [subscriptionChecked, setSubscriptionChecked] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
@@ -78,11 +86,11 @@ const ResultsPreview = () => {
     }
   }, [stage]);
 
-  // Check subscription when results are ready and email is available
   useEffect(() => {
     if (!hasRealResults || subscriptionChecked) return;
 
-    const email = userEmail || localStorage.getItem("conversiondoc_user_email") || "";
+    const email =
+      userEmail || localStorage.getItem("conversiondoc_user_email") || "";
     if (!email) {
       setSubscriptionChecked(true);
       return;
@@ -119,19 +127,51 @@ const ResultsPreview = () => {
     checkSubscription();
   }, [hasRealResults, userEmail, subscriptionChecked]);
 
+  // Build pillars from result — now includes ai_readiness as 7th pillar
   const pillars = hasRealResults
     ? [
-        { name: "Clarity", score: (result?.scores?.clarity?.score || 0) * 10, fullMark: 100 },
-        { name: "Hook", score: (result?.scores?.hook?.score || 0) * 10, fullMark: 100 },
-        { name: "Trust", score: (result?.scores?.trust?.score || 0) * 10, fullMark: 100 },
-        { name: "Desire", score: (result?.scores?.desire?.score || 0) * 10, fullMark: 100 },
-        { name: "Action", score: (result?.scores?.action?.score || 0) * 10, fullMark: 100 },
-        { name: "Objections", score: (result?.scores?.objections?.score || 0) * 10, fullMark: 100 },
+        {
+          name: "Clarity",
+          score: (result?.scores?.clarity?.score || 0) * 10,
+          fullMark: 100,
+        },
+        {
+          name: "Hook",
+          score: (result?.scores?.hook?.score || 0) * 10,
+          fullMark: 100,
+        },
+        {
+          name: "Trust",
+          score: (result?.scores?.trust?.score || 0) * 10,
+          fullMark: 100,
+        },
+        {
+          name: "Desire",
+          score: (result?.scores?.desire?.score || 0) * 10,
+          fullMark: 100,
+        },
+        {
+          name: "Action",
+          score: (result?.scores?.action?.score || 0) * 10,
+          fullMark: 100,
+        },
+        {
+          name: "Objections",
+          score: (result?.scores?.objections?.score || 0) * 10,
+          fullMark: 100,
+        },
+        {
+          name: "AI Readiness",
+          score: (result?.scores?.ai_readiness?.score || 0) * 10,
+          fullMark: 100,
+        },
       ]
     : defaultPillars;
 
-  const overallScore = hasRealResults ? (result?.overall_score || 0) : 67;
-  const verdict = hasRealResults ? (result?.verdict || "Needs Attention") : "Needs Attention";
+  const overallScore = hasRealResults ? result?.overall_score || 0 : 67;
+  const verdict = hasRealResults
+    ? result?.verdict || "Needs Attention"
+    : "Needs Attention";
 
   const handleCheckout = async () => {
     setCheckoutLoading(true);
@@ -141,8 +181,10 @@ const ResultsPreview = () => {
       const checkoutEmail = userEmail || savedEmail || "";
       if (!checkoutEmail) throw new Error("No email provided for checkout");
 
-      const screenshotUrl = localStorage.getItem("conversiondoc_screenshot_url") ||
-        result?.screenshot_url || "";
+      const screenshotUrl =
+        localStorage.getItem("conversiondoc_screenshot_url") ||
+        result?.screenshot_url ||
+        "";
 
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
@@ -177,12 +219,14 @@ const ResultsPreview = () => {
     }
   };
 
-  // Save audit result to purchases table for subscribers
   const handleViewFullReport = async () => {
     try {
-      const email = userEmail || localStorage.getItem("conversiondoc_user_email") || "";
-      const screenshotUrl = localStorage.getItem("conversiondoc_screenshot_url") ||
-        result?.screenshot_url || "";
+      const email =
+        userEmail || localStorage.getItem("conversiondoc_user_email") || "";
+      const screenshotUrl =
+        localStorage.getItem("conversiondoc_screenshot_url") ||
+        result?.screenshot_url ||
+        "";
 
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
@@ -221,12 +265,14 @@ const ResultsPreview = () => {
           className="text-center mb-10"
         >
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
-            {hasRealResults ? "Your Conversion Diagnosis" : "Conversion Diagnosis"}
+            {hasRealResults
+              ? "Your Conversion Diagnosis"
+              : "Conversion Diagnosis"}
           </h2>
           <p className="text-lg text-subheading">
             {hasRealResults
               ? "Here's exactly what's holding your page back."
-              : "See exactly what's holding your page back."}
+              : "See exactly what's holding your page back — across all 7 pillars."}
           </p>
         </motion.div>
 
@@ -236,7 +282,9 @@ const ResultsPreview = () => {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
           className={`glass-card p-10 relative overflow-hidden flex flex-col items-center transition-shadow duration-1000 ${
-            highlight ? "ring-2 ring-primary shadow-[0_0_40px_rgba(20,184,166,0.3)]" : ""
+            highlight
+              ? "ring-2 ring-primary shadow-[0_0_40px_rgba(20,184,166,0.3)]"
+              : ""
           }`}
         >
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-score-amber to-score-red" />
@@ -248,13 +296,23 @@ const ResultsPreview = () => {
             </div>
           </div>
 
+          {/* Radar chart — now shows 7 pillars */}
           <div className="w-full h-[340px] md:h-[420px] mb-6 px-4 md:px-0">
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="65%" data={pillars}>
+              <RadarChart
+                cx="50%"
+                cy="50%"
+                outerRadius="65%"
+                data={pillars}
+              >
                 <PolarGrid stroke="rgba(255,255,255,0.1)" />
                 <PolarAngleAxis
                   dataKey="name"
-                  tick={{ fill: "hsl(203 41% 79%)", fontSize: 13, fontWeight: 600 }}
+                  tick={{
+                    fill: "hsl(203 41% 79%)",
+                    fontSize: 12,
+                    fontWeight: 600,
+                  }}
                   tickLine={false}
                 />
                 <Radar
@@ -274,13 +332,18 @@ const ResultsPreview = () => {
             </p>
           )}
 
+          {/* Score + verdict */}
           <div className="w-full grid md:grid-cols-2 gap-6 mb-8">
-            <div className={`rounded-xl p-8 border text-center ${
-              hasRealResults
-                ? verdictBg[verdict] || verdictBg["Needs Attention"]
-                : "bg-score-amber/10 border-score-amber/20"
-            }`}>
-              <div className={`text-4xl font-bold mb-2 ${scoreColor(overallScore)}`}>
+            <div
+              className={`rounded-xl p-8 border text-center ${
+                hasRealResults
+                  ? verdictBg[verdict] || verdictBg["Needs Attention"]
+                  : "bg-score-amber/10 border-score-amber/20"
+              }`}
+            >
+              <div
+                className={`text-4xl font-bold mb-2 ${scoreColor(overallScore)}`}
+              >
                 {overallScore}/100
               </div>
               <div className="text-sm font-bold uppercase tracking-widest text-caption">
@@ -293,24 +356,75 @@ const ResultsPreview = () => {
                 {verdict === "Healthy" ? (
                   <CheckCircle2 className="w-5 h-5 text-score-green" />
                 ) : (
-                  <AlertCircle className={`w-5 h-5 ${verdictColor[verdict] || "text-score-amber"}`} />
+                  <AlertCircle
+                    className={`w-5 h-5 ${
+                      verdictColor[verdict] || "text-score-amber"
+                    }`}
+                  />
                 )}
-                <span className={`font-bold ${verdictColor[verdict] || "text-score-amber"}`}>
+                <span
+                  className={`font-bold ${
+                    verdictColor[verdict] || "text-score-amber"
+                  }`}
+                >
                   {verdict}
                 </span>
               </div>
               <p className="text-sm text-body leading-relaxed">
                 {hasRealResults
                   ? "Your detailed diagnosis is below. Review the top fixes to boost conversions."
-                  : "Significant improvements identified across your trust architecture and objection handling."}
+                  : "Significant improvements identified across trust architecture, objection handling, and AI search readiness."}
               </p>
             </div>
           </div>
 
-          {/* TOP 3 FIXES */}
+          {/* AI Search Readiness callout — shown when we have real results */}
+          {hasRealResults && result?.scores?.ai_readiness && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="w-full mb-8 rounded-xl p-6"
+              style={{
+                background: "rgba(20,184,166,0.08)",
+                border: "1px solid rgba(20,184,166,0.2)",
+              }}
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+                  <Zap className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-primary mb-1">
+                    AI Search Readiness
+                  </p>
+                  <div className="flex items-center gap-3 mb-2">
+                    <span
+                      className={`text-2xl font-bold ${scoreColor(
+                        (result.scores.ai_readiness.score || 0) * 10
+                      )}`}
+                    >
+                      {result.scores.ai_readiness.score || 0}/10
+                    </span>
+                    <span className="text-sm text-body">
+                      — how well your page is structured for AI search engines
+                    </span>
+                  </div>
+                  <p className="text-xs text-body leading-relaxed">
+                    {result.scores.ai_readiness.issue ||
+                      "AI search readiness assessment included in your full diagnosis."}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Top 3 fixes */}
           {hasRealResults && result?.top_3_fixes && (
             <div className="w-full mb-8">
-              <h4 className="text-lg font-bold text-foreground mb-4">Top 3 Priority Fixes</h4>
+              <h4 className="text-lg font-bold text-foreground mb-4">
+                Top 3 Priority Fixes
+              </h4>
               <div className="space-y-3">
                 {result.top_3_fixes.map((fix: any, i: number) => {
                   const impact = fix.impact || "Medium";
@@ -333,26 +447,72 @@ const ResultsPreview = () => {
                         </div>
                         <div className="flex-1 min-w-0 space-y-3">
                           <div>
-                            <span style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#94a3b8" }}>
+                            <span
+                              style={{
+                                fontSize: "10px",
+                                fontWeight: 700,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.1em",
+                                color: "#94a3b8",
+                              }}
+                            >
                               Issue
                             </span>
-                            <p style={{ fontWeight: 600, color: "#ffffff", fontSize: "14px", lineHeight: "1.4", marginTop: "2px" }}>
+                            <p
+                              style={{
+                                fontWeight: 600,
+                                color: "#ffffff",
+                                fontSize: "14px",
+                                lineHeight: "1.4",
+                                marginTop: "2px",
+                              }}
+                            >
                               {fix.issue}
                             </p>
                           </div>
                           <div>
-                            <span style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#94a3b8" }}>
+                            <span
+                              style={{
+                                fontSize: "10px",
+                                fontWeight: 700,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.1em",
+                                color: "#94a3b8",
+                              }}
+                            >
                               Impact
                             </span>
-                            <p style={{ fontSize: "14px", fontWeight: 700, color: styles.textColor, marginTop: "2px" }}>
+                            <p
+                              style={{
+                                fontSize: "14px",
+                                fontWeight: 700,
+                                color: styles.textColor,
+                                marginTop: "2px",
+                              }}
+                            >
                               {impact}
                             </p>
                           </div>
                           <div>
-                            <span style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#14b8a6" }}>
+                            <span
+                              style={{
+                                fontSize: "10px",
+                                fontWeight: 700,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.1em",
+                                color: "#14b8a6",
+                              }}
+                            >
                               Fix
                             </span>
-                            <p style={{ fontSize: "14px", color: "#e2e8f0", lineHeight: "1.6", marginTop: "2px" }}>
+                            <p
+                              style={{
+                                fontSize: "14px",
+                                color: "#e2e8f0",
+                                lineHeight: "1.6",
+                                marginTop: "2px",
+                              }}
+                            >
                               {fix.fix}
                             </p>
                           </div>
@@ -365,24 +525,34 @@ const ResultsPreview = () => {
             </div>
           )}
 
-          {/* FULL REPORT SECTION */}
+          {/* Full report section */}
           {hasRealResults && result?.scores && (
             <div className="w-full relative">
 
-              {/* SUBSCRIBER — show full report button */}
+              {/* Subscriber — show full report button */}
               {subscriptionChecked && isSubscribed && !limitReached && (
-                <div className="mb-6 rounded-xl p-6 text-center"
-                  style={{ background: "rgba(20,184,166,0.1)", border: "1px solid rgba(20,184,166,0.3)" }}>
+                <div
+                  className="mb-6 rounded-xl p-6 text-center"
+                  style={{
+                    background: "rgba(20,184,166,0.1)",
+                    border: "1px solid rgba(20,184,166,0.3)",
+                  }}
+                >
                   <div className="flex items-center justify-center gap-2 mb-2">
                     <Zap className="w-5 h-5 text-primary" />
                     <span className="font-bold text-primary">
-                      {subscriptionPlan === "agency_pro" ? "Agency Pro" : "Starter Pro"} Active
+                      {subscriptionPlan === "agency_pro"
+                        ? "Agency Pro"
+                        : "Starter Pro"}{" "}
+                      Active
                     </span>
                   </div>
                   <p className="text-sm text-body mb-4">
                     {auditsRemaining === 999999
                       ? "Unlimited audits — view your full report below."
-                      : `${auditsRemaining} full audit${auditsRemaining === 1 ? "" : "s"} remaining this month.`}
+                      : `${auditsRemaining} full audit${
+                          auditsRemaining === 1 ? "" : "s"
+                        } remaining this month.`}
                   </p>
                   <button
                     type="button"
@@ -394,28 +564,42 @@ const ResultsPreview = () => {
                 </div>
               )}
 
-              {/* LIMIT REACHED */}
+              {/* Limit reached */}
               {subscriptionChecked && isSubscribed && limitReached && (
-                <div className="mb-6 rounded-xl p-6 text-center"
-                  style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)" }}>
-                  <p className="font-bold text-score-amber mb-2">Monthly audit limit reached</p>
+                <div
+                  className="mb-6 rounded-xl p-6 text-center"
+                  style={{
+                    background: "rgba(245,158,11,0.1)",
+                    border: "1px solid rgba(245,158,11,0.3)",
+                  }}
+                >
+                  <p className="font-bold text-score-amber mb-2">
+                    Monthly audit limit reached
+                  </p>
                   <p className="text-sm text-body">
-                    You've used all your audits for this month. Upgrade to Agency Pro for unlimited audits,
-                    or wait until your plan renews.
+                    You've used all your audits for this month. Upgrade to
+                    Agency Pro for unlimited audits, or wait until your plan
+                    renews.
                   </p>
                 </div>
               )}
 
-              {/* NOT SUBSCRIBED — show pay button */}
+              {/* Not subscribed — pay gate */}
               {subscriptionChecked && !isSubscribed && (
                 <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 rounded-xl flex flex-col items-center justify-center px-4 text-center">
                   <Lock className="w-8 h-8 text-primary mb-3" />
-                  <h4 className="font-bold text-lg mb-2">Unlock Full Diagnosis</h4>
+                  <h4 className="font-bold text-lg mb-2">
+                    Unlock Full Diagnosis
+                  </h4>
                   <p className="text-sm text-body mb-4 text-center max-w-xs">
-                    Get detailed issue + fix for every pillar, rewritten copy, and your improved homepage mockup.
+                    Get a detailed issue and fix for every pillar, including AI
+                    search readiness — plus rewritten copy and your improved
+                    homepage mockup.
                   </p>
                   {checkoutError && (
-                    <p className="text-xs text-score-red mb-3">{checkoutError}</p>
+                    <p className="text-xs text-score-red mb-3">
+                      {checkoutError}
+                    </p>
                   )}
                   <button
                     type="button"
@@ -423,13 +607,15 @@ const ResultsPreview = () => {
                     disabled={checkoutLoading}
                     className="btn-primary flex items-center gap-2 whitespace-nowrap text-sm md:text-base disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {checkoutLoading ? "Processing..." : "Get Full Diagnosis £149"}
+                    {checkoutLoading
+                      ? "Processing..."
+                      : "Get Full Diagnosis £149"}
                     {!checkoutLoading && <ArrowRight className="w-4 h-4" />}
                   </button>
                 </div>
               )}
 
-              {/* Loading subscription check */}
+              {/* Subscription loading */}
               {!subscriptionChecked && subscriptionLoading && (
                 <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 rounded-xl flex flex-col items-center justify-center">
                   <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-3" />
@@ -437,18 +623,31 @@ const ResultsPreview = () => {
                 </div>
               )}
 
+              {/* Pillar breakdown grid — now shows all 7 */}
               <div className="grid md:grid-cols-2 gap-4 p-4">
-                {Object.entries(result.scores).map(([key, pillar]: any) => (
-                  <div key={key} className="glass-card p-5">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold capitalize text-foreground">{key}</span>
-                      <span className={`font-bold ${scoreColor((pillar?.score || 0) * 10)}`}>
-                        {pillar?.score || 0}/10
-                      </span>
+                {Object.entries(result.scores).map(
+                  ([key, pillar]: any) => (
+                    <div key={key} className="glass-card p-5">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-bold capitalize text-foreground">
+                          {key === "ai_readiness"
+                            ? "AI Search Readiness"
+                            : key}
+                        </span>
+                        <span
+                          className={`font-bold ${scoreColor(
+                            (pillar?.score || 0) * 10
+                          )}`}
+                        >
+                          {pillar?.score || 0}/10
+                        </span>
+                      </div>
+                      <p className="text-xs text-body">
+                        {pillar?.issue || ""}
+                      </p>
                     </div>
-                    <p className="text-xs text-body">{pillar?.issue || ""}</p>
-                  </div>
-                ))}
+                  )
+                )}
               </div>
             </div>
           )}
