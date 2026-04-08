@@ -93,6 +93,12 @@ const Navbar = () => {
           >
             FAQ
           </a>
+          <a
+            href="https://conversiondoc.co.uk/blog"
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Blog
+          </a>
         </div>
 
         {/* Right side */}
