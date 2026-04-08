@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Check, Star, Zap, ArrowRight } from "lucide-react";
+import { Check, Star, ArrowRight } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 
 const Pricing = () => {
@@ -51,12 +51,13 @@ const Pricing = () => {
     {
       name: "Free Audit",
       price: 0,
-      description: "Perfect for testing the waters and identifying quick wins.",
+      description: "Perfect for identifying quick wins and testing the waters.",
       features: [
-        "6-Pillar Analysis",
+        "7-Pillar Conversion Analysis",
         "Overall Conversion Score",
         "Top 3 Critical Fixes",
         "Basic Layout Audit",
+        "AI Search Readiness Signals",
         "Results in 60 Seconds",
       ],
       cta: "Start Free Audit",
@@ -68,11 +69,12 @@ const Pricing = () => {
       price: 149,
       description: "One-time, no subscription. Comprehensive analysis for serious growth.",
       features: [
-        "Full 6-pillar breakdown",
-        "Every issue identified",
-        "Rewritten copy (every section)",
-        "Brand-matched mockup (PNG)",
-        "Ready-to-use code (paste straight in)",
+        "Full 7-Pillar Breakdown",
+        "Every Issue Identified",
+        "Rewritten Copy (Every Section)",
+        "Brand-Matched Mockup (PNG)",
+        "Ready-to-Use Code (Paste Straight In)",
+        "AI Search Readiness Assessment",
       ],
       cta: "Get Full Diagnosis",
       ctaAction: "free",
@@ -86,9 +88,10 @@ const Pricing = () => {
       description: "20 full audits per month. Perfect for freelancers and consultants.",
       features: [
         "Everything in Full Diagnosis",
-        "20 Full Audits per month",
-        "Run audits on client sites",
-        "Full reports on every audit",
+        "20 Full Audits Per Month",
+        "Run Audits on Client Sites",
+        "Full Reports on Every Audit",
+        "AI Search Readiness on Every Audit",
         "Priority Support",
       ],
       cta: "Start Starter Pro",
@@ -104,8 +107,9 @@ const Pricing = () => {
       features: [
         "Everything in Starter Pro",
         "Unlimited Full Audits",
-        "Audit all your client sites",
-        "Full reports on every audit",
+        "Audit All Client Sites",
+        "Full Reports on Every Audit",
+        "AI Search Readiness on Every Audit",
         "Priority Support",
       ],
       cta: "Start Agency Pro",
@@ -119,9 +123,12 @@ const Pricing = () => {
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-20">
           <span className="section-label mb-4 block">Pricing</span>
-          <h2 className="section-heading mb-6">Simple, transparent pricing.</h2>
+          <h2 className="section-heading mb-6">
+            Simple, transparent pricing.
+          </h2>
           <p className="body-text max-w-2xl mx-auto">
-            No hidden fees. Choose the plan that fits your needs.
+            No hidden fees. Every plan includes conversion diagnosis and AI search readiness.
+            Choose the depth that fits your needs.
           </p>
         </div>
 
@@ -146,6 +153,7 @@ const Pricing = () => {
                   <Star className="w-3 h-3" /> {plan.popularLabel}
                 </div>
               )}
+
               <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
               <div className="flex items-baseline gap-1 mb-4">
                 <span className="text-4xl font-bold">
@@ -156,6 +164,7 @@ const Pricing = () => {
                 )}
               </div>
               <p className="text-sm text-muted-foreground mb-8">{plan.description}</p>
+
               <ul className="space-y-3 mb-8">
                 {plan.features.map((feature, i) => (
                   <li key={i} className="flex items-center gap-3 text-sm">
@@ -202,6 +211,27 @@ const Pricing = () => {
             </motion.div>
           ))}
         </div>
+
+        {/* GEO callout strip */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="mt-16 glass-card p-8 max-w-3xl mx-auto text-center"
+        >
+          <p className="text-xs font-bold uppercase tracking-widest text-primary mb-3">
+            New — AI Search Readiness
+          </p>
+          <h3 className="text-xl font-bold mb-3">
+            Built for humans. Ready for AI.
+          </h3>
+          <p className="text-sm text-body leading-relaxed">
+            Every audit now includes an AI Search Readiness check — so you know
+            whether your page is structured to be found, understood, and cited by
+            AI search engines like ChatGPT, Perplexity, and Google AI Overviews.
+          </p>
+        </motion.div>
       </div>
     </section>
   );
