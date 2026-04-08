@@ -16,13 +16,13 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
-    // Check if user is logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       setIsLoggedIn(!!session);
     });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsLoggedIn(!!session);
     });
 
@@ -33,39 +33,94 @@ const Navbar = () => {
     <nav
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-6 py-4",
-        scrolled ? "bg-background/80 backdrop-blur-md border-b border-white/10" : "bg-transparent"
+        scrolled
+          ? "bg-background/80 backdrop-blur-md border-b border-white/10"
+          : "bg-transparent"
       )}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
+
+        {/* Logo */}
         <div className="flex items-center gap-1">
           <span className="text-xl font-bold tracking-tight">ConversionDoc</span>
-          <svg width="40" height="24" viewBox="0 0 40 24" fill="none" className="text-primary">
-            <path d="M2 12H10L13 4L18 20L22 10L25 14H30L34 8L38 4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M34 4H38V8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <svg
+            width="40"
+            height="24"
+            viewBox="0 0 40 24"
+            fill="none"
+            className="text-primary"
+          >
+            <path
+              d="M2 12H10L13 4L18 20L22 10L25 14H30L34 8L38 4"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M34 4H38V8"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         </div>
 
+        {/* Nav links */}
         <div className="hidden md:flex items-center gap-8">
-          <a href="#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">How it Works</a>
-          <a href="#results" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Results</a>
-          <a href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
-          <a href="#faq" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">FAQ</a>
+          <a
+            href="#how-it-works"
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            How it Works
+          </a>
+          <a
+            href="#results"
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Results
+          </a>
+          <a
+            href="#pricing"
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Pricing
+          </a>
+          <a
+            href="#faq"
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            FAQ
+          </a>
         </div>
 
+        {/* Right side */}
         <div className="flex items-center gap-4">
+
+          {/* Currency selector */}
           <div className="flex items-center gap-2 bg-white/5 rounded-full px-3 py-1.5 border border-white/10">
             <Globe className="w-4 h-4 text-muted-foreground" />
             <select
               value={currency}
-              onChange={(e) => setCurrency(e.target.value as "USD" | "EUR" | "GBP")}
+              onChange={(e) =>
+                setCurrency(e.target.value as "USD" | "EUR" | "GBP")
+              }
               className="bg-transparent text-xs font-semibold outline-none cursor-pointer text-foreground"
             >
-              <option value="USD" className="bg-navy-dark text-foreground">USD</option>
-              <option value="EUR" className="bg-navy-dark text-foreground">EUR</option>
-              <option value="GBP" className="bg-navy-dark text-foreground">GBP</option>
+              <option value="USD" className="bg-navy-dark text-foreground">
+                USD
+              </option>
+              <option value="EUR" className="bg-navy-dark text-foreground">
+                EUR
+              </option>
+              <option value="GBP" className="bg-navy-dark text-foreground">
+                GBP
+              </option>
             </select>
           </div>
 
+          {/* Auth link */}
           {isLoggedIn ? (
             <a
               href="/dashboard"
@@ -82,7 +137,11 @@ const Navbar = () => {
             </a>
           )}
 
-          <a href="#hero-cta" className="btn-primary text-sm py-2 px-4 whitespace-nowrap">
+          {/* CTA */}
+          <a
+            href="#hero-cta"
+            className="btn-primary text-sm py-2 px-4 whitespace-nowrap"
+          >
             <span className="hidden sm:inline">Get </span>Free Audit
           </a>
         </div>
