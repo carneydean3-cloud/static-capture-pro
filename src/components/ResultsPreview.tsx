@@ -26,6 +26,16 @@ const defaultPillars = [
   { name: "AI Readiness", score: 45, fullMark: 100 },
 ];
 
+const defaultGEOPillars = [
+  { name: "AI Readiness", score: 45, fullMark: 100 },
+  { name: "Clarity", score: 70, fullMark: 100 },
+  { name: "Hook", score: 50, fullMark: 100 },
+  { name: "Trust", score: 40, fullMark: 100 },
+  { name: "Desire", score: 60, fullMark: 100 },
+  { name: "Action", score: 80, fullMark: 100 },
+  { name: "Objections", score: 30, fullMark: 100 },
+];
+
 const verdictColor: Record<string, string> = {
   Healthy: "text-score-green",
   "Needs Attention": "text-score-amber",
@@ -78,6 +88,9 @@ const ResultsPreview = () => {
   const [limitReached, setLimitReached] = useState(false);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
+  // Detect GEO mode from URL
+  const isGeoMode = window.location.pathname.includes("geo-audit");
+
   useEffect(() => {
     if (stage === "done") {
       setHighlight(true);
@@ -127,45 +140,85 @@ const ResultsPreview = () => {
     checkSubscription();
   }, [hasRealResults, userEmail, subscriptionChecked]);
 
-  // Build pillars from result — now includes ai_readiness as 7th pillar
+  // Build pillars — GEO mode puts AI Readiness first
   const pillars = hasRealResults
-    ? [
-        {
-          name: "Clarity",
-          score: (result?.scores?.clarity?.score || 0) * 10,
-          fullMark: 100,
-        },
-        {
-          name: "Hook",
-          score: (result?.scores?.hook?.score || 0) * 10,
-          fullMark: 100,
-        },
-        {
-          name: "Trust",
-          score: (result?.scores?.trust?.score || 0) * 10,
-          fullMark: 100,
-        },
-        {
-          name: "Desire",
-          score: (result?.scores?.desire?.score || 0) * 10,
-          fullMark: 100,
-        },
-        {
-          name: "Action",
-          score: (result?.scores?.action?.score || 0) * 10,
-          fullMark: 100,
-        },
-        {
-          name: "Objections",
-          score: (result?.scores?.objections?.score || 0) * 10,
-          fullMark: 100,
-        },
-        {
-          name: "AI Readiness",
-          score: (result?.scores?.ai_readiness?.score || 0) * 10,
-          fullMark: 100,
-        },
-      ]
+    ? isGeoMode
+      ? [
+          {
+            name: "AI Readiness",
+            score: (result?.scores?.ai_readiness?.score || 0) * 10,
+            fullMark: 100,
+          },
+          {
+            name: "Clarity",
+            score: (result?.scores?.clarity?.score || 0) * 10,
+            fullMark: 100,
+          },
+          {
+            name: "Hook",
+            score: (result?.scores?.hook?.score || 0) * 10,
+            fullMark: 100,
+          },
+          {
+            name: "Trust",
+            score: (result?.scores?.trust?.score || 0) * 10,
+            fullMark: 100,
+          },
+          {
+            name: "Desire",
+            score: (result?.scores?.desire?.score || 0) * 10,
+            fullMark: 100,
+          },
+          {
+            name: "Action",
+            score: (result?.scores?.action?.score || 0) * 10,
+            fullMark: 100,
+          },
+          {
+            name: "Objections",
+            score: (result?.scores?.objections?.score || 0) * 10,
+            fullMark: 100,
+          },
+        ]
+      : [
+          {
+            name: "Clarity",
+            score: (result?.scores?.clarity?.score || 0) * 10,
+            fullMark: 100,
+          },
+          {
+            name: "Hook",
+            score: (result?.scores?.hook?.score || 0) * 10,
+            fullMark: 100,
+          },
+          {
+            name: "Trust",
+            score: (result?.scores?.trust?.score || 0) * 10,
+            fullMark: 100,
+          },
+          {
+            name: "Desire",
+            score: (result?.scores?.desire?.score || 0) * 10,
+            fullMark: 100,
+          },
+          {
+            name: "Action",
+            score: (result?.scores?.action?.score || 0) * 10,
+            fullMark: 100,
+          },
+          {
+            name: "Objections",
+            score: (result?.scores?.objections?.score || 0) * 10,
+            fullMark: 100,
+          },
+          {
+            name: "AI Readiness",
+            score: (result?.scores?.ai_readiness?.score || 0) * 10,
+            fullMark: 100,
+          },
+        ]
+    : isGeoMode
+    ? defaultGEOPillars
     : defaultPillars;
 
   const overallScore = hasRealResults ? result?.overall_score || 0 : 67;
@@ -266,12 +319,20 @@ const ResultsPreview = () => {
         >
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
             {hasRealResults
-              ? "Your Conversion Diagnosis"
+              ? isGeoMode
+                ? "Your AI Search Readiness Audit"
+                : "Your Conversion Diagnosis"
+              : isGeoMode
+              ? "AI Search Readiness Audit"
               : "Conversion Diagnosis"}
           </h2>
           <p className="text-lg text-subheading">
             {hasRealResults
-              ? "Here's exactly what's holding your page back."
+              ? isGeoMode
+                ? "Here's how visible your page is to AI search engines."
+                : "Here's exactly what's holding your page back."
+              : isGeoMode
+              ? "See exactly how AI search engines read and rank your page."
               : "See exactly what's holding your page back — across all 7 pillars."}
           </p>
         </motion.div>
@@ -290,21 +351,18 @@ const ResultsPreview = () => {
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-score-amber to-score-red" />
 
           <div className="w-full flex items-center justify-between mb-10">
-            <h3 className="text-xl font-bold">Conversion Radar</h3>
+            <h3 className="text-xl font-bold">
+              {isGeoMode ? "AI Search Radar" : "Conversion Radar"}
+            </h3>
             <div className="text-xs font-bold uppercase tracking-widest text-caption">
               {hasRealResults ? "Your Audit" : "Example Audit"}
             </div>
           </div>
 
-          {/* Radar chart — now shows 7 pillars */}
+          {/* Radar chart */}
           <div className="w-full h-[340px] md:h-[420px] mb-6 px-4 md:px-0">
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart
-                cx="50%"
-                cy="50%"
-                outerRadius="65%"
-                data={pillars}
-              >
+              <RadarChart cx="50%" cy="50%" outerRadius="65%" data={pillars}>
                 <PolarGrid stroke="rgba(255,255,255,0.1)" />
                 <PolarAngleAxis
                   dataKey="name"
@@ -347,7 +405,7 @@ const ResultsPreview = () => {
                 {overallScore}/100
               </div>
               <div className="text-sm font-bold uppercase tracking-widest text-caption">
-                Conversion Score
+                {isGeoMode ? "GEO Readiness Score" : "Conversion Score"}
               </div>
             </div>
 
@@ -372,13 +430,17 @@ const ResultsPreview = () => {
               </div>
               <p className="text-sm text-body leading-relaxed">
                 {hasRealResults
-                  ? "Your detailed diagnosis is below. Review the top fixes to boost conversions."
+                  ? isGeoMode
+                    ? "Your detailed GEO diagnosis is below. Review the top fixes to improve AI search visibility."
+                    : "Your detailed diagnosis is below. Review the top fixes to boost conversions."
+                  : isGeoMode
+                  ? "Significant AI visibility gaps identified across content structure, entity signals, and answerability."
                   : "Significant improvements identified across trust architecture, objection handling, and AI search readiness."}
               </p>
             </div>
           </div>
 
-          {/* AI Search Readiness callout — shown when we have real results */}
+          {/* AI Search Readiness callout */}
           {hasRealResults && result?.scores?.ai_readiness && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -423,7 +485,9 @@ const ResultsPreview = () => {
           {hasRealResults && result?.top_3_fixes && (
             <div className="w-full mb-8">
               <h4 className="text-lg font-bold text-foreground mb-4">
-                Top 3 Priority Fixes
+                {isGeoMode
+                  ? "Your 3 biggest AI visibility gaps"
+                  : "Top 3 Priority Fixes"}
               </h4>
               <div className="space-y-3">
                 {result.top_3_fixes.map((fix: any, i: number) => {
@@ -559,7 +623,8 @@ const ResultsPreview = () => {
                     onClick={handleViewFullReport}
                     className="btn-primary flex items-center gap-2 mx-auto"
                   >
-                    View Full Report <ArrowRight className="w-4 h-4" />
+                    {isGeoMode ? "View Full GEO Report" : "View Full Report"}{" "}
+                    <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
               )}
@@ -589,12 +654,14 @@ const ResultsPreview = () => {
                 <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 rounded-xl flex flex-col items-center justify-center px-4 text-center">
                   <Lock className="w-8 h-8 text-primary mb-3" />
                   <h4 className="font-bold text-lg mb-2">
-                    Unlock Full Diagnosis
+                    {isGeoMode
+                      ? "Unlock Full GEO Diagnosis"
+                      : "Unlock Full Diagnosis"}
                   </h4>
                   <p className="text-sm text-body mb-4 text-center max-w-xs">
-                    Get a detailed issue and fix for every pillar, including AI
-                    search readiness — plus rewritten copy and your improved
-                    homepage mockup.
+                    {isGeoMode
+                      ? "Get a detailed issue and fix for every GEO dimension, including rewritten content and structured fixes for AI search visibility."
+                      : "Get a detailed issue and fix for every pillar, including AI search readiness — plus rewritten copy and your improved homepage mockup."}
                   </p>
                   {checkoutError && (
                     <p className="text-xs text-score-red mb-3">
@@ -609,6 +676,8 @@ const ResultsPreview = () => {
                   >
                     {checkoutLoading
                       ? "Processing..."
+                      : isGeoMode
+                      ? "Get Full GEO Audit £149"
                       : "Get Full Diagnosis £149"}
                     {!checkoutLoading && <ArrowRight className="w-4 h-4" />}
                   </button>
@@ -623,31 +692,33 @@ const ResultsPreview = () => {
                 </div>
               )}
 
-              {/* Pillar breakdown grid — now shows all 7 */}
+              {/* Pillar breakdown grid — GEO mode shows ai_readiness first */}
               <div className="grid md:grid-cols-2 gap-4 p-4">
-                {Object.entries(result.scores).map(
-                  ([key, pillar]: any) => (
-                    <div key={key} className="glass-card p-5">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold capitalize text-foreground">
-                          {key === "ai_readiness"
-                            ? "AI Search Readiness"
-                            : key}
-                        </span>
-                        <span
-                          className={`font-bold ${scoreColor(
-                            (pillar?.score || 0) * 10
-                          )}`}
-                        >
-                          {pillar?.score || 0}/10
-                        </span>
-                      </div>
-                      <p className="text-xs text-body">
-                        {pillar?.issue || ""}
-                      </p>
+                {(isGeoMode
+                  ? [
+                      ["ai_readiness", result.scores["ai_readiness"]],
+                      ...Object.entries(result.scores).filter(
+                        ([key]) => key !== "ai_readiness"
+                      ),
+                    ]
+                  : Object.entries(result.scores)
+                ).map(([key, pillar]: any) => (
+                  <div key={key} className="glass-card p-5">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-bold capitalize text-foreground">
+                        {key === "ai_readiness" ? "AI Search Readiness" : key}
+                      </span>
+                      <span
+                        className={`font-bold ${scoreColor(
+                          (pillar?.score || 0) * 10
+                        )}`}
+                      >
+                        {pillar?.score || 0}/10
+                      </span>
                     </div>
-                  )
-                )}
+                    <p className="text-xs text-body">{pillar?.issue || ""}</p>
+                  </div>
+                ))}
               </div>
             </div>
           )}
