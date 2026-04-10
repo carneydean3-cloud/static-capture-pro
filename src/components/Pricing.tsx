@@ -8,6 +8,8 @@ const Pricing = () => {
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
+  const isGeoMode = window.location.pathname.includes("geo-audit");
+
   const handleSubscriptionCheckout = async (plan: string) => {
     setCheckoutLoading(plan);
     setCheckoutError(null);
@@ -47,7 +49,7 @@ const Pricing = () => {
     }
   };
 
-  const plans = [
+  const conversionPlans = [
     {
       name: "Free Audit",
       price: 0,
@@ -118,6 +120,80 @@ const Pricing = () => {
     },
   ];
 
+  const geoPlans = [
+    {
+      name: "Free GEO Audit",
+      price: 0,
+      description: "Find out instantly how visible your page is to AI search engines.",
+      features: [
+        "AI Search Readiness Score",
+        "7-Dimension GEO Analysis",
+        "Top 3 AI Visibility Fixes",
+        "Conversion Health Check",
+        "Structured Content Assessment",
+        "Results in 60 Seconds",
+      ],
+      cta: "Start Free GEO Audit",
+      ctaAction: "free",
+      popular: false,
+    },
+    {
+      name: "Full GEO Audit",
+      price: 149,
+      description: "One-time. Full AI visibility and conversion diagnosis.",
+      features: [
+        "Full GEO + Conversion Audit",
+        "AI Search Readiness Score (Detailed)",
+        "Every Visibility Gap Identified",
+        "Structured Content Fixes (Every Section)",
+        "Conversion Alignment Assessment",
+        "Brand-Matched Mockup (PNG)",
+        "Ready-to-Use Code (Paste Straight In)",
+      ],
+      cta: "Get Full GEO Audit",
+      ctaAction: "free",
+      popular: false,
+      refundText: "If we don't find at least 5 issues we'll refund you. No questions asked.",
+    },
+    {
+      name: "Starter Pro",
+      price: 99,
+      isMonthly: true,
+      description: "20 full GEO + conversion audits per month. Built for freelancers managing client visibility.",
+      features: [
+        "AI Search Readiness on Every Audit",
+        "Full GEO + Conversion Reports",
+        "20 Full Audits Per Month",
+        "Audit Client Sites",
+        "Structured Fix Recommendations",
+        "Priority Support",
+      ],
+      cta: "Start Starter Pro",
+      ctaAction: "starter_pro",
+      popular: true,
+      popularLabel: "Best Value",
+    },
+    {
+      name: "Agency Pro",
+      price: 199,
+      isMonthly: true,
+      description: "Unlimited audits. Built for agencies managing AI visibility across multiple client sites.",
+      features: [
+        "Unlimited GEO + Conversion Audits",
+        "AI Search Readiness on Every Audit",
+        "Full Reports on Every Client Site",
+        "Audit All Client Sites",
+        "Structured Fix Recommendations",
+        "Priority Support",
+      ],
+      cta: "Start Agency Pro",
+      ctaAction: "agency_pro",
+      popular: false,
+    },
+  ];
+
+  const plans = isGeoMode ? geoPlans : conversionPlans;
+
   return (
     <section id="pricing" className="py-24 px-6">
       <div className="max-w-7xl mx-auto">
@@ -127,8 +203,9 @@ const Pricing = () => {
             Simple, transparent pricing.
           </h2>
           <p className="body-text max-w-2xl mx-auto">
-            No hidden fees. Every plan includes conversion diagnosis and AI search readiness.
-            Choose the depth that fits your needs.
+            {isGeoMode
+              ? "No hidden fees. Every plan includes GEO diagnosis and AI search readiness. Choose the depth that fits your needs."
+              : "No hidden fees. Every plan includes conversion diagnosis and AI search readiness. Choose the depth that fits your needs."}
           </p>
         </div>
 
@@ -163,7 +240,9 @@ const Pricing = () => {
                   <span className="text-sm text-muted-foreground">/mo</span>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground mb-8">{plan.description}</p>
+              <p className="text-sm text-muted-foreground mb-8">
+                {plan.description}
+              </p>
 
               <ul className="space-y-3 mb-8">
                 {plan.features.map((feature, i) => (
@@ -191,12 +270,12 @@ const Pricing = () => {
                   onClick={() => handleSubscriptionCheckout(plan.ctaAction)}
                   disabled={checkoutLoading === plan.ctaAction}
                   className={`w-full flex items-center justify-center gap-2 ${
-                    plan.popular
-                      ? "btn-primary"
-                      : "btn-outline-primary"
+                    plan.popular ? "btn-primary" : "btn-outline-primary"
                   } disabled:opacity-60 disabled:cursor-not-allowed`}
                 >
-                  {checkoutLoading === plan.ctaAction ? "Processing..." : plan.cta}
+                  {checkoutLoading === plan.ctaAction
+                    ? "Processing..."
+                    : plan.cta}
                   {checkoutLoading !== plan.ctaAction && (
                     <ArrowRight className="w-4 h-4" />
                   )}
@@ -212,7 +291,7 @@ const Pricing = () => {
           ))}
         </div>
 
-        {/* GEO callout strip */}
+        {/* Bottom callout strip */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -221,15 +300,17 @@ const Pricing = () => {
           className="mt-16 glass-card p-8 max-w-3xl mx-auto text-center"
         >
           <p className="text-xs font-bold uppercase tracking-widest text-primary mb-3">
-            New — AI Search Readiness
+            {isGeoMode ? "GEO + Conversion" : "New — AI Search Readiness"}
           </p>
           <h3 className="text-xl font-bold mb-3">
-            Built for humans. Ready for AI.
+            {isGeoMode
+              ? "AI visibility and conversion. Both covered."
+              : "Built for humans. Ready for AI."}
           </h3>
           <p className="text-sm text-body leading-relaxed">
-            Every audit now includes an AI Search Readiness check — so you know
-            whether your page is structured to be found, understood, and cited by
-            AI search engines like ChatGPT, Perplexity, and Google AI Overviews.
+            {isGeoMode
+              ? "Every GEO audit includes a conversion alignment check — so you know your page can be found by AI search and converts when visitors arrive."
+              : "Every audit now includes an AI Search Readiness check — so you know whether your page is structured to be found, understood, and cited by AI search engines like ChatGPT, Perplexity, and Google AI Overviews."}
           </p>
         </motion.div>
       </div>
