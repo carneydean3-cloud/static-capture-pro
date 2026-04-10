@@ -1,7 +1,7 @@
 import { motion } from "motion/react";
 import { Search, BarChart3, Rocket } from "lucide-react";
 
-const steps = [
+const conversionSteps = [
   {
     icon: Search,
     title: "Analyse",
@@ -25,76 +25,123 @@ const steps = [
   },
 ];
 
-const HowItWorks = () => (
-  <section id="how-it-works" className="py-24 px-6 bg-navy-dark/50">
-    <div className="max-w-7xl mx-auto">
-      <div className="text-center mb-20">
-        <span className="section-label mb-4 block">Process</span>
-        <h2 className="section-heading mb-6">
-          Three steps from broken to converting.
-        </h2>
-        <p className="body-text max-w-2xl mx-auto">
-          Most tools stop at the diagnosis. ConversionDoc prescribes the fix.
-        </p>
-      </div>
-      <div className="grid md:grid-cols-3 gap-12 relative">
-        <div className="hidden md:block absolute top-1/2 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-y-1/2 -z-10"></div>
-        {steps.map((step, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: index * 0.1 }}
-            className="glass-card p-10 text-center group hover:scale-105 transition-transform duration-300"
-          >
-            <div
-              className={`w-16 h-16 ${step.color} rounded-2xl flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-transform duration-300`}
-            >
-              <step.icon className="w-8 h-8" />
-            </div>
-            <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4 text-xs font-bold text-caption">
-              {index + 1}
-            </div>
-            <h3 className="text-xl font-bold mb-4">{step.title}</h3>
-            <p className="body-text">{step.description}</p>
-          </motion.div>
-        ))}
-      </div>
+const geoSteps = [
+  {
+    icon: Search,
+    title: "Analyse",
+    description:
+      "Paste your URL. Our AI reads your page the way ChatGPT, Perplexity, and Google AI Overviews do — structure, clarity, answerability, and entity signals.",
+    color: "bg-primary/20 text-primary",
+  },
+  {
+    icon: BarChart3,
+    title: "Diagnose",
+    description:
+      "You get an AI Search Readiness score across 7 GEO dimensions. Exact visibility gaps identified. No guesswork.",
+    color: "bg-score-amber/20 text-score-amber",
+  },
+  {
+    icon: Rocket,
+    title: "Fix",
+    description:
+      "Get structured content fixes, rewritten sections, and ready-to-use code that makes your page findable and citable by AI search engines.",
+    color: "bg-score-green/20 text-score-green",
+  },
+];
 
-      {/* 7 pillars strip */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, delay: 0.4 }}
-        className="mt-20 glass-card p-8"
-      >
-        <p className="text-xs font-bold uppercase tracking-widest text-primary text-center mb-6">
-          The 7 Conversion Pillars
-        </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-          {[
-            { label: "Clarity", description: "Can visitors understand your offer in 5 seconds?" },
-            { label: "Hook Strength", description: "Does your headline stop the scroll?" },
-            { label: "Trust Architecture", description: "Do visitors trust what they see?" },
-            { label: "Desire Building", description: "Are benefits clear and compelling?" },
-            { label: "Action Clarity", description: "Is the next step obvious?" },
-            { label: "Objection Handling", description: "Are concerns addressed?" },
-            { label: "AI Search Readiness", description: "Can AI engines find and cite your page?" },
-          ].map((pillar) => (
-            <div
-              key={pillar.label}
-              className="text-center p-4 rounded-xl bg-white/5 border border-white/10"
+const conversionPillars = [
+  { label: "Clarity", description: "Can visitors understand your offer in 5 seconds?" },
+  { label: "Hook Strength", description: "Does your headline stop the scroll?" },
+  { label: "Trust Architecture", description: "Do visitors trust what they see?" },
+  { label: "Desire Building", description: "Are benefits clear and compelling?" },
+  { label: "Action Clarity", description: "Is the next step obvious?" },
+  { label: "Objection Handling", description: "Are concerns addressed?" },
+  { label: "AI Search Readiness", description: "Can AI engines find and cite your page?" },
+];
+
+const geoPillars = [
+  { label: "AI Search Readiness", description: "Can AI engines find, understand, and cite your page?" },
+  { label: "Topic Clarity", description: "Is your page clearly focused on one primary topic?" },
+  { label: "Answerability", description: "Does your content directly answer likely user questions?" },
+  { label: "Structure", description: "Are headings, lists, and FAQs easy for AI to extract?" },
+  { label: "Authority Signals", description: "Is expertise and credibility clearly demonstrated?" },
+  { label: "Entity Clarity", description: "Is it obvious who you are, what you do, and who you serve?" },
+  { label: "Conversion Alignment", description: "If AI sends traffic here, does the page convert?" },
+];
+
+const HowItWorks = () => {
+  const isGeoMode = window.location.pathname.includes("geo-audit");
+  const steps = isGeoMode ? geoSteps : conversionSteps;
+  const pillars = isGeoMode ? geoPillars : conversionPillars;
+
+  return (
+    <section id="how-it-works" className="py-24 px-6 bg-navy-dark/50">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-20">
+          <span className="section-label mb-4 block">Process</span>
+          <h2 className="section-heading mb-6">
+            {isGeoMode
+              ? "Three steps from invisible to findable."
+              : "Three steps from broken to converting."}
+          </h2>
+          <p className="body-text max-w-2xl mx-auto">
+            {isGeoMode
+              ? "Most tools don't check AI search readiness at all. ConversionDoc diagnoses every visibility gap and prescribes the fix."
+              : "Most tools stop at the diagnosis. ConversionDoc prescribes the fix."}
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-12 relative">
+          <div className="hidden md:block absolute top-1/2 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-y-1/2 -z-10"></div>
+          {steps.map((step, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+              className="glass-card p-10 text-center group hover:scale-105 transition-transform duration-300"
             >
-              <p className="text-xs font-bold text-primary mb-2">{pillar.label}</p>
-              <p className="text-xs text-caption leading-relaxed">{pillar.description}</p>
-            </div>
+              <div
+                className={`w-16 h-16 ${step.color} rounded-2xl flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-transform duration-300`}
+              >
+                <step.icon className="w-8 h-8" />
+              </div>
+              <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4 text-xs font-bold text-caption">
+                {index + 1}
+              </div>
+              <h3 className="text-xl font-bold mb-4">{step.title}</h3>
+              <p className="body-text">{step.description}</p>
+            </motion.div>
           ))}
         </div>
-      </motion.div>
-    </div>
-  </section>
-);
+
+        {/* Pillars strip */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="mt-20 glass-card p-8"
+        >
+          <p className="text-xs font-bold uppercase tracking-widest text-primary text-center mb-6">
+            {isGeoMode ? "The 7 GEO Dimensions" : "The 7 Conversion Pillars"}
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+            {pillars.map((pillar) => (
+              <div
+                key={pillar.label}
+                className="text-center p-4 rounded-xl bg-white/5 border border-white/10"
+              >
+                <p className="text-xs font-bold text-primary mb-2">{pillar.label}</p>
+                <p className="text-xs text-caption leading-relaxed">{pillar.description}</p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+};
 
 export default HowItWorks;
