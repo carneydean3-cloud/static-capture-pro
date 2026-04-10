@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "../integrations/supabase/client";
 
 type TopFix = {
@@ -57,8 +57,23 @@ const scoreColor = (score?: number | null) => {
 const prettyLabel = (key: string) =>
   key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
+// GEO-related pillar key fragments to match against
+const GEO_PILLAR_KEYS = [
+  "ai_search",
+  "ai_readiness",
+  "geo",
+  "search_readiness",
+  "ai_search_readiness",
+];
+
+const isGeoPillar = (key: string) =>
+  GEO_PILLAR_KEYS.some((fragment) => key.toLowerCase().includes(fragment));
+
 export default function FreeAuditReport() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const isGeoFocus = searchParams.get("focus") === "geo";
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [audit, setAudit] = useState<AuditRow | null>(null);
@@ -104,7 +119,15 @@ export default function FreeAuditReport() {
   const scores = audit?.full_results?.scores ?? {};
   const summary = audit?.full_results?.summary ?? {};
 
-  const limitedScores = Object.entries(scores).slice(0, 3);
+  // Reorder scores based on focus
+  const orderedScores = useMemo(() => {
+    const entries = Object.entries(scores);
+    if (!isGeoFocus) return entries.slice(0, 3);
+
+    const geoEntries = entries.filter(([key]) => isGeoPillar(key));
+    const otherEntries = entries.filter(([key]) => !isGeoPillar(key));
+    return [...geoEntries, ...otherEntries].slice(0, 3);
+  }, [scores, isGeoFocus]);
 
   if (loading) {
     return (
@@ -139,20 +162,20 @@ export default function FreeAuditReport() {
     <div className="min-h-screen bg-[#f5f8fc] px-6 py-16">
       <div className="mx-auto max-w-5xl space-y-8">
         <a
-          href="/"
+          href={isGeoFocus ? "/geo-audit" : "/"}
           className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors"
         >
-          ← Back to home
+          ← Back to {isGeoFocus ? "GEO Audit" : "home"}
         </a>
 
         {/* Header */}
         <section className="rounded-[32px] overflow-hidden border border-slate-900/10 shadow-[0_20px_60px_rgba(15,23,42,0.12)]">
           <div className="bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.18),_transparent_30%),linear-gradient(135deg,#020617,#0f172a_50%,#111827)] px-8 py-10 md:px-10 md:py-12">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-400">
-              Free Audit
+              {isGeoFocus ? "GEO Audit" : "Free Audit"}
             </p>
             <h1 className="mt-3 text-4xl md:text-5xl font-bold text-white tracking-tight">
-              Your Conversion Audit
+              {isGeoFocus ? "Your AI Search Readiness Audit" : "Your Conversion Audit"}
             </h1>
             {audit.verdict && (
               <p className="mt-4 text-lg text-slate-300 italic max-w-3xl">
@@ -176,7 +199,9 @@ export default function FreeAuditReport() {
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
           <div className="grid gap-5 md:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
-              <p className="text-sm text-slate-500">Overall Score</p>
+              <p className="text-sm text-slate-500">
+                {isGeoFocus ? "GEO Readiness Score" : "Overall Score"}
+              </p>
               <p className={`mt-3 text-5xl font-bold ${scoreColor(audit.overall_score)}`}>
                 {typeof audit.overall_score === "number" ? `${audit.overall_score}/100` : "N/A"}
               </p>
@@ -184,10 +209,10 @@ export default function FreeAuditReport() {
 
             <div className="rounded-2xl border border-teal-100 bg-teal-50 p-6">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-700 mb-2">
-                Biggest Opportunity
+                {isGeoFocus ? "Biggest GEO Opportunity" : "Biggest Opportunity"}
               </p>
               <p className="text-slate-900 font-medium text-lg">
-                {summary.biggest_opportunity || audit.verdict || "Your page has clear opportunities to improve conversion performance."}
+                {summary.biggest_opportunity || audit.verdict || "Your page has clear opportunities to improve."}
               </p>
             </div>
           </div>
@@ -209,7 +234,9 @@ export default function FreeAuditReport() {
               Action Plan
             </p>
             <h2 className="mt-2 text-3xl font-bold text-slate-900">
-              Your 3 biggest conversion leaks
+              {isGeoFocus
+                ? "Your 3 biggest AI visibility gaps"
+                : "Your 3 biggest conversion leaks"}
             </h2>
           </div>
 
@@ -269,23 +296,25 @@ export default function FreeAuditReport() {
           </div>
         </section>
 
-        {/* Limited score preview */}
-        {limitedScores.length > 0 && (
+        {/* Score preview */}
+        {orderedScores.length > 0 && (
           <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
             <div className="mb-6">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">
                 Preview
               </p>
               <h2 className="mt-2 text-3xl font-bold text-slate-900">
-                Breakdown Snapshot
+                {isGeoFocus ? "AI Search Readiness Snapshot" : "Breakdown Snapshot"}
               </h2>
               <p className="mt-2 text-slate-600">
-                Here's a preview of your performance across a few key conversion pillars.
+                {isGeoFocus
+                  ? "Here's a preview of your AI search readiness across key GEO dimensions."
+                  : "Here's a preview of your performance across a few key conversion pillars."}
               </p>
             </div>
 
             <div className="space-y-5">
-              {limitedScores.map(([pillar, value]) => (
+              {orderedScores.map(([pillar, value]) => (
                 <div key={pillar} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-xl font-semibold text-slate-900">{prettyLabel(pillar)}</h3>
@@ -293,7 +322,6 @@ export default function FreeAuditReport() {
                       {typeof value?.score === "number" ? `${value.score}/10` : "—"}
                     </span>
                   </div>
-
                   {value?.issue && <p className="text-slate-700 text-sm">{value.issue}</p>}
                 </div>
               ))}
@@ -305,13 +333,17 @@ export default function FreeAuditReport() {
         <section className="rounded-[28px] overflow-hidden border border-slate-900/10 shadow-[0_20px_60px_rgba(15,23,42,0.12)]">
           <div className="bg-[linear-gradient(135deg,#020617,#0f172a_50%,#111827)] px-8 py-10 md:px-10 md:py-12">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-400">
-              Want the full diagnosis?
+              {isGeoFocus ? "Want the full GEO diagnosis?" : "Want the full diagnosis?"}
             </p>
             <h2 className="mt-3 text-3xl md:text-4xl font-bold text-white tracking-tight max-w-3xl">
-              Unlock every issue, rewritten copy, and your improved homepage mockup.
+              {isGeoFocus
+                ? "Unlock every AI visibility issue, rewritten content, and your full GEO prescription."
+                : "Unlock every issue, rewritten copy, and your improved homepage mockup."}
             </h2>
             <p className="mt-4 text-slate-300 max-w-2xl leading-7">
-              The free audit shows where you're leaking conversions. The Full Diagnosis shows exactly how to fix it.
+              {isGeoFocus
+                ? "The free GEO audit shows where AI search cannot find you. The Full Diagnosis shows exactly how to fix it."
+                : "The free audit shows where you're leaking conversions. The Full Diagnosis shows exactly how to fix it."}
             </p>
 
             <div className="mt-8 flex flex-wrap gap-4">
@@ -322,10 +354,10 @@ export default function FreeAuditReport() {
                 Get Full Diagnosis — £149
               </a>
               <a
-                href="/"
+                href={isGeoFocus ? "/geo-audit" : "/"}
                 className="inline-flex items-center rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white font-semibold px-6 py-3 transition-colors text-sm shadow-sm"
               >
-                Run another audit
+                {isGeoFocus ? "Run another GEO audit" : "Run another audit"}
               </a>
             </div>
           </div>
