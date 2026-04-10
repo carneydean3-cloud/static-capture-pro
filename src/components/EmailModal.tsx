@@ -15,6 +15,8 @@ const EmailModal = () => {
   const [submitting, setSubmitting] = useState(false);
   const isOpen = stage === "email_capture";
 
+  const isGeoFocus = window.location.pathname.includes("geo-audit");
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setEmailError(null);
@@ -35,19 +37,15 @@ const EmailModal = () => {
 
     setSubmitting(true);
     try {
-      // Save email in context
       setUserEmail(trimmedEmail);
-
-      // Save email in localStorage as backup for checkout
       localStorage.setItem("conversiondoc_user_email", trimmedEmail);
 
-      // 1) SUBSCRIBER INSERT (ignore duplicates)
+      // 1) SUBSCRIBER INSERT
       try {
         const { error: subError } = await supabase.from("subscribers").insert({
           email: trimmedEmail,
-          source: "free_audit",
+          source: isGeoFocus ? "geo_audit" : "free_audit",
         });
-
         if (subError && subError.code !== "23505") {
           console.error("Subscriber save error:", subError);
           toast.error(`Couldn't save subscriber. (${subError.message})`);
@@ -63,7 +61,6 @@ const EmailModal = () => {
           url,
           score: currentResult?.overall_score || 0,
         });
-
         if (leadsError) {
           console.error("Leads save error:", leadsError.message);
           toast.error(`Results unlocked — lead save failed. (${leadsError.message})`);
@@ -98,8 +95,12 @@ const EmailModal = () => {
           if (auditError) {
             console.error("Audits save error:", auditError.message);
           } else if (auditData?.id) {
+            // Pass focus=geo to the email function so the link in the email is correct
             supabase.functions.invoke("send-audit-email", {
-              body: { audit_id: auditData.id }
+              body: {
+                audit_id: auditData.id,
+                focus: isGeoFocus ? "geo" : "conversion",
+              }
             }).catch(console.error);
           }
         }
@@ -115,6 +116,7 @@ const EmailModal = () => {
           block: "start",
         });
       }, 300);
+
     } finally {
       setSubmitting(false);
     }
@@ -145,10 +147,14 @@ const EmailModal = () => {
 
             <div className="text-center mb-2">
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">🎯</span>
+                <span className="text-3xl">{isGeoFocus ? "🔍" : "🎯"}</span>
               </div>
               <h3 className="text-2xl font-bold mb-2">Your audit is ready.</h3>
-              <p className="text-sm text-body mb-6">Enter your email to unlock your results.</p>
+              <p className="text-sm text-body mb-6">
+                {isGeoFocus
+                  ? "Enter your email to unlock your AI search readiness report."
+                  : "Enter your email to unlock your results."}
+              </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-3">
@@ -179,7 +185,7 @@ const EmailModal = () => {
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <>
-                    See My Results
+                    {isGeoFocus ? "See My GEO Report" : "See My Results"}
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
