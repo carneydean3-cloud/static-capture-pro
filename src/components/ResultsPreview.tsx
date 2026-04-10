@@ -251,6 +251,7 @@ const ResultsPreview = () => {
             userEmail: checkoutEmail,
             url: url || "",
             auditResult: { ...result, screenshot_url: screenshotUrl },
+            focus: isGeoMode ? "geo" : "conversion", // ← FIX 1
           }),
         }
       );
@@ -294,13 +295,15 @@ const ResultsPreview = () => {
             url: url || "",
             auditResult: { ...result, screenshot_url: screenshotUrl },
             isSubscription: true,
+            focus: isGeoMode ? "geo" : "conversion", // ← FIX 2
           }),
         }
       );
 
       const data = await res.json();
       if (data.session_id) {
-        window.location.href = `/paid-report?session_id=${data.session_id}`;
+        // ← FIX 3: append focus param to redirect URL
+        window.location.href = `/paid-report?session_id=${data.session_id}${isGeoMode ? "&focus=geo" : ""}`;
       }
     } catch (err) {
       console.error("Error saving audit for subscriber:", err);
