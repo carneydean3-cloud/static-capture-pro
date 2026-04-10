@@ -43,18 +43,13 @@ const captureScreenshotToStorage = async (pageUrl: string): Promise<string> => {
   try {
     const supabaseUrl = (supabase as any).supabaseUrl as string;
     const supabaseKey = (supabase as any).supabaseKey as string;
-
     if (!supabaseUrl || !supabaseKey) return "";
-
     const thumbUrl = `https://image.thum.io/get/width/1400/crop/900/noanimate/${pageUrl}`;
     const imgRes = await fetch(thumbUrl);
     if (!imgRes.ok) return "";
-
     const blob = await imgRes.blob();
     if (blob.size < 5000) return "";
-
     const fileName = `screenshot-${Date.now()}.jpg`;
-
     const uploadRes = await fetch(
       `${supabaseUrl}/storage/v1/object/screenshots/${fileName}`,
       {
@@ -67,12 +62,10 @@ const captureScreenshotToStorage = async (pageUrl: string): Promise<string> => {
         body: blob,
       }
     );
-
     if (!uploadRes.ok) {
       console.warn("Screenshot upload failed:", uploadRes.status);
       return "";
     }
-
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/screenshots/${fileName}`;
     return publicUrl;
   } catch (e) {
@@ -123,7 +116,7 @@ const GeoHeroSection = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${supabaseKey}`,
         },
-        body: JSON.stringify({ url: normalizedUrl }),
+        body: JSON.stringify({ url: normalizedUrl, focus: "geo" }), // ← ONLY CHANGE
       });
 
       clearTimeout(timer1);
@@ -346,10 +339,7 @@ const GeoHeroSection = () => {
               description: "We check how your page performs for visitors and AI search engines like ChatGPT and Perplexity.",
             },
           ].map((item) => (
-            <div
-              key={item.label}
-              className="glass-card p-6 text-left"
-            >
+            <div key={item.label} className="glass-card p-6 text-left">
               <p className="text-sm font-bold text-primary mb-1">{item.label}</p>
               <p className="text-xs text-body leading-relaxed">{item.description}</p>
             </div>
