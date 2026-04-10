@@ -18,6 +18,7 @@ import NotFound from "./pages/NotFound.tsx";
 import Terms from "./pages/Terms.tsx";
 import Privacy from "./pages/Privacy.tsx";
 import Refund from "./pages/Refund.tsx";
+import GeoAudit from "./pages/GeoAudit.tsx";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ const App = () => (
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/refund" element={<Refund />} />
+              <Route path="/geo-audit" element={<GeoAudit />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
