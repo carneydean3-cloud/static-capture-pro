@@ -3,6 +3,18 @@ import { useSearchParams } from "react-router-dom";
 import { toPng } from "html-to-image";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  HeadingLevel,
+  BorderStyle,
+  AlignmentType,
+  ShadingType,
+} from "docx";
 import { supabase } from "../integrations/supabase/client";
 
 type ScoreItem = {
@@ -88,10 +100,567 @@ const impactBg: Record<string, string> = {
   Low: "rgba(107,114,128,0.08)",
 };
 
-// GEO pillar key detection
 const GEO_PILLAR_KEYS = ["ai_search", "ai_readiness", "geo", "search_readiness"];
 const isGeoPillar = (key: string) =>
   GEO_PILLAR_KEYS.some((fragment) => key.toLowerCase().includes(fragment));
+
+// ─── PDF PRINT TEMPLATE ────────────────────────────────────────────────────
+const buildPdfHtml = ({
+  isGeoMode,
+  overallScore,
+  auditData,
+  topFixes,
+  orderedScores,
+  copyPack,
+  summary,
+  purchaseUrl,
+}: {
+  isGeoMode: boolean;
+  overallScore: number | null;
+  auditData: AuditData | null;
+  topFixes: TopFix[] | null;
+  orderedScores: [string, ScoreItem][];
+  copyPack: HomepageCopyPack;
+  summary: SummaryData;
+  purchaseUrl?: string | null;
+}) => {
+  const bullets = Array.isArray(copyPack.benefit_bullets)
+    ? copyPack.benefit_bullets.filter(Boolean)
+    : [];
+
+  const scoreLabel =
+    overallScore !== null && overallScore >= 70
+      ? "Healthy"
+      : overallScore !== null && overallScore >= 50
+      ? "Needs Attention"
+      : "Critical";
+
+  const scoreHex =
+    overallScore !== null && overallScore >= 70
+      ? "#10b981"
+      : overallScore !== null && overallScore >= 50
+      ? "#f59e0b"
+      : "#ef4444";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #fff; color: #1e293b; font-size: 13px; line-height: 1.6; }
+  .page { max-width: 800px; margin: 0 auto; padding: 48px 40px; }
+
+  /* Header */
+  .header { background: linear-gradient(135deg, #020617, #0f172a); border-radius: 16px; padding: 32px 36px; margin-bottom: 32px; }
+  .header-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.25em; color: #2dd4bf; margin-bottom: 8px; }
+  .header-title { font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+  .header-verdict { font-size: 14px; color: #94a3b8; font-style: italic; margin-bottom: 8px; }
+  .header-url { font-size: 12px; color: #2dd4bf; }
+  .header-brand { display: flex; justify-content: space-between; align-items: flex-start; }
+  .cd-logo { font-size: 13px; font-weight: 700; color: #2dd4bf; letter-spacing: 0.05em; }
+
+  /* Section */
+  .section { margin-bottom: 28px; }
+  .section-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.22em; color: #0d9488; margin-bottom: 4px; }
+  .section-title { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 16px; }
+
+  /* Score cards */
+  .score-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+  .score-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; }
+  .score-card-label { font-size: 11px; color: #64748b; margin-bottom: 4px; }
+  .score-card-value { font-size: 24px; font-weight: 700; }
+
+  /* Teal box */
+  .teal-box { background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+  .teal-box-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: #0f766e; margin-bottom: 6px; }
+  .teal-box-text { font-size: 15px; font-weight: 600; color: #1e293b; }
+
+  /* Grey box */
+  .grey-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+  .grey-box-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: #94a3b8; margin-bottom: 6px; }
+  .grey-box-text { color: #475569; line-height: 1.7; }
+
+  /* Fix cards */
+  .fix-card { border-radius: 12px; padding: 16px; margin-bottom: 10px; display: flex; gap: 14px; border: 1px solid transparent; }
+  .fix-number { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .fix-impact-badge { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; padding: 2px 8px; border-radius: 999px; border: 1px solid transparent; margin-bottom: 6px; display: inline-block; }
+  .fix-issue { font-weight: 600; color: #1e293b; margin-bottom: 4px; font-size: 13px; }
+  .fix-fix { color: #475569; font-size: 12px; }
+  .fix-arrow { color: #0d9488; font-weight: 700; margin-right: 4px; }
+
+  /* Pillar cards */
+  .pillar-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 10px; }
+  .pillar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .pillar-name { font-size: 15px; font-weight: 600; color: #1e293b; }
+  .pillar-score { font-size: 15px; font-weight: 700; }
+  .pillar-sub-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: #94a3b8; margin-bottom: 4px; margin-top: 8px; }
+  .pillar-sub-text { color: #1e293b; font-size: 12px; }
+  .pillar-rewrite-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: #0d9488; margin-bottom: 4px; margin-top: 8px; }
+  .pillar-rewrite-text { color: #1e293b; font-size: 12px; font-style: italic; }
+
+  /* Copy pack */
+  .copy-headline { font-size: 22px; font-weight: 600; color: #1e293b; }
+  .bullet-item { display: flex; gap: 10px; margin-bottom: 6px; }
+  .bullet-check { color: #0d9488; font-weight: 700; }
+
+  /* Footer */
+  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+  .footer-brand { font-size: 12px; font-weight: 700; color: #0d9488; }
+  .footer-url { font-size: 11px; color: #94a3b8; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-brand">
+      <div>
+        <div class="header-label">${isGeoMode ? "Full GEO Audit" : "Full Diagnosis"}</div>
+        <div class="header-title">${isGeoMode ? "AI Search Readiness Report" : "Conversion Report"}</div>
+        ${auditData?.verdict ? `<div class="header-verdict">"${auditData.verdict}"</div>` : ""}
+        ${purchaseUrl ? `<div class="header-url">${purchaseUrl}</div>` : ""}
+      </div>
+      <div class="cd-logo">ConversionDoc</div>
+    </div>
+  </div>
+
+  <!-- Executive Summary -->
+  <div class="section">
+    <div class="section-label">Executive Summary</div>
+    <div class="section-title">${isGeoMode ? "Your biggest opportunity to improve AI search visibility" : "Your strongest opportunity to improve conversions"}</div>
+
+    <div class="score-grid">
+      <div class="score-card">
+        <div class="score-card-label">${isGeoMode ? "GEO Readiness Score" : "Overall Score"}</div>
+        <div class="score-card-value" style="color:${scoreHex}">${overallScore !== null ? `${overallScore}/100` : "N/A"}</div>
+      </div>
+      <div class="score-card">
+        <div class="score-card-label">${isGeoMode ? "Strongest Dimension" : "Strongest Pillar"}</div>
+        <div style="font-size:16px;font-weight:600;color:#1e293b;margin-top:4px">${summary.strongest_pillar ? prettyLabel(summary.strongest_pillar) : "N/A"}</div>
+      </div>
+      <div class="score-card">
+        <div class="score-card-label">${isGeoMode ? "Weakest Dimension" : "Weakest Pillar"}</div>
+        <div style="font-size:16px;font-weight:600;color:#1e293b;margin-top:4px">${summary.weakest_pillar ? prettyLabel(summary.weakest_pillar) : "N/A"}</div>
+      </div>
+    </div>
+
+    <div class="teal-box">
+      <div class="teal-box-label">${isGeoMode ? "Biggest GEO Opportunity" : "Biggest Opportunity"}</div>
+      <div class="teal-box-text">${summary.biggest_opportunity || "N/A"}</div>
+    </div>
+
+    <div class="grey-box">
+      <div class="grey-box-label">Diagnosis</div>
+      <div class="grey-box-text">${summary.executive_summary || "N/A"}</div>
+    </div>
+  </div>
+
+  <!-- Top Fixes -->
+  <div class="section">
+    <div class="section-label">Action Plan</div>
+    <div class="section-title">${isGeoMode ? "Top AI Visibility Fixes" : "Top Priority Fixes"}</div>
+    ${(topFixes || []).map((fix) => {
+      const impact = fix.impact || "Medium";
+      const hex = impact === "High" ? "#ef4444" : impact === "Medium" ? "#f59e0b" : "#6b7280";
+      const bg = impact === "High" ? "rgba(239,68,68,0.06)" : impact === "Medium" ? "rgba(245,158,11,0.06)" : "rgba(107,114,128,0.06)";
+      return `
+      <div class="fix-card" style="background:${bg};border-left:4px solid ${hex}">
+        <div class="fix-number" style="background:${hex}">${fix.priority ?? ""}</div>
+        <div>
+          <div class="fix-impact-badge" style="color:${hex};border-color:${hex}40;background:${hex}15">${impact} Impact</div>
+          <div class="fix-issue">${fix.issue || ""}</div>
+          <div class="fix-fix"><span class="fix-arrow">→</span>${fix.fix || ""}</div>
+        </div>
+      </div>`;
+    }).join("")}
+  </div>
+
+  <!-- Score Breakdown -->
+  <div class="section">
+    <div class="section-label">Full Analysis</div>
+    <div class="section-title">${isGeoMode ? "GEO Dimension Breakdown" : "Score Breakdown"}</div>
+    ${orderedScores.map(([pillar, value]) => {
+      const s = value?.score;
+      const hex = typeof s === "number" ? (s >= 8 ? "#10b981" : s >= 5 ? "#f59e0b" : "#ef4444") : "#94a3b8";
+      return `
+      <div class="pillar-card">
+        <div class="pillar-header">
+          <div class="pillar-name">${prettyLabel(pillar)}</div>
+          <div class="pillar-score" style="color:${hex}">${typeof s === "number" ? `${s}/10` : "—"}</div>
+        </div>
+        ${value?.issue ? `<div class="pillar-sub-label">Issue</div><div class="pillar-sub-text">${value.issue}</div>` : ""}
+        ${value?.fix ? `<div class="pillar-sub-label">Recommended Fix</div><div class="pillar-sub-text">${value.fix}</div>` : ""}
+        ${value?.rewritten_copy ? `<div class="pillar-rewrite-label">${isGeoMode ? "Rewritten Content" : "Rewritten Copy"}</div><div class="pillar-rewrite-text">${value.rewritten_copy}</div>` : ""}
+      </div>`;
+    }).join("")}
+  </div>
+
+  <!-- Copy Pack -->
+  <div class="section">
+    <div class="section-label">Deliverable</div>
+    <div class="section-title">${isGeoMode ? "Content Pack" : "Copy Pack"}</div>
+
+    <div class="teal-box">
+      <div class="teal-box-label">Headline</div>
+      <div class="copy-headline">${copyPack.headline || "N/A"}</div>
+    </div>
+
+    <div class="grey-box">
+      <div class="grey-box-label">Subheadline</div>
+      <div class="grey-box-text">${copyPack.subheadline || "N/A"}</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div class="grey-box" style="margin-bottom:0">
+        <div class="grey-box-label">Primary CTA</div>
+        <div style="font-weight:600;color:#1e293b">${copyPack.primary_cta || "N/A"}</div>
+      </div>
+      <div class="grey-box" style="margin-bottom:0">
+        <div class="grey-box-label">Trust Line</div>
+        <div style="font-weight:600;color:#1e293b">${copyPack.trust_line || "N/A"}</div>
+      </div>
+    </div>
+
+    <div class="grey-box">
+      <div class="grey-box-label">${isGeoMode ? "Key Points" : "Benefit Bullets"}</div>
+      ${bullets.map((b) => `<div class="bullet-item"><span class="bullet-check">✓</span><span>${b}</span></div>`).join("")}
+    </div>
+
+    ${copyPack.supporting_copy ? `
+    <div class="grey-box">
+      <div class="grey-box-label">Supporting Copy</div>
+      <div class="grey-box-text">${copyPack.supporting_copy}</div>
+    </div>` : ""}
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-brand">ConversionDoc — conversiondoc.co.uk</div>
+    <div class="footer-url">${purchaseUrl || ""}</div>
+  </div>
+
+</div>
+</body>
+</html>`;
+};
+
+// ─── DOCX COPY PACK BUILDER ────────────────────────────────────────────────
+const buildDocx = async ({
+  isGeoMode,
+  copyPack,
+  overallScore,
+  summary,
+  topFixes,
+  purchaseUrl,
+}: {
+  isGeoMode: boolean;
+  copyPack: HomepageCopyPack;
+  overallScore: number | null;
+  summary: SummaryData;
+  topFixes: TopFix[] | null;
+  purchaseUrl?: string | null;
+}): Promise<Blob> => {
+  const bullets = Array.isArray(copyPack.benefit_bullets)
+    ? copyPack.benefit_bullets.filter(Boolean)
+    : [];
+
+  const tealColor = "0D9488";
+  const navyColor = "1E3A5F";
+  const slateColor = "475569";
+  const darkColor = "1E293B";
+
+  const sectionLabel = (text: string) =>
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: text.toUpperCase(),
+          color: tealColor,
+          size: 18,
+          font: "Inter",
+          bold: true,
+          characterSpacing: 80,
+        }),
+      ],
+      spacing: { before: 320, after: 80 },
+    });
+
+  const heading = (text: string) =>
+    new Paragraph({
+      heading: HeadingLevel.HEADING_2,
+      children: [
+        new TextRun({
+          text,
+          color: darkColor,
+          size: 28,
+          font: "Inter",
+          bold: true,
+        }),
+      ],
+      spacing: { after: 160 },
+    });
+
+  const subLabel = (text: string) =>
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: text.toUpperCase(),
+          color: "94A3B8",
+          size: 16,
+          font: "Inter",
+          bold: true,
+          characterSpacing: 60,
+        }),
+      ],
+      spacing: { before: 160, after: 60 },
+    });
+
+  const bodyText = (text: string, italic = false) =>
+    new Paragraph({
+      children: [
+        new TextRun({
+          text,
+          color: slateColor,
+          size: 22,
+          font: "Inter",
+          italics: italic,
+        }),
+      ],
+      spacing: { after: 100 },
+    });
+
+  const boldText = (text: string) =>
+    new Paragraph({
+      children: [
+        new TextRun({
+          text,
+          color: darkColor,
+          size: 22,
+          font: "Inter",
+          bold: true,
+        }),
+      ],
+      spacing: { after: 100 },
+    });
+
+  const divider = () =>
+    new Paragraph({
+      border: {
+        bottom: { style: BorderStyle.SINGLE, size: 1, color: "E2E8F0" },
+      },
+      spacing: { before: 200, after: 200 },
+      children: [],
+    });
+
+  const children = [
+    // Title block
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: "ConversionDoc",
+          color: tealColor,
+          size: 20,
+          font: "Inter",
+          bold: true,
+          characterSpacing: 60,
+        }),
+      ],
+      spacing: { after: 80 },
+    }),
+    new Paragraph({
+      heading: HeadingLevel.HEADING_1,
+      children: [
+        new TextRun({
+          text: isGeoMode ? "AI Search Readiness Report" : "Conversion Report",
+          color: navyColor,
+          size: 48,
+          font: "Inter",
+          bold: true,
+        }),
+      ],
+      spacing: { after: 120 },
+    }),
+    ...(purchaseUrl
+      ? [
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: purchaseUrl,
+                color: tealColor,
+                size: 20,
+                font: "Inter",
+              }),
+            ],
+            spacing: { after: 80 },
+          }),
+        ]
+      : []),
+
+    divider(),
+
+    // Executive Summary
+    sectionLabel("Executive Summary"),
+    heading(isGeoMode ? "AI Search Readiness Score" : "Overall Score"),
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: overallScore !== null ? `${overallScore}/100` : "N/A",
+          color:
+            overallScore !== null && overallScore >= 70
+              ? "10B981"
+              : overallScore !== null && overallScore >= 50
+              ? "F59E0B"
+              : "EF4444",
+          size: 48,
+          font: "Inter",
+          bold: true,
+        }),
+      ],
+      spacing: { after: 160 },
+    }),
+
+    subLabel(isGeoMode ? "Strongest Dimension" : "Strongest Pillar"),
+    boldText(summary.strongest_pillar ? prettyLabel(summary.strongest_pillar) : "N/A"),
+
+    subLabel(isGeoMode ? "Weakest Dimension" : "Weakest Pillar"),
+    boldText(summary.weakest_pillar ? prettyLabel(summary.weakest_pillar) : "N/A"),
+
+    subLabel(isGeoMode ? "Biggest GEO Opportunity" : "Biggest Opportunity"),
+    bodyText(summary.biggest_opportunity || "N/A"),
+
+    subLabel("Diagnosis"),
+    bodyText(summary.executive_summary || "N/A"),
+
+    divider(),
+
+    // Top Fixes
+    sectionLabel("Action Plan"),
+    heading(isGeoMode ? "Top AI Visibility Fixes" : "Top Priority Fixes"),
+    ...(topFixes || []).flatMap((fix, i) => [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `${fix.priority ?? i + 1}. ${fix.impact?.toUpperCase() ?? "MEDIUM"} IMPACT`,
+            color:
+              fix.impact === "High"
+                ? "EF4444"
+                : fix.impact === "Medium"
+                ? "F59E0B"
+                : "6B7280",
+            size: 18,
+            font: "Inter",
+            bold: true,
+            characterSpacing: 60,
+          }),
+        ],
+        spacing: { before: 200, after: 60 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: fix.issue || "",
+            color: darkColor,
+            size: 22,
+            font: "Inter",
+            bold: true,
+          }),
+        ],
+        spacing: { after: 60 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `→ ${fix.fix || ""}`,
+            color: slateColor,
+            size: 22,
+            font: "Inter",
+          }),
+        ],
+        spacing: { after: 120 },
+      }),
+    ]),
+
+    divider(),
+
+    // Copy Pack
+    sectionLabel("Deliverable"),
+    heading(isGeoMode ? "Content Pack" : "Copy Pack"),
+
+    subLabel("Headline"),
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: copyPack.headline || "N/A",
+          color: darkColor,
+          size: 32,
+          font: "Inter",
+          bold: true,
+        }),
+      ],
+      spacing: { after: 160 },
+    }),
+
+    subLabel("Subheadline"),
+    bodyText(copyPack.subheadline || "N/A"),
+
+    subLabel("Primary CTA"),
+    boldText(copyPack.primary_cta || "N/A"),
+
+    subLabel("Trust Line"),
+    boldText(copyPack.trust_line || "N/A"),
+
+    subLabel(isGeoMode ? "Key Points" : "Benefit Bullets"),
+    ...bullets.map((b) =>
+      new Paragraph({
+        children: [
+          new TextRun({ text: "✓  ", color: tealColor, size: 22, font: "Inter", bold: true }),
+          new TextRun({ text: b, color: slateColor, size: 22, font: "Inter" }),
+        ],
+        spacing: { after: 80 },
+      })
+    ),
+
+    ...(copyPack.supporting_copy
+      ? [subLabel("Supporting Copy"), bodyText(copyPack.supporting_copy)]
+      : []),
+
+    divider(),
+
+    // Footer
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [
+        new TextRun({
+          text: "Generated by ConversionDoc — conversiondoc.co.uk",
+          color: tealColor,
+          size: 18,
+          font: "Inter",
+          bold: true,
+        }),
+      ],
+      spacing: { before: 200 },
+    }),
+  ];
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: {
+          page: {
+            margin: { top: 1000, right: 1000, bottom: 1000, left: 1000 },
+          },
+        },
+        children,
+      },
+    ],
+  });
+
+  return await Packer.toBlob(doc);
+};
+
+// ───────────────────────────────────────────────────────────────────────────
 
 export default function PaidReport() {
   const [searchParams] = useSearchParams();
@@ -105,6 +674,8 @@ export default function PaidReport() {
   const [fullscreen, setFullscreen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadingDocx, setDownloadingDocx] = useState(false);
   const [downloadingKit, setDownloadingKit] = useState(false);
 
   const [screenshotLoaded, setScreenshotLoaded] = useState(false);
@@ -112,6 +683,7 @@ export default function PaidReport() {
   const [screenshotDataUrl, setScreenshotDataUrl] = useState<string | null>(null);
 
   const mockupRef = useRef<HTMLDivElement>(null);
+  const mockupRefB = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -154,12 +726,10 @@ export default function PaidReport() {
   const mockupHtmlB = auditData?.mockup_html_b ?? null;
   const activeMockupHtml = mockupVersion === "a" ? mockupHtml : (mockupHtmlB || mockupHtml);
 
-  // Detect GEO mode from URL param or stored focus on purchase
   const isGeoMode =
     searchParams.get("focus") === "geo" ||
     purchase?.focus === "geo";
 
-  // Reorder scores for GEO mode — AI readiness first
   const orderedScores = useMemo(() => {
     const entries = Object.entries(scores);
     if (!isGeoMode) return entries;
@@ -229,15 +799,51 @@ export default function PaidReport() {
     }
   };
 
-  const generateMockupPng = async () => {
-    if (!mockupRef.current) throw new Error("Mockup not available");
-    return await toPng(mockupRef.current, { cacheBust: true, skipFonts: true });
+  // ── PNG: render into a hidden off-screen iframe to avoid GEO mode issues ──
+  const generateMockupPng = async (html: string | null): Promise<string> => {
+    if (!html) throw new Error("Mockup HTML not available");
+
+    return new Promise((resolve, reject) => {
+      const iframe = document.createElement("iframe");
+      iframe.style.cssText =
+        "position:fixed;left:-9999px;top:-9999px;width:1200px;height:800px;border:none;visibility:hidden;";
+      document.body.appendChild(iframe);
+
+      iframe.onload = async () => {
+        try {
+          const doc = iframe.contentDocument;
+          if (!doc) throw new Error("iframe document not accessible");
+          doc.open();
+          doc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/></head><body style="margin:0;padding:0;background:#f8fafc;">${html}</body></html>`);
+          doc.close();
+
+          await new Promise((r) => setTimeout(r, 800));
+
+          const canvas = await html2canvas(doc.body, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: false,
+            backgroundColor: "#f8fafc",
+            width: 1200,
+            height: Math.max(doc.body.scrollHeight, 800),
+          });
+
+          resolve(canvas.toDataURL("image/png"));
+        } catch (err) {
+          reject(err);
+        } finally {
+          document.body.removeChild(iframe);
+        }
+      };
+
+      iframe.src = "about:blank";
+    });
   };
 
   const handleDownloadPng = async () => {
     try {
       setDownloading(true);
-      const dataUrl = await generateMockupPng();
+      const dataUrl = await generateMockupPng(activeMockupHtml);
       saveAs(dataUrl, isGeoMode ? "geo-mockup.png" : "homepage-mockup.png");
     } catch (e) {
       console.error("PNG download failed:", e);
@@ -246,88 +852,165 @@ export default function PaidReport() {
     }
   };
 
-  const buildReadme = () => `# ConversionDoc ${isGeoMode ? "GEO Audit" : "Homepage"} Kit
+  // ── PDF ────────────────────────────────────────────────────────────────────
+  const handleDownloadPdf = async () => {
+    try {
+      setDownloadingPdf(true);
+
+      const html = buildPdfHtml({
+        isGeoMode,
+        overallScore,
+        auditData,
+        topFixes,
+        orderedScores,
+        copyPack,
+        summary,
+        purchaseUrl: purchase?.url,
+      });
+
+      const iframe = document.createElement("iframe");
+      iframe.style.cssText =
+        "position:fixed;left:-9999px;top:-9999px;width:900px;height:1200px;border:none;visibility:hidden;";
+      document.body.appendChild(iframe);
+
+      await new Promise<void>((resolve) => {
+        iframe.onload = () => resolve();
+        iframe.src = "about:blank";
+      });
+
+      const doc = iframe.contentDocument!;
+      doc.open();
+      doc.write(html);
+      doc.close();
+
+      await new Promise((r) => setTimeout(r, 1500));
+
+      const canvas = await html2canvas(doc.body, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: "#ffffff",
+        width: 900,
+        height: doc.body.scrollHeight,
+      });
+
+      document.body.removeChild(iframe);
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.92);
+      const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: "a4" });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * pageWidth) / canvas.width;
+
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position -= pageHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      const filename = isGeoMode ? "geo-audit-report.pdf" : "conversion-report.pdf";
+      pdf.save(filename);
+    } catch (e) {
+      console.error("PDF download failed:", e);
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  // ── DOCX ───────────────────────────────────────────────────────────────────
+  const handleDownloadDocx = async () => {
+    try {
+      setDownloadingDocx(true);
+      const blob = await buildDocx({
+        isGeoMode,
+        copyPack,
+        overallScore,
+        summary,
+        topFixes,
+        purchaseUrl: purchase?.url,
+      });
+      saveAs(blob, isGeoMode ? "geo-content-pack.docx" : "copy-pack.docx");
+    } catch (e) {
+      console.error("DOCX download failed:", e);
+    } finally {
+      setDownloadingDocx(false);
+    }
+  };
+
+  // ── README ─────────────────────────────────────────────────────────────────
+  const buildReadme = () => {
+    const prefix = isGeoMode ? "geo" : "homepage";
+    return `# ConversionDoc ${isGeoMode ? "GEO Audit" : "Homepage"} Kit
 
 This kit contains your improved ${isGeoMode ? "page" : "homepage"} assets generated by ConversionDoc.
 
 ## Files included
-- copy-pack.md
-- implementation-notes.md
-- ${isGeoMode ? "geo" : "homepage"}-mockup.html
-- ${isGeoMode ? "geo" : "homepage"}-mockup.png
+- ${prefix}-audit-report.pdf       (Full audit report — clean PDF)
+- ${isGeoMode ? "geo-content-pack" : "copy-pack"}.docx              (Formatted copy/content pack)
+- implementation-notes.txt
+- ${prefix}-mockup-a.html          (Version A mockup)
+- ${prefix}-mockup-a.png           (Version A mockup screenshot)
+${mockupHtmlB ? `- ${prefix}-mockup-b.html          (Version B mockup)
+- ${prefix}-mockup-b.png           (Version B mockup screenshot)` : ""}
 
 ## How to use
-1. Review the copy pack for your updated ${isGeoMode ? "page" : "homepage"} messaging.
-2. Open ${isGeoMode ? "geo" : "homepage"}-mockup.html in your browser to preview the improved direction.
-3. Share with your developer or designer.
-4. Apply the highest-impact changes first.
+1. Open the PDF report for the full diagnosis.
+2. Use the copy/content pack DOCX for your updated messaging.
+3. Open the mockup HTML files in your browser to preview the improved direction.
+4. Share with your developer or designer.
+5. Apply the highest-impact changes first.
 
 ## Website audited
 ${purchase?.url || "N/A"}
 
 ## Generated by ConversionDoc
-`;
-
-  const buildCopyPack = () => {
-    const bullets = Array.isArray(copyPack.benefit_bullets)
-      ? copyPack.benefit_bullets.filter(Boolean)
-      : [];
-    return `# ${isGeoMode ? "GEO Content" : "Homepage Copy"} Pack
-
-## ${isGeoMode ? "Page" : "Hero"} Headline
-${copyPack.headline || ""}
-
-## ${isGeoMode ? "Page" : "Hero"} Subheadline
-${copyPack.subheadline || ""}
-
-## Primary CTA
-${copyPack.primary_cta || ""}
-
-## Trust Line
-${copyPack.trust_line || ""}
-
-## ${isGeoMode ? "Key Points" : "Benefit Bullets"}
-${bullets.map((b) => `- ${b}`).join("\n")}
-
-## Supporting Copy
-${copyPack.supporting_copy || ""}
+conversiondoc.co.uk
 `;
   };
 
   const buildImplementationNotes = () => {
     const strongest = summary.strongest_pillar ? prettyLabel(summary.strongest_pillar) : "N/A";
     const weakest = summary.weakest_pillar ? prettyLabel(summary.weakest_pillar) : "N/A";
-    return `# Implementation Notes
+    return `IMPLEMENTATION NOTES
+Generated by ConversionDoc — conversiondoc.co.uk
+${"=".repeat(50)}
 
-## Overall Score
-${overallScore !== null ? `${overallScore}/100` : "N/A"}
+Overall Score: ${overallScore !== null ? `${overallScore}/100` : "N/A"}
+Verdict: ${auditData?.verdict || "N/A"}
 
-## Verdict
-${auditData?.verdict || "N/A"}
+Strongest ${isGeoMode ? "Dimension" : "Pillar"}: ${strongest}
+Weakest ${isGeoMode ? "Dimension" : "Pillar"}: ${weakest}
 
-## Strongest ${isGeoMode ? "Dimension" : "Pillar"}
-${strongest}
-
-## Weakest ${isGeoMode ? "Dimension" : "Pillar"}
-${weakest}
-
-## Biggest Opportunity
+Biggest Opportunity:
 ${summary.biggest_opportunity || "N/A"}
 
-## Executive Summary
+Executive Summary:
 ${summary.executive_summary || "N/A"}
 
-## Top 3 Priority Fixes
+${"=".repeat(50)}
+TOP 3 PRIORITY FIXES
+${"=".repeat(50)}
 ${(topFixes || [])
-  .map((fix) => `### Priority ${fix.priority || "-"}
+  .map(
+    (fix) => `
+Priority ${fix.priority || "-"} — ${fix.impact || "Medium"} Impact
 Issue: ${fix.issue || "N/A"}
-Impact: ${fix.impact || "N/A"}
-Fix: ${fix.fix || "N/A"}`)
-  .join("\n\n")}
+Fix: ${fix.fix || "N/A"}`
+  )
+  .join("\n")}
 `;
   };
 
-  const buildMockupHtmlFile = () => `<!DOCTYPE html>
+  const buildMockupHtmlFile = (html: string | null) => `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -335,30 +1018,119 @@ Fix: ${fix.fix || "N/A"}`)
   <title>${isGeoMode ? "GEO Mockup" : "Homepage Mockup"} — ConversionDoc</title>
 </head>
 <body style="margin:0;padding:0;background:#f8fafc;">
-${activeMockupHtml || ""}
+${html || ""}
 </body>
 </html>`;
 
-  const handleDownloadCopyPack = () => {
-    const blob = new Blob([buildCopyPack()], { type: "text/markdown;charset=utf-8" });
-    saveAs(blob, isGeoMode ? "geo-content-pack.md" : "copy-pack.md");
-  };
-
+  // ── ZIP ────────────────────────────────────────────────────────────────────
   const handleDownloadKit = async () => {
     try {
       setDownloadingKit(true);
       const zip = new JSZip();
       const prefix = isGeoMode ? "geo" : "homepage";
+
       zip.file("README.md", buildReadme());
-      zip.file("copy-pack.md", buildCopyPack());
-      zip.file("implementation-notes.md", buildImplementationNotes());
-      zip.file(`${prefix}-mockup.html`, buildMockupHtmlFile());
+      zip.file("implementation-notes.txt", buildImplementationNotes());
+
+      // DOCX copy pack
+      const docxBlob = await buildDocx({
+        isGeoMode,
+        copyPack,
+        overallScore,
+        summary,
+        topFixes,
+        purchaseUrl: purchase?.url,
+      });
+      const docxArrayBuffer = await docxBlob.arrayBuffer();
+      zip.file(
+        isGeoMode ? "geo-content-pack.docx" : "copy-pack.docx",
+        docxArrayBuffer
+      );
+
+      // PDF report
       try {
-        const pngDataUrl = await generateMockupPng();
-        zip.file(`${prefix}-mockup.png`, pngDataUrl.split(",")[1], { base64: true });
+        const pdfHtml = buildPdfHtml({
+          isGeoMode,
+          overallScore,
+          auditData,
+          topFixes,
+          orderedScores,
+          copyPack,
+          summary,
+          purchaseUrl: purchase?.url,
+        });
+
+        const iframe = document.createElement("iframe");
+        iframe.style.cssText =
+          "position:fixed;left:-9999px;top:-9999px;width:900px;height:1200px;border:none;visibility:hidden;";
+        document.body.appendChild(iframe);
+
+        await new Promise<void>((resolve) => {
+          iframe.onload = () => resolve();
+          iframe.src = "about:blank";
+        });
+
+        const doc = iframe.contentDocument!;
+        doc.open();
+        doc.write(pdfHtml);
+        doc.close();
+        await new Promise((r) => setTimeout(r, 1500));
+
+        const canvas = await html2canvas(doc.body, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: false,
+          backgroundColor: "#ffffff",
+          width: 900,
+          height: doc.body.scrollHeight,
+        });
+        document.body.removeChild(iframe);
+
+        const imgData = canvas.toDataURL("image/jpeg", 0.92);
+        const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: "a4" });
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = pageWidth;
+        const imgHeight = (canvas.height * pageWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
+        pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+        while (heightLeft > 0) {
+          position -= pageHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+        }
+        const pdfBlob = pdf.output("blob");
+        const pdfBuffer = await pdfBlob.arrayBuffer();
+        zip.file(`${prefix}-audit-report.pdf`, pdfBuffer);
       } catch (e) {
-        console.error("Could not generate PNG for ZIP:", e);
+        console.error("Could not generate PDF for ZIP:", e);
       }
+
+      // Version A mockup HTML + PNG
+      if (mockupHtml) {
+        zip.file(`${prefix}-mockup-a.html`, buildMockupHtmlFile(mockupHtml));
+        try {
+          const pngA = await generateMockupPng(mockupHtml);
+          zip.file(`${prefix}-mockup-a.png`, pngA.split(",")[1], { base64: true });
+        } catch (e) {
+          console.error("Could not generate Version A PNG for ZIP:", e);
+        }
+      }
+
+      // Version B mockup HTML + PNG
+      if (mockupHtmlB) {
+        zip.file(`${prefix}-mockup-b.html`, buildMockupHtmlFile(mockupHtmlB));
+        try {
+          const pngB = await generateMockupPng(mockupHtmlB);
+          zip.file(`${prefix}-mockup-b.png`, pngB.split(",")[1], { base64: true });
+        } catch (e) {
+          console.error("Could not generate Version B PNG for ZIP:", e);
+        }
+      }
+
       const blob = await zip.generateAsync({ type: "blob" });
       saveAs(blob, `conversiondoc-${prefix}-kit.zip`);
     } catch (e) {
@@ -367,6 +1139,8 @@ ${activeMockupHtml || ""}
       setDownloadingKit(false);
     }
   };
+
+  // ── RENDER ─────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -571,17 +1345,13 @@ ${activeMockupHtml || ""}
                   </div>
                   {value?.issue && (
                     <div className="mb-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 mb-1">
-                        Issue
-                      </p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 mb-1">Issue</p>
                       <p className="text-slate-800">{value.issue}</p>
                     </div>
                   )}
                   {value?.fix && (
                     <div className="mb-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 mb-1">
-                        {isGeoMode ? "Recommended Fix" : "Recommended Fix"}
-                      </p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 mb-1">Recommended Fix</p>
                       <p className="text-slate-800">{value.fix}</p>
                     </div>
                   )}
@@ -616,38 +1386,33 @@ ${activeMockupHtml || ""}
               </p>
             </div>
             <button
-              onClick={handleDownloadCopyPack}
-              className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm"
+              onClick={handleDownloadDocx}
+              disabled={downloadingDocx}
+              className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm disabled:opacity-50"
             >
-              {isGeoMode ? "Download Content Pack" : "Download Copy Pack"}
+              {downloadingDocx
+                ? "Generating…"
+                : isGeoMode
+                ? "Download Content Pack (.docx)"
+                : "Download Copy Pack (.docx)"}
             </button>
           </div>
           <div className="space-y-4">
             <div className="rounded-2xl border border-teal-100 bg-teal-50 p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-700 mb-2">
-                Headline
-              </p>
-              <p className="text-2xl font-semibold text-slate-900">
-                {copyPack.headline || "N/A"}
-              </p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-700 mb-2">Headline</p>
+              <p className="text-2xl font-semibold text-slate-900">{copyPack.headline || "N/A"}</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">
-                Subheadline
-              </p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">Subheadline</p>
               <p className="text-slate-800">{copyPack.subheadline || "N/A"}</p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">
-                  Primary CTA
-                </p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">Primary CTA</p>
                 <p className="text-slate-900 font-medium">{copyPack.primary_cta || "N/A"}</p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">
-                  Trust Line
-                </p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">Trust Line</p>
                 <p className="text-slate-900 font-medium">{copyPack.trust_line || "N/A"}</p>
               </div>
             </div>
@@ -666,9 +1431,7 @@ ${activeMockupHtml || ""}
             </div>
             {copyPack.supporting_copy && (
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">
-                  Supporting Copy
-                </p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">Supporting Copy</p>
                 <p className="text-slate-800">{copyPack.supporting_copy}</p>
               </div>
             )}
@@ -762,13 +1525,10 @@ ${activeMockupHtml || ""}
                   <style>{`@keyframes cdSpin { to { transform: rotate(360deg); } }`}</style>
                 </div>
               )}
-
               {topFixes && topFixes.length > 0 && (
                 <div className="p-6 bg-slate-50 space-y-3">
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">
-                    {isGeoMode
-                      ? "AI Visibility Issues on Current Page"
-                      : "Issues Identified on Current Site"}
+                    {isGeoMode ? "AI Visibility Issues on Current Page" : "Issues Identified on Current Site"}
                   </p>
                   {topFixes.map((fix, i) => {
                     const color = impactColor[fix.impact || "Medium"] || "#f59e0b";
@@ -787,9 +1547,7 @@ ${activeMockupHtml || ""}
                               {fix.impact} Impact
                             </span>
                           </div>
-                          <p className="font-semibold text-slate-900 text-sm mb-1 leading-snug">
-                            {fix.issue}
-                          </p>
+                          <p className="font-semibold text-slate-900 text-sm mb-1 leading-snug">{fix.issue}</p>
                           <div className="flex items-start gap-1.5">
                             <span className="text-teal-500 text-xs font-bold shrink-0 mt-0.5">→</span>
                             <p className="text-xs text-slate-600 leading-relaxed">{fix.fix}</p>
@@ -834,7 +1592,6 @@ ${activeMockupHtml || ""}
                     {mockupVersion === "a" ? "Recommended layout" : "Alternative layout"}
                   </span>
                 </div>
-
                 <div className="relative">
                   <div
                     ref={mockupRef}
@@ -872,6 +1629,13 @@ ${activeMockupHtml || ""}
                   className="rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm disabled:opacity-50"
                 >
                   {downloading ? "Generating…" : "Download PNG"}
+                </button>
+                <button
+                  onClick={handleDownloadPdf}
+                  disabled={downloadingPdf}
+                  className="rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm disabled:opacity-50"
+                >
+                  {downloadingPdf ? "Generating PDF…" : "Download Report PDF"}
                 </button>
                 <button
                   onClick={handleDownloadKit}
