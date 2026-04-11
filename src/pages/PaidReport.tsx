@@ -759,6 +759,249 @@ const buildDocx = async ({
   return await Packer.toBlob(doc);
 };
 
+// ─── CONSTANTS ─────────────────────────────────────────────────────────────
+const PLATFORMS = ["Webflow", "WordPress", "Framer", "Shopify", "Squarespace", "Wix", "Custom code", "Other"];
+const HELP_OPTIONS = ["Copy rewrite", "Page redesign", "Full page rebuild", "GEO content restructure", "Developer handoff", "Something else"];
+
+// ─── ENQUIRY MODAL ─────────────────────────────────────────────────────────
+function EnquiryModal({
+  open,
+  onClose,
+  isGeoMode,
+  prefillUrl,
+  prefillEmail,
+  purchaseId,
+}: {
+  open: boolean;
+  onClose: () => void;
+  isGeoMode: boolean;
+  prefillUrl?: string | null;
+  prefillEmail?: string | null;
+  purchaseId?: string;
+}) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState(prefillEmail || "");
+  const [url, setUrl] = useState(prefillUrl || "");
+  const [platform, setPlatform] = useState("");
+  const [helpNeeded, setHelpNeeded] = useState<string[]>([]);
+  const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
+  useEffect(() => {
+    if (open) {
+      setSubmitted(false);
+      setSubmitError("");
+      setEmail(prefillEmail || "");
+      setUrl(prefillUrl || "");
+    }
+  }, [open, prefillEmail, prefillUrl]);
+
+  const toggleHelp = (option: string) => {
+    setHelpNeeded((prev) =>
+      prev.includes(option) ? prev.filter((h) => h !== option) : [...prev, option]
+    );
+  };
+
+  const handleSubmit = async () => {
+    if (!name || !email) {
+      setSubmitError("Please fill in your name and email.");
+      return;
+    }
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-enquiry`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            name,
+            email,
+            url,
+            platform,
+            help_needed: helpNeeded,
+            notes,
+            focus: isGeoMode ? "geo" : "conversion",
+            purchase_id: purchaseId,
+          }),
+        }
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || "Submission failed");
+      }
+      setSubmitted(true);
+    } catch (err: any) {
+      setSubmitError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ background: "rgba(15,23,42,0.7)", backdropFilter: "blur(6px)" }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg bg-white rounded-[28px] shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="bg-[linear-gradient(135deg,#020617,#0f172a)] px-7 py-6 flex items-start justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-teal-400 mb-1">
+              Implementation Help
+            </p>
+            <h2 className="text-xl font-bold text-white">
+              {isGeoMode ? "Get help implementing your GEO fixes" : "Get help implementing your recommendations"}
+            </h2>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl leading-none ml-4 mt-0.5 shrink-0">✕</button>
+        </div>
+
+        <div className="px-7 py-6 max-h-[70vh] overflow-y-auto">
+          {submitted ? (
+            <div className="text-center py-8">
+              <div className="text-4xl mb-4">✅</div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">We'll be in touch shortly</h3>
+              <p className="text-slate-500 text-sm leading-relaxed">
+                Thanks for reaching out. We've received your enquiry and will come back to you within 1–2 business days. Check your inbox for a confirmation.
+              </p>
+              <button onClick={onClose} className="mt-6 rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-6 py-3 text-sm transition-colors">
+                Close
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500 mb-1.5">
+                  Your Name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Jane Smith"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500 mb-1.5">
+                  Email Address <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="jane@example.com"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500 mb-1.5">
+                  Website URL
+                </label>
+                <input
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://yoursite.com"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500 mb-1.5">
+                  Platform / Tech Stack
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {PLATFORMS.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPlatform(p)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-colors ${
+                        platform === p
+                          ? "bg-teal-500 border-teal-500 text-white"
+                          : "bg-slate-50 border-slate-200 text-slate-600 hover:border-teal-300"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500 mb-1.5">
+                  What do you need help with?
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {HELP_OPTIONS.map((h) => (
+                    <button
+                      key={h}
+                      type="button"
+                      onClick={() => toggleHelp(h)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-colors ${
+                        helpNeeded.includes(h)
+                          ? "bg-teal-500 border-teal-500 text-white"
+                          : "bg-slate-50 border-slate-200 text-slate-600 hover:border-teal-300"
+                      }`}
+                    >
+                      {h}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500 mb-1.5">
+                  Anything else we should know?
+                </label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Budget, timeline, specific pages, anything relevant…"
+                  rows={3}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition resize-none"
+                />
+              </div>
+
+              {submitError && (
+                <p className="text-xs text-red-500 font-medium">{submitError}</p>
+              )}
+
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="w-full rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-bold px-6 py-3.5 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? "Sending…" : "Send Enquiry"}
+              </button>
+
+              <p className="text-center text-xs text-slate-400">
+                We'll come back to you within 1–2 business days.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 
 export default function PaidReport() {
@@ -776,6 +1019,7 @@ export default function PaidReport() {
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadingDocx, setDownloadingDocx] = useState(false);
   const [downloadingKit, setDownloadingKit] = useState(false);
+  const [enquiryOpen, setEnquiryOpen] = useState(false);
 
   const [screenshotLoaded, setScreenshotLoaded] = useState(false);
   const [screenshotErrored, setScreenshotErrored] = useState(false);
@@ -809,7 +1053,9 @@ export default function PaidReport() {
   }, [sessionId]);
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setFullscreen(false); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setFullscreen(false); setEnquiryOpen(false); }
+    };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
@@ -1036,6 +1282,16 @@ ${html || ""}
 
   return (
     <div className="min-h-screen bg-[#f5f8fc] px-6 py-16">
+
+      <EnquiryModal
+        open={enquiryOpen}
+        onClose={() => setEnquiryOpen(false)}
+        isGeoMode={isGeoMode}
+        prefillUrl={purchase.url}
+        prefillEmail={undefined}
+        purchaseId={purchase.id}
+      />
+
       {screenshotUrl && !screenshotLoaded && !screenshotErrored && (
         <div style={{
           position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)",
@@ -1418,15 +1674,15 @@ ${html || ""}
           </h2>
           <p className="text-slate-600 mb-6 max-w-3xl leading-7">
             {isGeoMode
-              ? "If you'd like expert help applying your GEO fixes — from content restructuring to full page implementation — we're here to help. Get in touch and we'll talk through your options."
-              : "If you'd like expert help putting these fixes into action — from copy rewrites to full page redesigns — we're here to help. Get in touch and we'll talk through your options."}
+              ? "If you'd like expert help applying your GEO fixes — from content restructuring to full page implementation — tell us what you need and we'll come back to you within 1–2 business days."
+              : "If you'd like expert help putting these fixes into action — from copy rewrites to full page redesigns — tell us what you need and we'll come back to you within 1–2 business days."}
           </p>
-          <div className="flex flex-wrap gap-3">
-            <a href={`mailto:hello@conversiondoc.co.uk?subject=${isGeoMode ? "GEO Implementation Help Request" : "Implementation Help Request"}`}
-              className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-3 transition-colors text-sm shadow-sm">
-              Get in Touch
-            </a>
-          </div>
+          <button
+            onClick={() => setEnquiryOpen(true)}
+            className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-6 py-3 transition-colors text-sm shadow-sm"
+          >
+            Get Implementation Help →
+          </button>
         </section>
 
       </div>
