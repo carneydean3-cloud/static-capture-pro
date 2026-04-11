@@ -102,16 +102,7 @@ const GEO_PILLAR_KEYS = ["ai_search", "ai_readiness", "geo", "search_readiness"]
 const isGeoPillar = (key: string) =>
   GEO_PILLAR_KEYS.some((fragment) => key.toLowerCase().includes(fragment));
 
-// ─── PDF BUILDER (jsPDF programmatic — no screenshot) ──────────────────────
-
-const hexToRgb = (hex: string): [number, number, number] => {
-  const h = hex.replace("#", "");
-  return [
-    parseInt(h.substring(0, 2), 16),
-    parseInt(h.substring(2, 4), 16),
-    parseInt(h.substring(4, 6), 16),
-  ];
-};
+// ─── PDF BUILDER ───────────────────────────────────────────────────────────
 
 const buildPdf = ({
   isGeoMode,
@@ -134,14 +125,13 @@ const buildPdf = ({
 }): jsPDF => {
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
-  const W = 210; // A4 width mm
-  const H = 297; // A4 height mm
-  const ML = 16; // margin left
-  const MR = 16; // margin right
-  const CW = W - ML - MR; // content width
+  const W = 210;
+  const H = 297;
+  const ML = 16;
+  const MR = 16;
+  const CW = W - ML - MR;
   const BOTTOM_MARGIN = 20;
 
-  // Colours
   const NAVY: [number, number, number] = [2, 6, 23];
   const TEAL: [number, number, number] = [13, 148, 136];
   const TEAL_LIGHT: [number, number, number] = [240, 253, 250];
@@ -166,12 +156,10 @@ const buildPdf = ({
     impact === "High" ? RED : impact === "Medium" ? AMBER : [107, 114, 128];
 
   let y = 0;
-  let page = 1;
 
   const checkPageBreak = (neededMm: number) => {
     if (y + neededMm > H - BOTTOM_MARGIN) {
       pdf.addPage();
-      page++;
       y = 16;
     }
   };
@@ -189,13 +177,12 @@ const buildPdf = ({
   const wrappedText = (
     text: string,
     x: number,
-    startY: number,
     maxWidth: number,
     lineHeight: number,
     style: "normal" | "bold" | "italic" = "normal",
     size = 10,
     color: [number, number, number] = SLATE_700
-  ): number => {
+  ): void => {
     setFont(style, size, color);
     const lines = pdf.splitTextToSize(text, maxWidth);
     lines.forEach((line: string) => {
@@ -203,7 +190,6 @@ const buildPdf = ({
       pdf.text(line, x, y);
       y += lineHeight;
     });
-    return y;
   };
 
   const sectionDivider = () => {
@@ -221,21 +207,6 @@ const buildPdf = ({
     y += 5;
   };
 
-  const pill = (
-    text: string,
-    x: number,
-    pillY: number,
-    textColor: [number, number, number],
-    bgColor: [number, number, number]
-  ) => {
-    setFont("bold", 7, textColor);
-    const tw = pdf.getTextWidth(text.toUpperCase()) + 6;
-    pdf.setFillColor(...bgColor);
-    pdf.roundedRect(x, pillY - 3.5, tw, 5.5, 1.5, 1.5, "F");
-    pdf.text(text.toUpperCase(), x + 3, pillY);
-    return tw;
-  };
-
   const roundedRect = (
     x: number,
     rectY: number,
@@ -245,38 +216,27 @@ const buildPdf = ({
     stroke?: [number, number, number],
     radius = 3
   ) => {
+    pdf.setFillColor(...fill);
     if (stroke) {
       pdf.setDrawColor(...stroke);
       pdf.setLineWidth(0.3);
+      pdf.roundedRect(x, rectY, w, h, radius, radius, "FD");
+    } else {
+      pdf.roundedRect(x, rectY, w, h, radius, radius, "F");
     }
-    pdf.setFillColor(...fill);
-    pdf.roundedRect(x, rectY, w, h, radius, radius, stroke ? "FD" : "F");
   };
 
-  // ── PAGE 1: HEADER ─────────────────────────────────────────────────────────
-  // Dark header block
+  // ── HEADER ─────────────────────────────────────────────────────────────────
   roundedRect(ML, 12, CW, 44, NAVY, undefined, 4);
-
-  // Teal accent bar top
   pdf.setFillColor(...TEAL);
-  pdf.roundedRect(ML, 12, CW, 1.2, 0, 0, "F");
+  pdf.rect(ML, 12, CW, 1.2, "F");
 
   setFont("bold", 7, TEAL);
-  pdf.text(
-    isGeoMode ? "FULL GEO AUDIT" : "FULL DIAGNOSIS",
-    ML + 6,
-    20
-  );
-
+  pdf.text(isGeoMode ? "FULL GEO AUDIT" : "FULL DIAGNOSIS", ML + 6, 20);
   setFont("bold", 8, TEAL);
   pdf.text("ConversionDoc", W - MR - 6, 20, { align: "right" });
-
   setFont("bold", 18, WHITE);
-  pdf.text(
-    isGeoMode ? "AI Search Readiness Report" : "Conversion Report",
-    ML + 6,
-    30
-  );
+  pdf.text(isGeoMode ? "AI Search Readiness Report" : "Conversion Report", ML + 6, 30);
 
   if (auditData?.verdict) {
     setFont("italic", 8, [148, 163, 184]);
@@ -299,28 +259,20 @@ const buildPdf = ({
     isGeoMode
       ? "Your biggest opportunity to improve AI search visibility"
       : "Your strongest opportunity to improve conversions",
-    ML,
-    y,
-    CW,
-    7,
-    "bold",
-    14,
-    SLATE_900
+    ML, CW, 7, "bold", 14, SLATE_900
   );
   y += 2;
 
-  // Score cards row
+  // Score cards
   checkPageBreak(24);
   const cardW = (CW - 8) / 3;
 
-  // Card 1 — score
   roundedRect(ML, y, cardW, 22, SLATE_50, SLATE_200);
   setFont("normal", 7, SLATE_500);
   pdf.text(isGeoMode ? "GEO Readiness Score" : "Overall Score", ML + 4, y + 6);
   setFont("bold", 16, scoreRgb(overallScore));
   pdf.text(overallScore !== null ? `${overallScore}/100` : "N/A", ML + 4, y + 17);
 
-  // Card 2 — strongest
   roundedRect(ML + cardW + 4, y, cardW, 22, SLATE_50, SLATE_200);
   setFont("normal", 7, SLATE_500);
   pdf.text(isGeoMode ? "Strongest Dimension" : "Strongest Pillar", ML + cardW + 8, y + 6);
@@ -333,7 +285,6 @@ const buildPdf = ({
     pdf.text(line, ML + cardW + 8, y + 13 + i * 5);
   });
 
-  // Card 3 — weakest
   roundedRect(ML + (cardW + 4) * 2, y, cardW, 22, SLATE_50, SLATE_200);
   setFont("normal", 7, SLATE_500);
   pdf.text(isGeoMode ? "Weakest Dimension" : "Weakest Pillar", ML + (cardW + 4) * 2 + 4, y + 6);
@@ -355,11 +306,7 @@ const buildPdf = ({
   checkPageBreak(oppH + 4);
   roundedRect(ML, y, CW, oppH, TEAL_LIGHT, TEAL_BORDER);
   setFont("bold", 7, [15, 118, 110]);
-  pdf.text(
-    isGeoMode ? "BIGGEST GEO OPPORTUNITY" : "BIGGEST OPPORTUNITY",
-    ML + 5,
-    y + 6
-  );
+  pdf.text(isGeoMode ? "BIGGEST GEO OPPORTUNITY" : "BIGGEST OPPORTUNITY", ML + 5, y + 6);
   setFont("bold", 9.5, SLATE_900);
   oppLines.forEach((line: string, i: number) => {
     pdf.text(line, ML + 5, y + 12 + i * 5.5);
@@ -386,55 +333,107 @@ const buildPdf = ({
   microLabel("Action Plan", TEAL);
   wrappedText(
     isGeoMode ? "Top AI Visibility Fixes" : "Top Priority Fixes",
-    ML,
-    y,
-    CW,
-    7,
-    "bold",
-    14,
-    SLATE_900
+    ML, CW, 7, "bold", 14, SLATE_900
   );
   y += 2;
 
   (topFixes || []).forEach((fix) => {
     const impact = fix.impact || "Medium";
     const iRgb = impactRgb(impact);
+
+    // light tint for card background
     const iRgbLight: [number, number, number] = [
-      Math.min(255, iRgb[0] + 180),
-      Math.min(255, iRgb[1] + 180),
-      Math.min(255, iRgb[2] + 180),
+      Math.min(255, iRgb[0] + 190),
+      Math.min(255, iRgb[1] + 190),
+      Math.min(255, iRgb[2] + 190),
     ];
 
-    const issueLines = pdf.splitTextToSize(fix.issue || "", CW - 22);
-    const fixLines = pdf.splitTextToSize(`→ ${fix.fix || ""}`, CW - 22);
-    const cardH = 8 + issueLines.length * 5 + fixLines.length * 4.5 + 10;
+    // Layout constants
+    const LEFT_BAR = 1.5;
+    const CIRCLE_RADIUS = 4;
+    const CIRCLE_CENTER_X = ML + LEFT_BAR + 2 + CIRCLE_RADIUS; // ~ML + 9.5
+    const TEXT_X = CIRCLE_CENTER_X + CIRCLE_RADIUS + 4;        // text starts after circle + gap
+    const TEXT_W = W - MR - TEXT_X - 4;                        // available width for text
+
+    const PILL_H = 5.5;
+    const ISSUE_LH = 5;
+    const FIX_LH = 4.5;
+    const V_PAD_TOP = 6;
+    const V_PAD_BOT = 6;
+    const PILL_GAP = 3;
+    const ISSUE_GAP = 3;
+
+    // Split text at actual available width
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9);
+    const issueLines: string[] = pdf.splitTextToSize(fix.issue || "", TEXT_W);
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8.5);
+    const fixText = `-> ${fix.fix || ""}`;
+    const fixLines: string[] = pdf.splitTextToSize(fixText, TEXT_W);
+
+    const cardH =
+      V_PAD_TOP +
+      PILL_H +
+      PILL_GAP +
+      issueLines.length * ISSUE_LH +
+      ISSUE_GAP +
+      fixLines.length * FIX_LH +
+      V_PAD_BOT;
 
     checkPageBreak(cardH + 4);
 
-    roundedRect(ML, y, CW, cardH, iRgbLight, undefined);
+    // Card
+    roundedRect(ML, y, CW, cardH, iRgbLight, undefined, 3);
+
     // Left accent bar
     pdf.setFillColor(...iRgb);
-    pdf.roundedRect(ML, y, 1.5, cardH, 0, 0, "F");
+    pdf.rect(ML, y, LEFT_BAR, cardH, "F");
 
     // Number circle
     pdf.setFillColor(...iRgb);
-    pdf.circle(ML + 9, y + 7, 4, "F");
-    setFont("bold", 8, WHITE);
-    pdf.text(String(fix.priority ?? ""), ML + 9, y + 9, { align: "center" });
+    pdf.circle(CIRCLE_CENTER_X, y + V_PAD_TOP + CIRCLE_RADIUS, CIRCLE_RADIUS, "F");
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(8);
+    pdf.setTextColor(...WHITE);
+    pdf.text(
+      String(fix.priority ?? ""),
+      CIRCLE_CENTER_X,
+      y + V_PAD_TOP + CIRCLE_RADIUS + 1,
+      { align: "center" }
+    );
 
     // Impact pill
-    pill(`${impact} Impact`, ML + 16, y + 7, iRgb, [255, 255, 255]);
+    const pillLabel = `${impact.toUpperCase()} IMPACT`;
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(7);
+    pdf.setTextColor(...iRgb);
+    const pillW = pdf.getTextWidth(pillLabel) + 6;
+    pdf.setFillColor(255, 255, 255);
+    pdf.roundedRect(TEXT_X, y + V_PAD_TOP, pillW, PILL_H, 1.5, 1.5, "F");
+    pdf.text(pillLabel, TEXT_X + 3, y + V_PAD_TOP + 3.8);
+
+    let innerY = y + V_PAD_TOP + PILL_H + PILL_GAP;
 
     // Issue
-    setFont("bold", 9, SLATE_900);
-    issueLines.forEach((line: string, i: number) => {
-      pdf.text(line, ML + 16, y + 13 + i * 5);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9);
+    pdf.setTextColor(...SLATE_900);
+    issueLines.forEach((line: string) => {
+      innerY += ISSUE_LH;
+      pdf.text(line, TEXT_X, innerY);
     });
 
+    innerY += ISSUE_GAP;
+
     // Fix
-    setFont("normal", 8, SLATE_700);
-    fixLines.forEach((line: string, i: number) => {
-      pdf.text(line, ML + 16, y + 13 + issueLines.length * 5 + i * 4.5);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(...SLATE_700);
+    fixLines.forEach((line: string) => {
+      innerY += FIX_LH;
+      pdf.text(line, TEXT_X, innerY);
     });
 
     y += cardH + 4;
@@ -446,13 +445,7 @@ const buildPdf = ({
   microLabel("Full Analysis", TEAL);
   wrappedText(
     isGeoMode ? "GEO Dimension Breakdown" : "Score Breakdown",
-    ML,
-    y,
-    CW,
-    7,
-    "bold",
-    14,
-    SLATE_900
+    ML, CW, 7, "bold", 14, SLATE_900
   );
   y += 2;
 
@@ -460,14 +453,14 @@ const buildPdf = ({
     const s = value?.score;
     const sRgb = pillarScoreRgb(s);
 
-    const issueLines = value?.issue
-      ? pdf.splitTextToSize(value.issue, CW - 10)
-      : [];
-    const fixLines = value?.fix
-      ? pdf.splitTextToSize(value.fix, CW - 10)
-      : [];
-    const rewriteLines = value?.rewritten_copy
-      ? pdf.splitTextToSize(value.rewritten_copy, CW - 10)
+    const INNER_W = CW - 10;
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8.5);
+    const issueLines: string[] = value?.issue ? pdf.splitTextToSize(value.issue, INNER_W) : [];
+    const fixLines: string[] = value?.fix ? pdf.splitTextToSize(value.fix, INNER_W) : [];
+    const rewriteLines: string[] = value?.rewritten_copy
+      ? pdf.splitTextToSize(value.rewritten_copy, INNER_W)
       : [];
 
     const labelRows =
@@ -476,39 +469,35 @@ const buildPdf = ({
       (rewriteLines.length > 0 ? 1 : 0);
 
     const contentH =
-      8 +
+      14 +
       issueLines.length * 4.5 +
       fixLines.length * 4.5 +
       rewriteLines.length * 4.5 +
-      labelRows * 5 +
-      labelRows * 2;
+      labelRows * 6;
 
     checkPageBreak(contentH + 4);
 
     roundedRect(ML, y, CW, contentH, SLATE_50, SLATE_200);
 
-    // Pillar name + score
     setFont("bold", 11, SLATE_900);
-    pdf.text(prettyLabel(pillar), ML + 5, y + 7);
+    pdf.text(prettyLabel(pillar), ML + 5, y + 8);
     setFont("bold", 11, sRgb);
     pdf.text(
       typeof s === "number" ? `${s}/10` : "—",
-      W - MR - 5,
-      y + 7,
+      W - MR - 5, y + 8,
       { align: "right" }
     );
 
-    // Separator line
     pdf.setDrawColor(...SLATE_200);
     pdf.setLineWidth(0.2);
-    pdf.line(ML + 5, y + 9, W - MR - 5, y + 9);
+    pdf.line(ML + 5, y + 10, W - MR - 5, y + 10);
 
-    let innerY = y + 14;
+    let innerY = y + 16;
 
     if (issueLines.length > 0) {
       setFont("bold", 7, SLATE_500);
       pdf.text("ISSUE", ML + 5, innerY);
-      innerY += 4.5;
+      innerY += 5;
       setFont("normal", 8.5, SLATE_700);
       issueLines.forEach((line: string) => {
         pdf.text(line, ML + 5, innerY);
@@ -520,7 +509,7 @@ const buildPdf = ({
     if (fixLines.length > 0) {
       setFont("bold", 7, SLATE_500);
       pdf.text("RECOMMENDED FIX", ML + 5, innerY);
-      innerY += 4.5;
+      innerY += 5;
       setFont("normal", 8.5, SLATE_700);
       fixLines.forEach((line: string) => {
         pdf.text(line, ML + 5, innerY);
@@ -531,12 +520,8 @@ const buildPdf = ({
 
     if (rewriteLines.length > 0) {
       setFont("bold", 7, TEAL);
-      pdf.text(
-        isGeoMode ? "REWRITTEN CONTENT" : "REWRITTEN COPY",
-        ML + 5,
-        innerY
-      );
-      innerY += 4.5;
+      pdf.text(isGeoMode ? "REWRITTEN CONTENT" : "REWRITTEN COPY", ML + 5, innerY);
+      innerY += 5;
       setFont("italic", 8.5, SLATE_700);
       rewriteLines.forEach((line: string) => {
         pdf.text(line, ML + 5, innerY);
@@ -553,13 +538,7 @@ const buildPdf = ({
   microLabel("Deliverable", TEAL);
   wrappedText(
     isGeoMode ? "Content Pack" : "Copy Pack",
-    ML,
-    y,
-    CW,
-    7,
-    "bold",
-    14,
-    SLATE_900
+    ML, CW, 7, "bold", 14, SLATE_900
   );
   y += 2;
 
@@ -567,8 +546,8 @@ const buildPdf = ({
     ? copyPack.benefit_bullets.filter(Boolean)
     : [];
 
-  // Headline box (teal)
-  const hlLines = pdf.splitTextToSize(copyPack.headline || "N/A", CW - 10);
+  // Headline
+  const hlLines: string[] = pdf.splitTextToSize(copyPack.headline || "N/A", CW - 10);
   const hlH = 10 + hlLines.length * 6.5;
   checkPageBreak(hlH + 4);
   roundedRect(ML, y, CW, hlH, TEAL_LIGHT, TEAL_BORDER);
@@ -581,7 +560,7 @@ const buildPdf = ({
   y += hlH + 4;
 
   // Subheadline
-  const subLines = pdf.splitTextToSize(copyPack.subheadline || "N/A", CW - 10);
+  const subLines: string[] = pdf.splitTextToSize(copyPack.subheadline || "N/A", CW - 10);
   const subH = 10 + subLines.length * 4.5;
   checkPageBreak(subH + 4);
   roundedRect(ML, y, CW, subH, SLATE_50, SLATE_200);
@@ -600,7 +579,7 @@ const buildPdf = ({
   setFont("bold", 7, SLATE_500);
   pdf.text("PRIMARY CTA", ML + 5, y + 6);
   setFont("bold", 9, SLATE_900);
-  const ctaLines = pdf.splitTextToSize(copyPack.primary_cta || "N/A", halfW - 10);
+  const ctaLines: string[] = pdf.splitTextToSize(copyPack.primary_cta || "N/A", halfW - 10);
   ctaLines.slice(0, 2).forEach((line: string, i: number) => {
     pdf.text(line, ML + 5, y + 12 + i * 4.5);
   });
@@ -609,13 +588,13 @@ const buildPdf = ({
   setFont("bold", 7, SLATE_500);
   pdf.text("TRUST LINE", ML + halfW + 9, y + 6);
   setFont("bold", 9, SLATE_900);
-  const trustLines = pdf.splitTextToSize(copyPack.trust_line || "N/A", halfW - 10);
+  const trustLines: string[] = pdf.splitTextToSize(copyPack.trust_line || "N/A", halfW - 10);
   trustLines.slice(0, 2).forEach((line: string, i: number) => {
     pdf.text(line, ML + halfW + 9, y + 12 + i * 4.5);
   });
   y += 22;
 
-  // Benefit bullets
+  // Bullets
   if (bullets.length > 0) {
     const bulletH = 10 + bullets.length * 5.5;
     checkPageBreak(bulletH + 4);
@@ -624,9 +603,9 @@ const buildPdf = ({
     pdf.text(isGeoMode ? "KEY POINTS" : "BENEFIT BULLETS", ML + 5, y + 6);
     bullets.forEach((b, i) => {
       setFont("bold", 9, TEAL);
-      pdf.text("✓", ML + 5, y + 12 + i * 5.5);
+      pdf.text("*", ML + 5, y + 12 + i * 5.5);
       setFont("normal", 8.5, SLATE_700);
-      const bLines = pdf.splitTextToSize(b, CW - 16);
+      const bLines: string[] = pdf.splitTextToSize(b, CW - 16);
       pdf.text(bLines[0], ML + 10, y + 12 + i * 5.5);
     });
     y += bulletH + 4;
@@ -634,7 +613,7 @@ const buildPdf = ({
 
   // Supporting copy
   if (copyPack.supporting_copy) {
-    const scLines = pdf.splitTextToSize(copyPack.supporting_copy, CW - 10);
+    const scLines: string[] = pdf.splitTextToSize(copyPack.supporting_copy, CW - 10);
     const scH = 10 + scLines.length * 4.5;
     checkPageBreak(scH + 4);
     roundedRect(ML, y, CW, scH, SLATE_50, SLATE_200);
@@ -647,7 +626,7 @@ const buildPdf = ({
     y += scH + 4;
   }
 
-  // ── FOOTER (every page) ────────────────────────────────────────────────────
+  // ── FOOTER on every page ───────────────────────────────────────────────────
   const totalPages = pdf.getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     pdf.setPage(p);
@@ -656,18 +635,19 @@ const buildPdf = ({
     pdf.line(ML, H - 12, W - MR, H - 12);
     setFont("bold", 7.5, TEAL);
     pdf.text("ConversionDoc — conversiondoc.co.uk", ML, H - 7);
+    setFont("normal", 7, SLATE_500);
+    pdf.text(`${p} / ${totalPages}`, W / 2, H - 7, { align: "center" });
     if (purchaseUrl) {
       setFont("normal", 7, SLATE_500);
       pdf.text(purchaseUrl, W - MR, H - 7, { align: "right" });
     }
-    setFont("normal", 7, SLATE_500);
-    pdf.text(`${p} / ${totalPages}`, W / 2, H - 7, { align: "center" });
   }
 
   return pdf;
 };
 
-// ─── DOCX COPY PACK BUILDER ────────────────────────────────────────────────
+// ─── DOCX BUILDER ──────────────────────────────────────────────────────────
+
 const buildDocx = async ({
   isGeoMode,
   copyPack,
@@ -841,13 +821,10 @@ const buildDocx = async ({
 
     subLabel(isGeoMode ? "Strongest Dimension" : "Strongest Pillar"),
     boldText(summary.strongest_pillar ? prettyLabel(summary.strongest_pillar) : "N/A"),
-
     subLabel(isGeoMode ? "Weakest Dimension" : "Weakest Pillar"),
     boldText(summary.weakest_pillar ? prettyLabel(summary.weakest_pillar) : "N/A"),
-
     subLabel(isGeoMode ? "Biggest GEO Opportunity" : "Biggest Opportunity"),
     bodyText(summary.biggest_opportunity || "N/A"),
-
     subLabel("Diagnosis"),
     bodyText(summary.executive_summary || "N/A"),
 
@@ -861,11 +838,7 @@ const buildDocx = async ({
           new TextRun({
             text: `${fix.priority ?? i + 1}. ${fix.impact?.toUpperCase() ?? "MEDIUM"} IMPACT`,
             color:
-              fix.impact === "High"
-                ? "EF4444"
-                : fix.impact === "Medium"
-                ? "F59E0B"
-                : "6B7280",
+              fix.impact === "High" ? "EF4444" : fix.impact === "Medium" ? "F59E0B" : "6B7280",
             size: 18,
             font: "Inter",
             bold: true,
@@ -889,7 +862,7 @@ const buildDocx = async ({
       new Paragraph({
         children: [
           new TextRun({
-            text: `→ ${fix.fix || ""}`,
+            text: `-> ${fix.fix || ""}`,
             color: slateColor,
             size: 22,
             font: "Inter",
@@ -920,10 +893,8 @@ const buildDocx = async ({
 
     subLabel("Subheadline"),
     bodyText(copyPack.subheadline || "N/A"),
-
     subLabel("Primary CTA"),
     boldText(copyPack.primary_cta || "N/A"),
-
     subLabel("Trust Line"),
     boldText(copyPack.trust_line || "N/A"),
 
@@ -931,7 +902,7 @@ const buildDocx = async ({
     ...bullets.map((b) =>
       new Paragraph({
         children: [
-          new TextRun({ text: "✓  ", color: tealColor, size: 22, font: "Inter", bold: true }),
+          new TextRun({ text: "* ", color: tealColor, size: 22, font: "Inter", bold: true }),
           new TextRun({ text: b, color: slateColor, size: 22, font: "Inter" }),
         ],
         spacing: { after: 80 },
@@ -1041,8 +1012,7 @@ export default function PaidReport() {
   const activeMockupHtml = mockupVersion === "a" ? mockupHtml : (mockupHtmlB || mockupHtml);
 
   const isGeoMode =
-    searchParams.get("focus") === "geo" ||
-    purchase?.focus === "geo";
+    searchParams.get("focus") === "geo" || purchase?.focus === "geo";
 
   const orderedScores = useMemo(() => {
     const entries = Object.entries(scores);
@@ -1070,9 +1040,10 @@ export default function PaidReport() {
     return avg <= 10 ? Math.round(avg * 10) : Math.round(avg);
   }, [auditData, scores]);
 
-  const screenshotUrl = (auditData?.screenshot_url || "").length > 0
-    ? auditData!.screenshot_url!
-    : purchase?.url
+  const screenshotUrl =
+    (auditData?.screenshot_url || "").length > 0
+      ? auditData!.screenshot_url!
+      : purchase?.url
       ? `https://image.thum.io/get/width/1400/crop/900/noanimate/${purchase.url}`
       : null;
 
@@ -1088,15 +1059,14 @@ export default function PaidReport() {
         const ctx = canvas.getContext("2d");
         if (ctx) {
           ctx.drawImage(img, 0, 0);
-          const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-          setScreenshotDataUrl(dataUrl);
+          setScreenshotDataUrl(canvas.toDataURL("image/jpeg", 0.85));
         }
       } catch {
         setScreenshotDataUrl(screenshotUrl);
       }
       setScreenshotLoaded(true);
     };
-    img.onerror = () => { setScreenshotErrored(true); };
+    img.onerror = () => setScreenshotErrored(true);
     img.src = screenshotUrl;
   }, [screenshotUrl]);
 
@@ -1116,23 +1086,21 @@ export default function PaidReport() {
   // ── PNG ────────────────────────────────────────────────────────────────────
   const generateMockupPng = async (html: string | null): Promise<string> => {
     if (!html) throw new Error("Mockup HTML not available");
-
     return new Promise((resolve, reject) => {
       const iframe = document.createElement("iframe");
       iframe.style.cssText =
         "position:fixed;left:-9999px;top:-9999px;width:1200px;height:800px;border:none;visibility:hidden;";
       document.body.appendChild(iframe);
-
       iframe.onload = async () => {
         try {
           const doc = iframe.contentDocument;
           if (!doc) throw new Error("iframe document not accessible");
           doc.open();
-          doc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/></head><body style="margin:0;padding:0;background:#f8fafc;">${html}</body></html>`);
+          doc.write(
+            `<!DOCTYPE html><html><head><meta charset="UTF-8"/></head><body style="margin:0;padding:0;background:#f8fafc;">${html}</body></html>`
+          );
           doc.close();
-
           await new Promise((r) => setTimeout(r, 800));
-
           const canvas = await html2canvas(doc.body, {
             scale: 2,
             useCORS: true,
@@ -1141,7 +1109,6 @@ export default function PaidReport() {
             width: 1200,
             height: Math.max(doc.body.scrollHeight, 800),
           });
-
           resolve(canvas.toDataURL("image/png"));
         } catch (err) {
           reject(err);
@@ -1149,7 +1116,6 @@ export default function PaidReport() {
           document.body.removeChild(iframe);
         }
       };
-
       iframe.src = "about:blank";
     });
   };
@@ -1208,27 +1174,24 @@ export default function PaidReport() {
     }
   };
 
-  // ── README ─────────────────────────────────────────────────────────────────
+  // ── README + NOTES ─────────────────────────────────────────────────────────
   const buildReadme = () => {
     const prefix = isGeoMode ? "geo" : "homepage";
     return `# ConversionDoc ${isGeoMode ? "GEO Audit" : "Homepage"} Kit
 
-This kit contains your improved ${isGeoMode ? "page" : "homepage"} assets generated by ConversionDoc.
-
 ## Files included
-- ${prefix}-audit-report.pdf       (Full audit report — clean PDF)
-- ${isGeoMode ? "geo-content-pack" : "copy-pack"}.docx              (Formatted copy/content pack)
+- ${prefix}-audit-report.pdf
+- ${isGeoMode ? "geo-content-pack" : "copy-pack"}.docx
 - implementation-notes.txt
-- ${prefix}-mockup-a.html          (Version A mockup)
-- ${prefix}-mockup-a.png           (Version A mockup screenshot)
-${mockupHtmlB ? `- ${prefix}-mockup-b.html          (Version B mockup)\n- ${prefix}-mockup-b.png           (Version B mockup screenshot)` : ""}
+- ${prefix}-mockup-a.html
+- ${prefix}-mockup-a.png
+${mockupHtmlB ? `- ${prefix}-mockup-b.html\n- ${prefix}-mockup-b.png` : ""}
 
 ## How to use
-1. Open the PDF report for the full diagnosis.
-2. Use the copy/content pack DOCX for your updated messaging.
-3. Open the mockup HTML files in your browser to preview the improved direction.
-4. Share with your developer or designer.
-5. Apply the highest-impact changes first.
+1. Open the PDF for the full diagnosis.
+2. Use the DOCX for your updated messaging.
+3. Open the mockup HTML files in a browser to preview.
+4. Apply the highest-impact changes first.
 
 ## Website audited
 ${purchase?.url || "N/A"}
@@ -1293,57 +1256,41 @@ ${html || ""}
       zip.file("README.md", buildReadme());
       zip.file("implementation-notes.txt", buildImplementationNotes());
 
-      // DOCX
       const docxBlob = await buildDocx({
-        isGeoMode,
-        copyPack,
-        overallScore,
-        summary,
-        topFixes,
-        purchaseUrl: purchase?.url,
+        isGeoMode, copyPack, overallScore, summary, topFixes, purchaseUrl: purchase?.url,
       });
       zip.file(
         isGeoMode ? "geo-content-pack.docx" : "copy-pack.docx",
         await docxBlob.arrayBuffer()
       );
 
-      // PDF — now synchronous buildPdf, just output to blob
       try {
         const pdf = buildPdf({
-          isGeoMode,
-          overallScore,
-          auditData,
-          topFixes,
-          orderedScores,
-          copyPack,
-          summary,
-          purchaseUrl: purchase?.url,
+          isGeoMode, overallScore, auditData, topFixes, orderedScores,
+          copyPack, summary, purchaseUrl: purchase?.url,
         });
-        const pdfBlob = pdf.output("blob");
-        zip.file(`${prefix}-audit-report.pdf`, await pdfBlob.arrayBuffer());
+        zip.file(`${prefix}-audit-report.pdf`, await pdf.output("blob").arrayBuffer());
       } catch (e) {
-        console.error("Could not generate PDF for ZIP:", e);
+        console.error("PDF for ZIP failed:", e);
       }
 
-      // Version A mockup
       if (mockupHtml) {
         zip.file(`${prefix}-mockup-a.html`, buildMockupHtmlFile(mockupHtml));
         try {
           const pngA = await generateMockupPng(mockupHtml);
           zip.file(`${prefix}-mockup-a.png`, pngA.split(",")[1], { base64: true });
         } catch (e) {
-          console.error("Could not generate Version A PNG for ZIP:", e);
+          console.error("PNG A for ZIP failed:", e);
         }
       }
 
-      // Version B mockup
       if (mockupHtmlB) {
         zip.file(`${prefix}-mockup-b.html`, buildMockupHtmlFile(mockupHtmlB));
         try {
           const pngB = await generateMockupPng(mockupHtmlB);
           zip.file(`${prefix}-mockup-b.png`, pngB.split(",")[1], { base64: true });
         } catch (e) {
-          console.error("Could not generate Version B PNG for ZIP:", e);
+          console.error("PNG B for ZIP failed:", e);
         }
       }
 
@@ -1376,7 +1323,10 @@ ${html || ""}
           <p className="text-4xl">⚠️</p>
           <h1 className="text-xl font-bold text-slate-900">Report unavailable</h1>
           <p className="text-slate-600 text-sm">{error || "Could not load your purchase."}</p>
-          <a href="/" className="inline-block mt-4 rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-3 transition-colors text-sm">
+          <a
+            href="/"
+            className="inline-block mt-4 rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-3 transition-colors text-sm"
+          >
             Back to Home
           </a>
         </div>
@@ -1386,19 +1336,22 @@ ${html || ""}
 
   return (
     <div className="min-h-screen bg-[#f5f8fc] px-6 py-16">
-
       {screenshotUrl && !screenshotLoaded && !screenshotErrored && (
-        <div style={{
-          position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)",
-          zIndex: 50, background: "rgba(15,23,42,0.85)", color: "#fff",
-          fontSize: 12, fontWeight: 600, padding: "8px 16px", borderRadius: 999,
-          display: "flex", alignItems: "center", gap: 8, backdropFilter: "blur(8px)",
-        }}>
-          <div style={{
-            width: 12, height: 12, borderRadius: "50%",
-            border: "2px solid #2dd4bf", borderTopColor: "transparent",
-            animation: "cdSpin 0.8s linear infinite", flexShrink: 0,
-          }} />
+        <div
+          style={{
+            position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)",
+            zIndex: 50, background: "rgba(15,23,42,0.85)", color: "#fff",
+            fontSize: 12, fontWeight: 600, padding: "8px 16px", borderRadius: 999,
+            display: "flex", alignItems: "center", gap: 8, backdropFilter: "blur(8px)",
+          }}
+        >
+          <div
+            style={{
+              width: 12, height: 12, borderRadius: "50%",
+              border: "2px solid #2dd4bf", borderTopColor: "transparent",
+              animation: "cdSpin 0.8s linear infinite", flexShrink: 0,
+            }}
+          />
           Preparing screenshot…
           <style>{`@keyframes cdSpin { to { transform: rotate(360deg); } }`}</style>
         </div>
@@ -1416,13 +1369,15 @@ ${html || ""}
               {isGeoMode ? "AI Search Readiness Report" : "Conversion Report"}
             </h1>
             {auditData?.verdict && (
-              <p className="mt-4 text-lg text-slate-300 italic max-w-3xl">
-                "{auditData.verdict}"
-              </p>
+              <p className="mt-4 text-lg text-slate-300 italic max-w-3xl">"{auditData.verdict}"</p>
             )}
             {purchase.url && (
-              <a href={purchase.url} target="_blank" rel="noopener noreferrer"
-                className="mt-3 inline-block text-teal-400 text-sm hover:underline">
+              <a
+                href={purchase.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-block text-teal-400 text-sm hover:underline"
+              >
                 {purchase.url} →
               </a>
             )}
@@ -1446,11 +1401,15 @@ ${html || ""}
               <p className="text-sm text-slate-500">
                 {isGeoMode ? "GEO Readiness Score" : "Overall Score"}
               </p>
-              <p className={`mt-2 text-3xl font-bold ${
-                overallScore !== null && overallScore >= 70 ? "text-emerald-600"
-                : overallScore !== null && overallScore >= 50 ? "text-amber-500"
-                : "text-red-500"
-              }`}>
+              <p
+                className={`mt-2 text-3xl font-bold ${
+                  overallScore !== null && overallScore >= 70
+                    ? "text-emerald-600"
+                    : overallScore !== null && overallScore >= 50
+                    ? "text-amber-500"
+                    : "text-red-500"
+                }`}
+              >
                 {overallScore !== null ? `${overallScore}/100` : "N/A"}
               </p>
             </div>
@@ -1505,16 +1464,32 @@ ${html || ""}
                 const color = impactColor[x.impact || "Medium"] || "#f59e0b";
                 const bg = impactBg[x.impact || "Medium"] || impactBg["Medium"];
                 return (
-                  <div key={idx} className="flex gap-4 rounded-2xl border p-5"
-                    style={{ borderColor: `${color}25`, borderLeftWidth: 4, borderLeftColor: color, background: bg }}>
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white text-sm font-bold shadow-sm"
-                      style={{ background: color }}>
+                  <div
+                    key={idx}
+                    className="flex gap-4 rounded-2xl border p-5"
+                    style={{
+                      borderColor: `${color}25`,
+                      borderLeftWidth: 4,
+                      borderLeftColor: color,
+                      background: bg,
+                    }}
+                  >
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white text-sm font-bold shadow-sm"
+                      style={{ background: color }}
+                    >
                       {x.priority ?? idx + 1}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border"
-                          style={{ color, background: `${color}15`, borderColor: `${color}30` }}>
+                        <span
+                          className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border"
+                          style={{
+                            color,
+                            background: `${color}15`,
+                            borderColor: `${color}30`,
+                          }}
+                        >
                           {x.impact ?? "—"} Impact
                         </span>
                       </div>
@@ -1550,7 +1525,10 @@ ${html || ""}
           ) : (
             <div className="space-y-5">
               {orderedScores.map(([pillar, value]) => (
-                <div key={pillar} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div
+                  key={pillar}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
+                >
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xl font-semibold text-slate-900">
                       {prettyLabel(pillar)}
@@ -1561,13 +1539,17 @@ ${html || ""}
                   </div>
                   {value?.issue && (
                     <div className="mb-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 mb-1">Issue</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 mb-1">
+                        Issue
+                      </p>
                       <p className="text-slate-800">{value.issue}</p>
                     </div>
                   )}
                   {value?.fix && (
                     <div className="mb-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 mb-1">Recommended Fix</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 mb-1">
+                        Recommended Fix
+                      </p>
                       <p className="text-slate-800">{value.fix}</p>
                     </div>
                   )}
@@ -1615,20 +1597,30 @@ ${html || ""}
           </div>
           <div className="space-y-4">
             <div className="rounded-2xl border border-teal-100 bg-teal-50 p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-700 mb-2">Headline</p>
-              <p className="text-2xl font-semibold text-slate-900">{copyPack.headline || "N/A"}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-700 mb-2">
+                Headline
+              </p>
+              <p className="text-2xl font-semibold text-slate-900">
+                {copyPack.headline || "N/A"}
+              </p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">Subheadline</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">
+                Subheadline
+              </p>
               <p className="text-slate-800">{copyPack.subheadline || "N/A"}</p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">Primary CTA</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">
+                  Primary CTA
+                </p>
                 <p className="text-slate-900 font-medium">{copyPack.primary_cta || "N/A"}</p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">Trust Line</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">
+                  Trust Line
+                </p>
                 <p className="text-slate-900 font-medium">{copyPack.trust_line || "N/A"}</p>
               </div>
             </div>
@@ -1647,7 +1639,9 @@ ${html || ""}
             </div>
             {copyPack.supporting_copy && (
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">Supporting Copy</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">
+                  Supporting Copy
+                </p>
                 <p className="text-slate-800">{copyPack.supporting_copy}</p>
               </div>
             )}
@@ -1694,85 +1688,106 @@ ${html || ""}
           </div>
 
           <div style={{ display: activeTab === "before" ? "block" : "none" }}>
-            <div>
-              {displayScreenshotUrl && (
-                <div style={{ background: "#0f172a", position: "relative" }}>
-                  {!screenshotLoaded && !screenshotErrored && (
-                    <div style={{
+            {displayScreenshotUrl && (
+              <div style={{ background: "#0f172a", position: "relative" }}>
+                {!screenshotLoaded && !screenshotErrored && (
+                  <div
+                    style={{
                       minHeight: 400, display: "flex", flexDirection: "column",
                       alignItems: "center", justifyContent: "center", gap: 12,
-                    }}>
-                      <div style={{
+                    }}
+                  >
+                    <div
+                      style={{
                         width: 36, height: 36, borderRadius: "50%",
                         border: "4px solid #2dd4bf", borderTopColor: "transparent",
                         animation: "cdSpin 0.8s linear infinite",
-                      }} />
-                      <p style={{ color: "#94a3b8", fontSize: 14, fontWeight: 500, margin: 0 }}>
-                        Loading screenshot…
-                      </p>
-                    </div>
-                  )}
-                  {screenshotLoaded && (
-                    <div style={{ position: "relative", width: "100%" }}>
-                      <img
-                        src={displayScreenshotUrl}
-                        alt="Current page screenshot"
+                      }}
+                    />
+                    <p style={{ color: "#94a3b8", fontSize: 14, fontWeight: 500, margin: 0 }}>
+                      Loading screenshot…
+                    </p>
+                  </div>
+                )}
+                {screenshotLoaded && (
+                  <div style={{ position: "relative", width: "100%" }}>
+                    <img
+                      src={displayScreenshotUrl}
+                      alt="Current page screenshot"
+                      style={{
+                        width: "100%", display: "block",
+                        maxHeight: 600, objectFit: "cover", objectPosition: "top",
+                      }}
+                    />
+                    {purchase.url && (
+                      <a
+                        href={purchase.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         style={{
-                          width: "100%", display: "block",
-                          maxHeight: 600, objectFit: "cover", objectPosition: "top",
+                          position: "absolute", bottom: 12, right: 12,
+                          background: "rgba(0,0,0,0.7)", color: "#fff",
+                          fontSize: 11, fontWeight: 600, padding: "6px 12px",
+                          borderRadius: 8, textDecoration: "none",
+                          border: "1px solid rgba(255,255,255,0.15)",
                         }}
-                      />
-                      {purchase.url && (
-                        <a href={purchase.url} target="_blank" rel="noopener noreferrer"
-                          style={{
-                            position: "absolute", bottom: 12, right: 12,
-                            background: "rgba(0,0,0,0.7)", color: "#fff",
-                            fontSize: 11, fontWeight: 600, padding: "6px 12px",
-                            borderRadius: 8, textDecoration: "none",
-                            border: "1px solid rgba(255,255,255,0.15)",
-                          }}>
-                          View Live Page →
-                        </a>
-                      )}
-                    </div>
-                  )}
-                  <style>{`@keyframes cdSpin { to { transform: rotate(360deg); } }`}</style>
-                </div>
-              )}
-              {topFixes && topFixes.length > 0 && (
-                <div className="p-6 bg-slate-50 space-y-3">
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">
-                    {isGeoMode ? "AI Visibility Issues on Current Page" : "Issues Identified on Current Site"}
-                  </p>
-                  {topFixes.map((fix, i) => {
-                    const color = impactColor[fix.impact || "Medium"] || "#f59e0b";
-                    const bg = impactBg[fix.impact || "Medium"] || impactBg["Medium"];
-                    return (
-                      <div key={i} className="rounded-2xl border bg-white p-5 flex gap-4"
-                        style={{ borderColor: `${color}30`, borderLeftWidth: 4, borderLeftColor: color }}>
-                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
-                          style={{ background: color }}>
-                          {fix.priority ?? i + 1}
+                      >
+                        View Live Page →
+                      </a>
+                    )}
+                  </div>
+                )}
+                <style>{`@keyframes cdSpin { to { transform: rotate(360deg); } }`}</style>
+              </div>
+            )}
+            {topFixes && topFixes.length > 0 && (
+              <div className="p-6 bg-slate-50 space-y-3">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">
+                  {isGeoMode
+                    ? "AI Visibility Issues on Current Page"
+                    : "Issues Identified on Current Site"}
+                </p>
+                {topFixes.map((fix, i) => {
+                  const color = impactColor[fix.impact || "Medium"] || "#f59e0b";
+                  const bg = impactBg[fix.impact || "Medium"] || impactBg["Medium"];
+                  return (
+                    <div
+                      key={i}
+                      className="rounded-2xl border bg-white p-5 flex gap-4"
+                      style={{
+                        borderColor: `${color}30`,
+                        borderLeftWidth: 4,
+                        borderLeftColor: color,
+                      }}
+                    >
+                      <div
+                        className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
+                        style={{ background: color }}
+                      >
+                        {fix.priority ?? i + 1}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span
+                            className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border"
+                            style={{ color, background: bg, borderColor: `${color}30` }}
+                          >
+                            {fix.impact} Impact
+                          </span>
                         </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border"
-                              style={{ color, background: bg, borderColor: `${color}30` }}>
-                              {fix.impact} Impact
-                            </span>
-                          </div>
-                          <p className="font-semibold text-slate-900 text-sm mb-1 leading-snug">{fix.issue}</p>
-                          <div className="flex items-start gap-1.5">
-                            <span className="text-teal-500 text-xs font-bold shrink-0 mt-0.5">→</span>
-                            <p className="text-xs text-slate-600 leading-relaxed">{fix.fix}</p>
-                          </div>
+                        <p className="font-semibold text-slate-900 text-sm mb-1 leading-snug">
+                          {fix.issue}
+                        </p>
+                        <div className="flex items-start gap-1.5">
+                          <span className="text-teal-500 text-xs font-bold shrink-0 mt-0.5">→</span>
+                          <p className="text-xs text-slate-600 leading-relaxed">{fix.fix}</p>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div style={{ display: activeTab === "after" ? "block" : "none" }}>
@@ -1892,7 +1907,9 @@ ${html || ""}
           </p>
           <div className="flex flex-wrap gap-3">
             <a
-              href={`mailto:hello@conversiondoc.co.uk?subject=${isGeoMode ? "GEO Implementation Help Request" : "Implementation Help Request"}`}
+              href={`mailto:hello@conversiondoc.co.uk?subject=${
+                isGeoMode ? "GEO Implementation Help Request" : "Implementation Help Request"
+              }`}
               className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-3 transition-colors text-sm shadow-sm"
             >
               Get in Touch
