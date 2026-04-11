@@ -110,7 +110,6 @@ const buildPdf = ({
   auditData,
   topFixes,
   orderedScores,
-  copyPack,
   summary,
   purchaseUrl,
   hasMockupB,
@@ -120,7 +119,6 @@ const buildPdf = ({
   auditData: AuditData | null;
   topFixes: TopFix[] | null;
   orderedScores: [string, ScoreItem][];
-  copyPack: HomepageCopyPack;
   summary: SummaryData;
   purchaseUrl?: string | null;
   hasMockupB?: boolean;
@@ -493,96 +491,10 @@ const buildPdf = ({
     y += contentH + 4;
   });
 
-  sectionDivider();
-
-  // ── COPY PACK ──────────────────────────────────────────────────────────────
-  microLabel("Deliverable", TEAL);
-  wrappedText(
-    isGeoMode ? "Content Pack" : "Copy Pack",
-    ML, CW, 7, "bold", 14, SLATE_900
-  );
-  y += 2;
-
-  const bullets = Array.isArray(copyPack.benefit_bullets)
-    ? copyPack.benefit_bullets.filter(Boolean) : [];
-
-  const hlLines: string[] = pdf.splitTextToSize(copyPack.headline || "N/A", CW - 10);
-  const hlH = 10 + hlLines.length * 6.5;
-  checkPageBreak(hlH + 4);
-  roundedRect(ML, y, CW, hlH, TEAL_LIGHT, TEAL_BORDER);
-  setFont("bold", 7, [15, 118, 110]);
-  pdf.text("HEADLINE", ML + 5, y + 6);
-  setFont("bold", 13, SLATE_900);
-  hlLines.forEach((line: string, i: number) => { pdf.text(line, ML + 5, y + 12 + i * 6.5); });
-  y += hlH + 4;
-
-  const subLines: string[] = pdf.splitTextToSize(copyPack.subheadline || "N/A", CW - 10);
-  const subH = 10 + subLines.length * 4.5;
-  checkPageBreak(subH + 4);
-  roundedRect(ML, y, CW, subH, SLATE_50, SLATE_200);
-  setFont("bold", 7, SLATE_500);
-  pdf.text("SUBHEADLINE", ML + 5, y + 6);
-  setFont("normal", 8.5, SLATE_700);
-  subLines.forEach((line: string, i: number) => { pdf.text(line, ML + 5, y + 11 + i * 4.5); });
-  y += subH + 4;
-
-  checkPageBreak(20);
-  const halfW = (CW - 4) / 2;
-  roundedRect(ML, y, halfW, 18, SLATE_50, SLATE_200);
-  setFont("bold", 7, SLATE_500);
-  pdf.text("PRIMARY CTA", ML + 5, y + 6);
-  setFont("bold", 9, SLATE_900);
-  const ctaLines: string[] = pdf.splitTextToSize(copyPack.primary_cta || "N/A", halfW - 10);
-  ctaLines.slice(0, 2).forEach((line: string, i: number) => {
-    pdf.text(line, ML + 5, y + 12 + i * 4.5);
-  });
-
-  roundedRect(ML + halfW + 4, y, halfW, 18, SLATE_50, SLATE_200);
-  setFont("bold", 7, SLATE_500);
-  pdf.text("TRUST LINE", ML + halfW + 9, y + 6);
-  setFont("bold", 9, SLATE_900);
-  const trustLines: string[] = pdf.splitTextToSize(copyPack.trust_line || "N/A", halfW - 10);
-  trustLines.slice(0, 2).forEach((line: string, i: number) => {
-    pdf.text(line, ML + halfW + 9, y + 12 + i * 4.5);
-  });
-  y += 22;
-
-  if (bullets.length > 0) {
-    const bulletH = 10 + bullets.length * 5.5;
-    checkPageBreak(bulletH + 4);
-    roundedRect(ML, y, CW, bulletH, SLATE_50, SLATE_200);
-    setFont("bold", 7, SLATE_500);
-    pdf.text(isGeoMode ? "KEY POINTS" : "BENEFIT BULLETS", ML + 5, y + 6);
-    bullets.forEach((b, i) => {
-      // Square bullet — renders cleanly in helvetica
-      setFont("bold", 9, TEAL);
-      pdf.text("-", ML + 5, y + 12 + i * 5.5);
-      setFont("normal", 8.5, SLATE_700);
-      const bLines: string[] = pdf.splitTextToSize(b, CW - 16);
-      pdf.text(bLines[0], ML + 10, y + 12 + i * 5.5);
-    });
-    y += bulletH + 4;
-  }
-
-  if (copyPack.supporting_copy) {
-    const scLines: string[] = pdf.splitTextToSize(copyPack.supporting_copy, CW - 10);
-    const scH = 10 + scLines.length * 4.5;
-    checkPageBreak(scH + 4);
-    roundedRect(ML, y, CW, scH, SLATE_50, SLATE_200);
-    setFont("bold", 7, SLATE_500);
-    pdf.text("SUPPORTING COPY", ML + 5, y + 6);
-    setFont("normal", 8.5, SLATE_700);
-    scLines.forEach((line: string, i: number) => {
-      pdf.text(line, ML + 5, y + 11 + i * 4.5);
-    });
-    y += scH + 4;
-  }
-
   // ── HOW TO USE THIS KIT ────────────────────────────────────────────────────
   pdf.addPage();
   y = 16;
 
-  // Dark header band
   roundedRect(ML, y, CW, 28, NAVY, undefined, 4);
   pdf.setFillColor(...TEAL);
   pdf.rect(ML, y, CW, 1.2, "F");
@@ -628,7 +540,6 @@ const buildPdf = ({
     const stepH = 8 + bodyLines.length * 4.5 + 7;
     checkPageBreak(stepH + 4);
 
-    // Number circle
     pdf.setFillColor(...TEAL);
     pdf.circle(ML + 5, y + 6, 4.5, "F");
     pdf.setFont("helvetica", "bold");
@@ -636,11 +547,9 @@ const buildPdf = ({
     pdf.setTextColor(...WHITE);
     pdf.text(step.number, ML + 5, y + 7.8, { align: "center" });
 
-    // Title
     setFont("bold", 10, SLATE_900);
     pdf.text(step.title, ML + 14, y + 7);
 
-    // Body
     setFont("normal", 8.5, SLATE_700);
     bodyLines.forEach((line: string, i: number) => {
       pdf.text(line, ML + 14, y + 13 + i * 4.5);
@@ -649,7 +558,6 @@ const buildPdf = ({
     y += stepH + 4;
   });
 
-  // Files in this kit box
   y += 4;
   checkPageBreak(50);
   const fileList = [
@@ -662,7 +570,6 @@ const buildPdf = ({
   roundedRect(ML, y, CW, kitBoxH, SLATE_50, SLATE_200);
   setFont("bold", 7, SLATE_500);
   pdf.text("FILES IN THIS KIT", ML + 5, y + 7);
-  setFont("normal", 8.5, SLATE_700);
   fileList.forEach((f, i) => {
     setFont("bold", 8, TEAL);
     pdf.text("-", ML + 5, y + 13 + i * 5.5);
@@ -671,7 +578,6 @@ const buildPdf = ({
   });
   y += kitBoxH + 8;
 
-  // ConversionDoc sign-off
   checkPageBreak(20);
   pdf.setDrawColor(...TEAL_BORDER);
   pdf.setLineWidth(0.5);
@@ -792,7 +698,8 @@ const buildDocx = async ({
     new Paragraph({
       children: [new TextRun({
         text: overallScore !== null ? `${overallScore}/100` : "N/A",
-        color: overallScore !== null && overallScore >= 70 ? "10B981" : overallScore !== null && overallScore >= 50 ? "F59E0B" : "EF4444",
+        color: overallScore !== null && overallScore >= 70 ? "10B981"
+          : overallScore !== null && overallScore >= 50 ? "F59E0B" : "EF4444",
         size: 48, font: "Inter", bold: true,
       })],
       spacing: { after: 160 },
@@ -806,28 +713,6 @@ const buildDocx = async ({
     bodyText(summary.biggest_opportunity || "N/A"),
     subLabel("Diagnosis"),
     bodyText(summary.executive_summary || "N/A"),
-
-    divider(),
-    sectionLabel("Action Plan"),
-    heading(isGeoMode ? "Top AI Visibility Fixes" : "Top Priority Fixes"),
-    ...(topFixes || []).flatMap((fix, i) => [
-      new Paragraph({
-        children: [new TextRun({
-          text: `${fix.priority ?? i + 1}. ${fix.impact?.toUpperCase() ?? "MEDIUM"} IMPACT`,
-          color: fix.impact === "High" ? "EF4444" : fix.impact === "Medium" ? "F59E0B" : "6B7280",
-          size: 18, font: "Inter", bold: true, characterSpacing: 60,
-        })],
-        spacing: { before: 200, after: 60 },
-      }),
-      new Paragraph({
-        children: [new TextRun({ text: fix.issue || "", color: darkColor, size: 22, font: "Inter", bold: true })],
-        spacing: { after: 60 },
-      }),
-      new Paragraph({
-        children: [new TextRun({ text: `-> ${fix.fix || ""}`, color: slateColor, size: 22, font: "Inter" })],
-        spacing: { after: 120 },
-      }),
-    ]),
 
     divider(),
     sectionLabel("Deliverable"),
@@ -1045,7 +930,7 @@ export default function PaidReport() {
       setDownloadingPdf(true);
       const pdf = buildPdf({
         isGeoMode, overallScore, auditData, topFixes,
-        orderedScores, copyPack, summary, purchaseUrl: purchase?.url,
+        orderedScores, summary, purchaseUrl: purchase?.url,
         hasMockupB: !!mockupHtmlB,
       });
       pdf.save(isGeoMode ? "geo-audit-report.pdf" : "conversion-report.pdf");
@@ -1056,7 +941,10 @@ export default function PaidReport() {
   const handleDownloadDocx = async () => {
     try {
       setDownloadingDocx(true);
-      const blob = await buildDocx({ isGeoMode, copyPack, overallScore, summary, topFixes, purchaseUrl: purchase?.url });
+      const blob = await buildDocx({
+        isGeoMode, copyPack, overallScore, summary,
+        topFixes, purchaseUrl: purchase?.url,
+      });
       saveAs(blob, isGeoMode ? "geo-content-pack.docx" : "copy-pack.docx");
     } catch (e) { console.error("DOCX download failed:", e); }
     finally { setDownloadingDocx(false); }
@@ -1080,21 +968,24 @@ ${html || ""}
       const zip = new JSZip();
       const prefix = isGeoMode ? "geo" : "homepage";
 
-      // PDF
       try {
         const pdf = buildPdf({
           isGeoMode, overallScore, auditData, topFixes,
-          orderedScores, copyPack, summary, purchaseUrl: purchase?.url,
+          orderedScores, summary, purchaseUrl: purchase?.url,
           hasMockupB: !!mockupHtmlB,
         });
         zip.file(`${prefix}-audit-report.pdf`, await pdf.output("blob").arrayBuffer());
       } catch (e) { console.error("PDF for ZIP failed:", e); }
 
-      // DOCX
-      const docxBlob = await buildDocx({ isGeoMode, copyPack, overallScore, summary, topFixes, purchaseUrl: purchase?.url });
-      zip.file(isGeoMode ? "geo-content-pack.docx" : "copy-pack.docx", await docxBlob.arrayBuffer());
+      const docxBlob = await buildDocx({
+        isGeoMode, copyPack, overallScore, summary,
+        topFixes, purchaseUrl: purchase?.url,
+      });
+      zip.file(
+        isGeoMode ? "geo-content-pack.docx" : "copy-pack.docx",
+        await docxBlob.arrayBuffer()
+      );
 
-      // Mockup A
       if (mockupHtml) {
         zip.file(`${prefix}-mockup-a.html`, buildMockupHtmlFile(mockupHtml));
         try {
@@ -1103,7 +994,6 @@ ${html || ""}
         } catch (e) { console.error("PNG A for ZIP failed:", e); }
       }
 
-      // Mockup B
       if (mockupHtmlB) {
         zip.file(`${prefix}-mockup-b.html`, buildMockupHtmlFile(mockupHtmlB));
         try {
