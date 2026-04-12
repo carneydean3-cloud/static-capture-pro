@@ -110,6 +110,7 @@ export default function AccountSettings() {
 
   const handleRemoveLogo = () => {
     setSettings((prev) => ({ ...prev, logo: null }));
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleSave = async () => {
