@@ -20,7 +20,6 @@ export default function AccountSettings() {
   const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load email from localStorage and check subscription
   useEffect(() => {
     const storedEmail = localStorage.getItem("conversiondoc_user_email");
     if (!storedEmail) {
@@ -78,31 +77,30 @@ export default function AccountSettings() {
     try {
       setUploading(true);
 
-      const safeEmail = email.replace(/[^a-zA-Z0-9]/g, "_");
-      const ext = file.name.split(".").pop();
-      const filename = `${safeEmail}_logo.${ext}`;
+      // Send file to edge function which uploads using service role key
+      const formData = new FormData();
+      formData.append("email", email);
+      formData.append("file", file);
 
-      // Upload to Supabase Storage via REST API
-      const uploadRes = await fetch(
-        `${SUPABASE_URL}/storage/v1/object/white-label-logos/${filename}`,
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/update-white-label`,
         {
-          method: "PUT",
+          method: "POST",
           headers: {
             Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-            "Content-Type": file.type,
-            "x-upsert": "true",
           },
-          body: file,
+          body: formData,
         }
       );
 
-      if (!uploadRes.ok) {
-        throw new Error("Upload failed");
+      const data = await res.json();
+
+      if (!res.ok || !data.url) {
+        throw new Error(data.error || "Upload failed");
       }
 
-      const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/white-label-logos/${filename}`;
-      setSettings((prev) => ({ ...prev, logo: publicUrl }));
-    } catch (e) {
+      setSettings((prev) => ({ ...prev, logo: data.url }));
+    } catch (e: any) {
       setUploadError("Upload failed. Please try again.");
       console.error("Logo upload error:", e);
     } finally {
@@ -278,7 +276,6 @@ export default function AccountSettings() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            {/* Light theme */}
             <button
               type="button"
               onClick={() => setSettings((prev) => ({ ...prev, theme: "light" }))}
@@ -288,7 +285,6 @@ export default function AccountSettings() {
                   : "border-slate-200 bg-slate-50 hover:border-slate-300"
               }`}
             >
-              {/* Light preview */}
               <div className="rounded-xl overflow-hidden border border-slate-200 mb-4">
                 <div className="bg-white p-3 border-b border-slate-100">
                   <div className="h-2 w-16 bg-slate-200 rounded" />
@@ -306,7 +302,6 @@ export default function AccountSettings() {
               )}
             </button>
 
-            {/* Dark theme */}
             <button
               type="button"
               onClick={() => setSettings((prev) => ({ ...prev, theme: "dark" }))}
@@ -316,7 +311,6 @@ export default function AccountSettings() {
                   : "border-slate-200 bg-slate-50 hover:border-slate-300"
               }`}
             >
-              {/* Dark preview */}
               <div className="rounded-xl overflow-hidden border border-slate-700 mb-4">
                 <div className="bg-slate-900 p-3 border-b border-slate-700">
                   <div className="h-2 w-16 bg-teal-500/40 rounded" />
@@ -342,13 +336,8 @@ export default function AccountSettings() {
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">Preview</p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">Report header preview</h2>
           </div>
-
           <div className={`rounded-2xl overflow-hidden border ${settings.theme === "dark" ? "border-slate-700" : "border-slate-200"}`}>
-            <div className={`px-6 py-8 ${
-              settings.theme === "dark"
-                ? "bg-[linear-gradient(135deg,#020617,#0f172a)]"
-                : "bg-white border-b border-slate-100"
-            }`}>
+            <div className={`px-6 py-8 ${settings.theme === "dark" ? "bg-[linear-gradient(135deg,#020617,#0f172a)]" : "bg-white border-b border-slate-100"}`}>
               <div className="flex items-start justify-between">
                 <div>
                   <p className={`text-xs font-semibold uppercase tracking-[0.22em] mb-2 ${settings.theme === "dark" ? "text-teal-400" : "text-teal-600"}`}>
