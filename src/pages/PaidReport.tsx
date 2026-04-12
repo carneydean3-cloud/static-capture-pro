@@ -72,8 +72,14 @@ type PurchaseRow = {
   focus?: string | null;
 };
 
+type WhiteLabel = {
+  logo: string | null;
+  theme: "light" | "dark";
+  is_subscriber: boolean;
+};
+
 type VerifyPurchaseResponse =
-  | { valid: true; purchase: PurchaseRow }
+  | { valid: true; purchase: PurchaseRow; white_label?: WhiteLabel }
   | { valid: false; error?: string };
 
 const prettyLabel = (key: string) =>
@@ -113,6 +119,7 @@ const buildPdf = ({
   summary,
   purchaseUrl,
   hasMockupB,
+  whiteLabel,
 }: {
   isGeoMode: boolean;
   overallScore: number | null;
@@ -122,8 +129,11 @@ const buildPdf = ({
   summary: SummaryData;
   purchaseUrl?: string | null;
   hasMockupB?: boolean;
+  whiteLabel?: WhiteLabel;
 }): jsPDF => {
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+  const isDark = whiteLabel?.theme === "dark";
 
   const W = 210;
   const H = 297;
@@ -146,6 +156,13 @@ const buildPdf = ({
   const AMBER: [number, number, number] = [245, 158, 11];
   const RED: [number, number, number] = [239, 68, 68];
 
+  // Theme-aware colors
+  const BG: [number, number, number] = isDark ? NAVY : WHITE;
+  const BODY_TEXT: [number, number, number] = isDark ? [203, 213, 225] : SLATE_700;
+  const CARD_BG: [number, number, number] = isDark ? [15, 23, 42] : SLATE_50;
+  const CARD_BORDER: [number, number, number] = isDark ? [30, 41, 59] : SLATE_200;
+  const HEADING_COLOR: [number, number, number] = isDark ? WHITE : SLATE_900;
+
   const scoreRgb = (s: number | null): [number, number, number] =>
     s === null ? SLATE_500 : s >= 70 ? EMERALD : s >= 50 ? AMBER : RED;
 
@@ -161,13 +178,24 @@ const buildPdf = ({
     if (y + neededMm > H - BOTTOM_MARGIN) {
       pdf.addPage();
       y = 16;
+      // Fill dark background on new page
+      if (isDark) {
+        pdf.setFillColor(...BG);
+        pdf.rect(0, 0, W, H, "F");
+      }
     }
   };
+
+  // Fill background on first page
+  if (isDark) {
+    pdf.setFillColor(...BG);
+    pdf.rect(0, 0, W, H, "F");
+  }
 
   const setFont = (
     style: "normal" | "bold" | "italic" = "normal",
     size = 10,
-    color: [number, number, number] = SLATE_700
+    color: [number, number, number] = BODY_TEXT
   ) => {
     pdf.setFont("helvetica", style);
     pdf.setFontSize(size);
@@ -181,7 +209,7 @@ const buildPdf = ({
     lineHeight: number,
     style: "normal" | "bold" | "italic" = "normal",
     size = 10,
-    color: [number, number, number] = SLATE_700
+    color: [number, number, number] = BODY_TEXT
   ): void => {
     setFont(style, size, color);
     const lines = pdf.splitTextToSize(text, maxWidth);
@@ -194,7 +222,7 @@ const buildPdf = ({
 
   const sectionDivider = () => {
     checkPageBreak(8);
-    pdf.setDrawColor(...SLATE_200);
+    pdf.setDrawColor(...CARD_BORDER);
     pdf.setLineWidth(0.3);
     pdf.line(ML, y, W - MR, y);
     y += 8;
@@ -233,8 +261,14 @@ const buildPdf = ({
 
   setFont("bold", 7, TEAL);
   pdf.text(isGeoMode ? "FULL GEO AUDIT" : "FULL DIAGNOSIS", ML + 6, 20);
-  setFont("bold", 8, TEAL);
-  pdf.text("ConversionDoc", W - MR - 6, 20, { align: "right" });
+
+  // Brand — logo text or "ConversionDoc" depending on white label
+  const brandName = whiteLabel?.is_subscriber && whiteLabel.logo ? "" : "ConversionDoc";
+  if (brandName) {
+    setFont("bold", 8, TEAL);
+    pdf.text(brandName, W - MR - 6, 20, { align: "right" });
+  }
+
   setFont("bold", 18, WHITE);
   pdf.text(isGeoMode ? "AI Search Readiness Report" : "Conversion Report", ML + 6, 30);
 
@@ -259,23 +293,23 @@ const buildPdf = ({
     isGeoMode
       ? "Your biggest opportunity to improve AI search visibility"
       : "Your strongest opportunity to improve conversions",
-    ML, CW, 7, "bold", 14, SLATE_900
+    ML, CW, 7, "bold", 14, HEADING_COLOR
   );
   y += 2;
 
   checkPageBreak(24);
   const cardW = (CW - 8) / 3;
 
-  roundedRect(ML, y, cardW, 22, SLATE_50, SLATE_200);
+  roundedRect(ML, y, cardW, 22, CARD_BG, CARD_BORDER);
   setFont("normal", 7, SLATE_500);
   pdf.text(isGeoMode ? "GEO Readiness Score" : "Overall Score", ML + 4, y + 6);
   setFont("bold", 16, scoreRgb(overallScore));
   pdf.text(overallScore !== null ? `${overallScore}/100` : "N/A", ML + 4, y + 17);
 
-  roundedRect(ML + cardW + 4, y, cardW, 22, SLATE_50, SLATE_200);
+  roundedRect(ML + cardW + 4, y, cardW, 22, CARD_BG, CARD_BORDER);
   setFont("normal", 7, SLATE_500);
   pdf.text(isGeoMode ? "Strongest Dimension" : "Strongest Pillar", ML + cardW + 8, y + 6);
-  setFont("bold", 10, SLATE_900);
+  setFont("bold", 10, HEADING_COLOR);
   const strongLines = pdf.splitTextToSize(
     summary.strongest_pillar ? prettyLabel(summary.strongest_pillar) : "N/A", cardW - 8
   );
@@ -283,10 +317,10 @@ const buildPdf = ({
     pdf.text(line, ML + cardW + 8, y + 13 + i * 5);
   });
 
-  roundedRect(ML + (cardW + 4) * 2, y, cardW, 22, SLATE_50, SLATE_200);
+  roundedRect(ML + (cardW + 4) * 2, y, cardW, 22, CARD_BG, CARD_BORDER);
   setFont("normal", 7, SLATE_500);
   pdf.text(isGeoMode ? "Weakest Dimension" : "Weakest Pillar", ML + (cardW + 4) * 2 + 4, y + 6);
-  setFont("bold", 10, SLATE_900);
+  setFont("bold", 10, HEADING_COLOR);
   const weakLines = pdf.splitTextToSize(
     summary.weakest_pillar ? prettyLabel(summary.weakest_pillar) : "N/A", cardW - 8
   );
@@ -313,10 +347,10 @@ const buildPdf = ({
   const diagLines = pdf.splitTextToSize(diagText, CW - 10);
   const diagH = 10 + diagLines.length * 5;
   checkPageBreak(diagH + 4);
-  roundedRect(ML, y, CW, diagH, SLATE_50, SLATE_200);
+  roundedRect(ML, y, CW, diagH, CARD_BG, CARD_BORDER);
   setFont("bold", 7, SLATE_500);
   pdf.text("DIAGNOSIS", ML + 5, y + 6);
-  setFont("normal", 9, SLATE_700);
+  setFont("normal", 9, BODY_TEXT);
   diagLines.forEach((line: string, i: number) => {
     pdf.text(line, ML + 5, y + 12 + i * 5);
   });
@@ -328,18 +362,16 @@ const buildPdf = ({
   microLabel("Action Plan", TEAL);
   wrappedText(
     isGeoMode ? "Top AI Visibility Fixes" : "Top Priority Fixes",
-    ML, CW, 7, "bold", 14, SLATE_900
+    ML, CW, 7, "bold", 14, HEADING_COLOR
   );
   y += 2;
 
   (topFixes || []).forEach((fix) => {
     const impact = fix.impact || "Medium";
     const iRgb = impactRgb(impact);
-    const iRgbLight: [number, number, number] = [
-      Math.min(255, iRgb[0] + 190),
-      Math.min(255, iRgb[1] + 190),
-      Math.min(255, iRgb[2] + 190),
-    ];
+    const iRgbLight: [number, number, number] = isDark
+      ? [Math.min(40, iRgb[0] / 4), Math.min(40, iRgb[1] / 4), Math.min(40, iRgb[2] / 4)]
+      : [Math.min(255, iRgb[0] + 190), Math.min(255, iRgb[1] + 190), Math.min(255, iRgb[2] + 190)];
 
     const LEFT_BAR = 1.5;
     const CIRCLE_RADIUS = 4;
@@ -387,7 +419,7 @@ const buildPdf = ({
     pdf.setFontSize(7);
     pdf.setTextColor(...iRgb);
     const pillW = pdf.getTextWidth(pillLabel) + 6;
-    pdf.setFillColor(255, 255, 255);
+    pdf.setFillColor(...(isDark ? [15, 23, 42] as [number,number,number] : [255, 255, 255] as [number,number,number]));
     pdf.roundedRect(TEXT_X, y + V_PAD_TOP, pillW, PILL_H, 1.5, 1.5, "F");
     pdf.text(pillLabel, TEXT_X + 3, y + V_PAD_TOP + 3.8);
 
@@ -395,7 +427,7 @@ const buildPdf = ({
 
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(9);
-    pdf.setTextColor(...SLATE_900);
+    pdf.setTextColor(...HEADING_COLOR);
     issueLines.forEach((line: string) => {
       innerY += ISSUE_LH;
       pdf.text(line, TEXT_X, innerY);
@@ -405,7 +437,7 @@ const buildPdf = ({
 
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(8.5);
-    pdf.setTextColor(...SLATE_700);
+    pdf.setTextColor(...BODY_TEXT);
     fixLines.forEach((line: string) => {
       innerY += FIX_LH;
       pdf.text(line, TEXT_X, innerY);
@@ -420,7 +452,7 @@ const buildPdf = ({
   microLabel("Full Analysis", TEAL);
   wrappedText(
     isGeoMode ? "GEO Dimension Breakdown" : "Score Breakdown",
-    ML, CW, 7, "bold", 14, SLATE_900
+    ML, CW, 7, "bold", 14, HEADING_COLOR
   );
   y += 2;
 
@@ -449,14 +481,14 @@ const buildPdf = ({
       labelRows * 6;
 
     checkPageBreak(contentH + 4);
-    roundedRect(ML, y, CW, contentH, SLATE_50, SLATE_200);
+    roundedRect(ML, y, CW, contentH, CARD_BG, CARD_BORDER);
 
-    setFont("bold", 11, SLATE_900);
+    setFont("bold", 11, HEADING_COLOR);
     pdf.text(prettyLabel(pillar), ML + 5, y + 8);
     setFont("bold", 11, sRgb);
     pdf.text(typeof s === "number" ? `${s}/10` : "—", W - MR - 5, y + 8, { align: "right" });
 
-    pdf.setDrawColor(...SLATE_200);
+    pdf.setDrawColor(...CARD_BORDER);
     pdf.setLineWidth(0.2);
     pdf.line(ML + 5, y + 10, W - MR - 5, y + 10);
 
@@ -466,7 +498,7 @@ const buildPdf = ({
       setFont("bold", 7, SLATE_500);
       pdf.text("ISSUE", ML + 5, innerY);
       innerY += 5;
-      setFont("normal", 8.5, SLATE_700);
+      setFont("normal", 8.5, BODY_TEXT);
       issueLines.forEach((line: string) => { pdf.text(line, ML + 5, innerY); innerY += 4.5; });
       innerY += 2;
     }
@@ -475,7 +507,7 @@ const buildPdf = ({
       setFont("bold", 7, SLATE_500);
       pdf.text("RECOMMENDED FIX", ML + 5, innerY);
       innerY += 5;
-      setFont("normal", 8.5, SLATE_700);
+      setFont("normal", 8.5, BODY_TEXT);
       fixLines.forEach((line: string) => { pdf.text(line, ML + 5, innerY); innerY += 4.5; });
       innerY += 2;
     }
@@ -484,7 +516,7 @@ const buildPdf = ({
       setFont("bold", 7, TEAL);
       pdf.text(isGeoMode ? "REWRITTEN CONTENT" : "REWRITTEN COPY", ML + 5, innerY);
       innerY += 5;
-      setFont("italic", 8.5, SLATE_700);
+      setFont("italic", 8.5, BODY_TEXT);
       rewriteLines.forEach((line: string) => { pdf.text(line, ML + 5, innerY); innerY += 4.5; });
     }
 
@@ -493,6 +525,10 @@ const buildPdf = ({
 
   // ── HOW TO USE THIS KIT ────────────────────────────────────────────────────
   pdf.addPage();
+  if (isDark) {
+    pdf.setFillColor(...BG);
+    pdf.rect(0, 0, W, H, "F");
+  }
   y = 16;
 
   roundedRect(ML, y, CW, 28, NAVY, undefined, 4);
@@ -547,10 +583,10 @@ const buildPdf = ({
     pdf.setTextColor(...WHITE);
     pdf.text(step.number, ML + 5, y + 7.8, { align: "center" });
 
-    setFont("bold", 10, SLATE_900);
+    setFont("bold", 10, HEADING_COLOR);
     pdf.text(step.title, ML + 14, y + 7);
 
-    setFont("normal", 8.5, SLATE_700);
+    setFont("normal", 8.5, BODY_TEXT);
     bodyLines.forEach((line: string, i: number) => {
       pdf.text(line, ML + 14, y + 13 + i * 4.5);
     });
@@ -567,13 +603,13 @@ const buildPdf = ({
     ...(hasMockupB ? [`${prefix}-mockup-b.html / .png — Alternative direction (Version B)`] : []),
   ];
   const kitBoxH = 12 + fileList.length * 5.5;
-  roundedRect(ML, y, CW, kitBoxH, SLATE_50, SLATE_200);
+  roundedRect(ML, y, CW, kitBoxH, CARD_BG, CARD_BORDER);
   setFont("bold", 7, SLATE_500);
   pdf.text("FILES IN THIS KIT", ML + 5, y + 7);
   fileList.forEach((f, i) => {
     setFont("bold", 8, TEAL);
     pdf.text("-", ML + 5, y + 13 + i * 5.5);
-    setFont("normal", 8, SLATE_700);
+    setFont("normal", 8, BODY_TEXT);
     pdf.text(f, ML + 10, y + 13 + i * 5.5);
   });
   y += kitBoxH + 8;
@@ -583,11 +619,16 @@ const buildPdf = ({
   pdf.setLineWidth(0.5);
   pdf.line(ML, y, W - MR, y);
   y += 8;
-  setFont("bold", 9, TEAL);
-  pdf.text("ConversionDoc", ML, y);
-  y += 5;
-  setFont("normal", 8, SLATE_500);
-  pdf.text("conversiondoc.co.uk", ML, y);
+
+  // Footer branding — show subscriber's name placeholder or ConversionDoc
+  const footerBrand = whiteLabel?.is_subscriber ? "" : "ConversionDoc";
+  if (footerBrand) {
+    setFont("bold", 9, TEAL);
+    pdf.text(footerBrand, ML, y);
+    y += 5;
+    setFont("normal", 8, SLATE_500);
+    pdf.text("conversiondoc.co.uk", ML, y);
+  }
   if (purchaseUrl) {
     y += 5;
     setFont("normal", 8, SLATE_500);
@@ -598,11 +639,17 @@ const buildPdf = ({
   const totalPages = pdf.getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     pdf.setPage(p);
-    pdf.setDrawColor(...SLATE_200);
+    if (isDark) {
+      pdf.setFillColor(...BG);
+      pdf.rect(0, H - 18, W, 18, "F");
+    }
+    pdf.setDrawColor(...CARD_BORDER);
     pdf.setLineWidth(0.3);
     pdf.line(ML, H - 12, W - MR, H - 12);
-    setFont("bold", 7.5, TEAL);
-    pdf.text("ConversionDoc — conversiondoc.co.uk", ML, H - 7);
+    if (!whiteLabel?.is_subscriber) {
+      setFont("bold", 7.5, TEAL);
+      pdf.text("ConversionDoc — conversiondoc.co.uk", ML, H - 7);
+    }
     setFont("normal", 7, SLATE_500);
     pdf.text(`${p} / ${totalPages}`, W / 2, H - 7, { align: "center" });
     if (purchaseUrl) {
@@ -623,6 +670,7 @@ const buildDocx = async ({
   summary,
   topFixes,
   purchaseUrl,
+  whiteLabel,
 }: {
   isGeoMode: boolean;
   copyPack: HomepageCopyPack;
@@ -630,6 +678,7 @@ const buildDocx = async ({
   summary: SummaryData;
   topFixes: TopFix[] | null;
   purchaseUrl?: string | null;
+  whiteLabel?: WhiteLabel;
 }): Promise<Blob> => {
   const bullets = Array.isArray(copyPack.benefit_bullets)
     ? copyPack.benefit_bullets.filter(Boolean) : [];
@@ -677,11 +726,16 @@ const buildDocx = async ({
       children: [],
     });
 
+  // Brand line — hide ConversionDoc if white label subscriber
+  const brandLine = whiteLabel?.is_subscriber
+    ? []
+    : [new Paragraph({
+        children: [new TextRun({ text: "ConversionDoc", color: tealColor, size: 20, font: "Inter", bold: true, characterSpacing: 60 })],
+        spacing: { after: 80 },
+      })];
+
   const children = [
-    new Paragraph({
-      children: [new TextRun({ text: "ConversionDoc", color: tealColor, size: 20, font: "Inter", bold: true, characterSpacing: 60 })],
-      spacing: { after: 80 },
-    }),
+    ...brandLine,
     new Paragraph({
       heading: HeadingLevel.HEADING_1,
       children: [new TextRun({ text: isGeoMode ? "AI Search Readiness Report" : "Conversion Report", color: navyColor, size: 48, font: "Inter", bold: true })],
@@ -742,11 +796,11 @@ const buildDocx = async ({
     ...(copyPack.supporting_copy ? [subLabel("Supporting Copy"), bodyText(copyPack.supporting_copy)] : []),
 
     divider(),
-    new Paragraph({
+    ...(!whiteLabel?.is_subscriber ? [new Paragraph({
       alignment: AlignmentType.CENTER,
       children: [new TextRun({ text: "Generated by ConversionDoc — conversiondoc.co.uk", color: tealColor, size: 18, font: "Inter", bold: true })],
       spacing: { before: 200 },
-    }),
+    })] : []),
   ];
 
   const doc = new Document({
@@ -765,19 +819,10 @@ const HELP_OPTIONS = ["Copy rewrite", "Page redesign", "Full page rebuild", "GEO
 
 // ─── ENQUIRY MODAL ─────────────────────────────────────────────────────────
 function EnquiryModal({
-  open,
-  onClose,
-  isGeoMode,
-  prefillUrl,
-  prefillEmail,
-  purchaseId,
+  open, onClose, isGeoMode, prefillUrl, prefillEmail, purchaseId,
 }: {
-  open: boolean;
-  onClose: () => void;
-  isGeoMode: boolean;
-  prefillUrl?: string | null;
-  prefillEmail?: string | null;
-  purchaseId?: string;
+  open: boolean; onClose: () => void; isGeoMode: boolean;
+  prefillUrl?: string | null; prefillEmail?: string | null; purchaseId?: string;
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState(prefillEmail || "");
@@ -791,209 +836,89 @@ function EnquiryModal({
 
   useEffect(() => {
     if (open) {
-      setSubmitted(false);
-      setSubmitError("");
-      setEmail(prefillEmail || "");
-      setUrl(prefillUrl || "");
+      setSubmitted(false); setSubmitError("");
+      setEmail(prefillEmail || ""); setUrl(prefillUrl || "");
     }
   }, [open, prefillEmail, prefillUrl]);
 
   const toggleHelp = (option: string) => {
-    setHelpNeeded((prev) =>
-      prev.includes(option) ? prev.filter((h) => h !== option) : [...prev, option]
-    );
+    setHelpNeeded((prev) => prev.includes(option) ? prev.filter((h) => h !== option) : [...prev, option]);
   };
 
   const handleSubmit = async () => {
-    if (!name || !email) {
-      setSubmitError("Please fill in your name and email.");
-      return;
-    }
-    setSubmitting(true);
-    setSubmitError("");
+    if (!name || !email) { setSubmitError("Please fill in your name and email."); return; }
+    setSubmitting(true); setSubmitError("");
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-enquiry`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            name,
-            email,
-            url,
-            platform,
-            help_needed: helpNeeded,
-            notes,
-            focus: isGeoMode ? "geo" : "conversion",
-            purchase_id: purchaseId,
-          }),
-        }
-      );
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.error || "Submission failed");
-      }
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-enquiry`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ name, email, url, platform, help_needed: helpNeeded, notes, focus: isGeoMode ? "geo" : "conversion", purchase_id: purchaseId }),
+      });
+      if (!res.ok) { const body = await res.json().catch(() => null); throw new Error(body?.error || "Submission failed"); }
       setSubmitted(true);
-    } catch (err: any) {
-      setSubmitError(err.message || "Something went wrong. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
+    } catch (err: any) { setSubmitError(err.message || "Something went wrong. Please try again."); }
+    finally { setSubmitting(false); }
   };
 
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      style={{ background: "rgba(15,23,42,0.7)", backdropFilter: "blur(6px)" }}
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-lg bg-white rounded-[28px] shadow-2xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: "rgba(15,23,42,0.7)", backdropFilter: "blur(6px)" }} onClick={onClose}>
+      <div className="w-full max-w-lg bg-white rounded-[28px] shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="bg-[linear-gradient(135deg,#020617,#0f172a)] px-7 py-6 flex items-start justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-teal-400 mb-1">
-              Implementation Help
-            </p>
-            <h2 className="text-xl font-bold text-white">
-              {isGeoMode ? "Get help implementing your GEO fixes" : "Get help implementing your recommendations"}
-            </h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-teal-400 mb-1">Implementation Help</p>
+            <h2 className="text-xl font-bold text-white">{isGeoMode ? "Get help implementing your GEO fixes" : "Get help implementing your recommendations"}</h2>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl leading-none ml-4 mt-0.5 shrink-0">✕</button>
         </div>
-
         <div className="px-7 py-6 max-h-[70vh] overflow-y-auto">
           {submitted ? (
             <div className="text-center py-8">
               <div className="text-4xl mb-4">✅</div>
               <h3 className="text-xl font-bold text-slate-900 mb-2">We'll be in touch shortly</h3>
-              <p className="text-slate-500 text-sm leading-relaxed">
-                Thanks for reaching out. We've received your enquiry and will come back to you within 1–2 business days. Check your inbox for a confirmation.
-              </p>
-              <button onClick={onClose} className="mt-6 rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-6 py-3 text-sm transition-colors">
-                Close
-              </button>
+              <p className="text-slate-500 text-sm leading-relaxed">Thanks for reaching out. We've received your enquiry and will come back to you within 1–2 business days.</p>
+              <button onClick={onClose} className="mt-6 rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-6 py-3 text-sm transition-colors">Close</button>
             </div>
           ) : (
             <div className="space-y-5">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500 mb-1.5">
-                  Your Name <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Jane Smith"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition"
-                />
+                <label className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500 mb-1.5">Your Name <span className="text-red-400">*</span></label>
+                <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Smith" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition" />
               </div>
-
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500 mb-1.5">
-                  Email Address <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="jane@example.com"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition"
-                />
+                <label className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500 mb-1.5">Email Address <span className="text-red-400">*</span></label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="jane@example.com" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition" />
               </div>
-
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500 mb-1.5">
-                  Website URL
-                </label>
-                <input
-                  type="url"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://yoursite.com"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition"
-                />
+                <label className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500 mb-1.5">Website URL</label>
+                <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://yoursite.com" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition" />
               </div>
-
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500 mb-1.5">
-                  Platform / Tech Stack
-                </label>
+                <label className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500 mb-1.5">Platform / Tech Stack</label>
                 <div className="flex flex-wrap gap-2">
                   {PLATFORMS.map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => setPlatform(p)}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-colors ${
-                        platform === p
-                          ? "bg-teal-500 border-teal-500 text-white"
-                          : "bg-slate-50 border-slate-200 text-slate-600 hover:border-teal-300"
-                      }`}
-                    >
-                      {p}
-                    </button>
+                    <button key={p} type="button" onClick={() => setPlatform(p)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-colors ${platform === p ? "bg-teal-500 border-teal-500 text-white" : "bg-slate-50 border-slate-200 text-slate-600 hover:border-teal-300"}`}>{p}</button>
                   ))}
                 </div>
               </div>
-
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500 mb-1.5">
-                  What do you need help with?
-                </label>
+                <label className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500 mb-1.5">What do you need help with?</label>
                 <div className="flex flex-wrap gap-2">
                   {HELP_OPTIONS.map((h) => (
-                    <button
-                      key={h}
-                      type="button"
-                      onClick={() => toggleHelp(h)}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-colors ${
-                        helpNeeded.includes(h)
-                          ? "bg-teal-500 border-teal-500 text-white"
-                          : "bg-slate-50 border-slate-200 text-slate-600 hover:border-teal-300"
-                      }`}
-                    >
-                      {h}
-                    </button>
+                    <button key={h} type="button" onClick={() => toggleHelp(h)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-colors ${helpNeeded.includes(h) ? "bg-teal-500 border-teal-500 text-white" : "bg-slate-50 border-slate-200 text-slate-600 hover:border-teal-300"}`}>{h}</button>
                   ))}
                 </div>
               </div>
-
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500 mb-1.5">
-                  Anything else we should know?
-                </label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Budget, timeline, specific pages, anything relevant…"
-                  rows={3}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition resize-none"
-                />
+                <label className="block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500 mb-1.5">Anything else we should know?</label>
+                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Budget, timeline, specific pages, anything relevant…" rows={3} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition resize-none" />
               </div>
-
-              {submitError && (
-                <p className="text-xs text-red-500 font-medium">{submitError}</p>
-              )}
-
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={submitting}
-                className="w-full rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-bold px-6 py-3.5 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              {submitError && <p className="text-xs text-red-500 font-medium">{submitError}</p>}
+              <button type="button" onClick={handleSubmit} disabled={submitting} className="w-full rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-bold px-6 py-3.5 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 {submitting ? "Sending…" : "Send Enquiry"}
               </button>
-
-              <p className="text-center text-xs text-slate-400">
-                We'll come back to you within 1–2 business days.
-              </p>
+              <p className="text-center text-xs text-slate-400">We'll come back to you within 1–2 business days.</p>
             </div>
           )}
         </div>
@@ -1011,6 +936,7 @@ export default function PaidReport() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [purchase, setPurchase] = useState<PurchaseRow | null>(null);
+  const [whiteLabel, setWhiteLabel] = useState<WhiteLabel | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<"before" | "after">("before");
   const [mockupVersion, setMockupVersion] = useState<"a" | "b">("a");
   const [fullscreen, setFullscreen] = useState(false);
@@ -1041,6 +967,7 @@ export default function PaidReport() {
         if (!data.valid) throw new Error(data.error || "Purchase not valid / not paid");
         if (cancelled) return;
         setPurchase(data.purchase);
+        if (data.white_label) setWhiteLabel(data.white_label);
         setLoading(false);
       } catch (e: any) {
         if (cancelled) return;
@@ -1070,6 +997,15 @@ export default function PaidReport() {
 
   const isGeoMode = searchParams.get("focus") === "geo" || purchase?.focus === "geo";
 
+  // White label theme classes
+  const isWhiteLabel = whiteLabel?.is_subscriber;
+  const isDarkTheme = whiteLabel?.theme === "dark";
+  const pageBg = isDarkTheme ? "bg-[#020617]" : "bg-[#f5f8fc]";
+  const cardBg = isDarkTheme ? "bg-[#0f172a] border-slate-800" : "bg-white border-slate-200";
+  const headingColor = isDarkTheme ? "text-white" : "text-slate-900";
+  const bodyColor = isDarkTheme ? "text-slate-300" : "text-slate-700";
+  const labelColor = isDarkTheme ? "text-teal-400" : "text-teal-600";
+
   const orderedScores = useMemo(() => {
     const entries = Object.entries(scores);
     if (!isGeoMode) return entries;
@@ -1080,17 +1016,13 @@ export default function PaidReport() {
 
   const topFixes = useMemo(() => {
     const t3 = auditData?.top_3_fixes;
-    if (Array.isArray(t3) && t3.length) {
-      return [...t3].sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99));
-    }
+    if (Array.isArray(t3) && t3.length) return [...t3].sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99));
     return null;
   }, [auditData]);
 
   const overallScore = useMemo(() => {
     if (typeof auditData?.overall_score === "number") return auditData.overall_score;
-    const nums = Object.entries(scores)
-      .map(([, v]) => v?.score)
-      .filter((x): x is number => typeof x === "number");
+    const nums = Object.entries(scores).map(([, v]) => v?.score).filter((x): x is number => typeof x === "number");
     if (!nums.length) return null;
     const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
     return avg <= 10 ? Math.round(avg * 10) : Math.round(avg);
@@ -1110,13 +1042,9 @@ export default function PaidReport() {
     img.onload = () => {
       try {
         const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
+        canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
         const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.drawImage(img, 0, 0);
-          setScreenshotDataUrl(canvas.toDataURL("image/jpeg", 0.85));
-        }
+        if (ctx) { ctx.drawImage(img, 0, 0); setScreenshotDataUrl(canvas.toDataURL("image/jpeg", 0.85)); }
       } catch { setScreenshotDataUrl(screenshotUrl); }
       setScreenshotLoaded(true);
     };
@@ -1128,11 +1056,8 @@ export default function PaidReport() {
 
   const handleCopyCode = async () => {
     if (!activeMockupHtml) return;
-    try {
-      await navigator.clipboard.writeText(activeMockupHtml);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2500);
-    } catch { setCopySuccess(false); }
+    try { await navigator.clipboard.writeText(activeMockupHtml); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 2500); }
+    catch { setCopySuccess(false); }
   };
 
   const generateMockupPng = async (html: string | null): Promise<string> => {
@@ -1149,11 +1074,7 @@ export default function PaidReport() {
           doc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/></head><body style="margin:0;padding:0;background:#f8fafc;">${html}</body></html>`);
           doc.close();
           await new Promise((r) => setTimeout(r, 800));
-          const canvas = await html2canvas(doc.body, {
-            scale: 2, useCORS: true, allowTaint: false,
-            backgroundColor: "#f8fafc", width: 1200,
-            height: Math.max(doc.body.scrollHeight, 800),
-          });
+          const canvas = await html2canvas(doc.body, { scale: 2, useCORS: true, allowTaint: false, backgroundColor: "#f8fafc", width: 1200, height: Math.max(doc.body.scrollHeight, 800) });
           resolve(canvas.toDataURL("image/png"));
         } catch (err) { reject(err); }
         finally { document.body.removeChild(iframe); }
@@ -1163,22 +1084,15 @@ export default function PaidReport() {
   };
 
   const handleDownloadPng = async () => {
-    try {
-      setDownloading(true);
-      const dataUrl = await generateMockupPng(activeMockupHtml);
-      saveAs(dataUrl, isGeoMode ? "geo-mockup.png" : "homepage-mockup.png");
-    } catch (e) { console.error("PNG download failed:", e); }
+    try { setDownloading(true); const dataUrl = await generateMockupPng(activeMockupHtml); saveAs(dataUrl, isGeoMode ? "geo-mockup.png" : "homepage-mockup.png"); }
+    catch (e) { console.error("PNG download failed:", e); }
     finally { setDownloading(false); }
   };
 
   const handleDownloadPdf = async () => {
     try {
       setDownloadingPdf(true);
-      const pdf = buildPdf({
-        isGeoMode, overallScore, auditData, topFixes,
-        orderedScores, summary, purchaseUrl: purchase?.url,
-        hasMockupB: !!mockupHtmlB,
-      });
+      const pdf = buildPdf({ isGeoMode, overallScore, auditData, topFixes, orderedScores, summary, purchaseUrl: purchase?.url, hasMockupB: !!mockupHtmlB, whiteLabel });
       pdf.save(isGeoMode ? "geo-audit-report.pdf" : "conversion-report.pdf");
     } catch (e) { console.error("PDF download failed:", e); }
     finally { setDownloadingPdf(false); }
@@ -1187,10 +1101,7 @@ export default function PaidReport() {
   const handleDownloadDocx = async () => {
     try {
       setDownloadingDocx(true);
-      const blob = await buildDocx({
-        isGeoMode, copyPack, overallScore, summary,
-        topFixes, purchaseUrl: purchase?.url,
-      });
+      const blob = await buildDocx({ isGeoMode, copyPack, overallScore, summary, topFixes, purchaseUrl: purchase?.url, whiteLabel });
       saveAs(blob, isGeoMode ? "geo-content-pack.docx" : "copy-pack.docx");
     } catch (e) { console.error("DOCX download failed:", e); }
     finally { setDownloadingDocx(false); }
@@ -1201,7 +1112,7 @@ export default function PaidReport() {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${isGeoMode ? "GEO Mockup" : "Homepage Mockup"} — ConversionDoc</title>
+  <title>${isGeoMode ? "GEO Mockup" : "Homepage Mockup"}${isWhiteLabel ? "" : " — ConversionDoc"}</title>
 </head>
 <body style="margin:0;padding:0;background:#f8fafc;">
 ${html || ""}
@@ -1213,43 +1124,21 @@ ${html || ""}
       setDownloadingKit(true);
       const zip = new JSZip();
       const prefix = isGeoMode ? "geo" : "homepage";
-
       try {
-        const pdf = buildPdf({
-          isGeoMode, overallScore, auditData, topFixes,
-          orderedScores, summary, purchaseUrl: purchase?.url,
-          hasMockupB: !!mockupHtmlB,
-        });
+        const pdf = buildPdf({ isGeoMode, overallScore, auditData, topFixes, orderedScores, summary, purchaseUrl: purchase?.url, hasMockupB: !!mockupHtmlB, whiteLabel });
         zip.file(`${prefix}-audit-report.pdf`, await pdf.output("blob").arrayBuffer());
       } catch (e) { console.error("PDF for ZIP failed:", e); }
-
-      const docxBlob = await buildDocx({
-        isGeoMode, copyPack, overallScore, summary,
-        topFixes, purchaseUrl: purchase?.url,
-      });
-      zip.file(
-        isGeoMode ? "geo-content-pack.docx" : "copy-pack.docx",
-        await docxBlob.arrayBuffer()
-      );
-
+      const docxBlob = await buildDocx({ isGeoMode, copyPack, overallScore, summary, topFixes, purchaseUrl: purchase?.url, whiteLabel });
+      zip.file(isGeoMode ? "geo-content-pack.docx" : "copy-pack.docx", await docxBlob.arrayBuffer());
       if (mockupHtml) {
         zip.file(`${prefix}-mockup-a.html`, buildMockupHtmlFile(mockupHtml));
-        try {
-          const pngA = await generateMockupPng(mockupHtml);
-          zip.file(`${prefix}-mockup-a.png`, pngA.split(",")[1], { base64: true });
-        } catch (e) { console.error("PNG A for ZIP failed:", e); }
+        try { const pngA = await generateMockupPng(mockupHtml); zip.file(`${prefix}-mockup-a.png`, pngA.split(",")[1], { base64: true }); } catch (e) { console.error("PNG A failed:", e); }
       }
-
       if (mockupHtmlB) {
         zip.file(`${prefix}-mockup-b.html`, buildMockupHtmlFile(mockupHtmlB));
-        try {
-          const pngB = await generateMockupPng(mockupHtmlB);
-          zip.file(`${prefix}-mockup-b.png`, pngB.split(",")[1], { base64: true });
-        } catch (e) { console.error("PNG B for ZIP failed:", e); }
+        try { const pngB = await generateMockupPng(mockupHtmlB); zip.file(`${prefix}-mockup-b.png`, pngB.split(",")[1], { base64: true }); } catch (e) { console.error("PNG B failed:", e); }
       }
-
-      const blob = await zip.generateAsync({ type: "blob" });
-      saveAs(blob, `conversiondoc-${prefix}-kit.zip`);
+      saveAs(await zip.generateAsync({ type: "blob" }), `${isWhiteLabel ? "" : "conversiondoc-"}${prefix}-kit.zip`);
     } catch (e) { console.error("Kit download failed:", e); }
     finally { setDownloadingKit(false); }
   };
@@ -1272,38 +1161,20 @@ ${html || ""}
           <p className="text-4xl">⚠️</p>
           <h1 className="text-xl font-bold text-slate-900">Report unavailable</h1>
           <p className="text-slate-600 text-sm">{error || "Could not load your purchase."}</p>
-          <a href="/" className="inline-block mt-4 rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-3 transition-colors text-sm">
-            Back to Home
-          </a>
+          <a href="/" className="inline-block mt-4 rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-3 transition-colors text-sm">Back to Home</a>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f8fc] px-6 py-16">
+    <div className={`min-h-screen ${pageBg} px-6 py-16`}>
 
-      <EnquiryModal
-        open={enquiryOpen}
-        onClose={() => setEnquiryOpen(false)}
-        isGeoMode={isGeoMode}
-        prefillUrl={purchase.url}
-        prefillEmail={undefined}
-        purchaseId={purchase.id}
-      />
+      <EnquiryModal open={enquiryOpen} onClose={() => setEnquiryOpen(false)} isGeoMode={isGeoMode} prefillUrl={purchase.url} prefillEmail={undefined} purchaseId={purchase.id} />
 
       {screenshotUrl && !screenshotLoaded && !screenshotErrored && (
-        <div style={{
-          position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)",
-          zIndex: 50, background: "rgba(15,23,42,0.85)", color: "#fff",
-          fontSize: 12, fontWeight: 600, padding: "8px 16px", borderRadius: 999,
-          display: "flex", alignItems: "center", gap: 8, backdropFilter: "blur(8px)",
-        }}>
-          <div style={{
-            width: 12, height: 12, borderRadius: "50%",
-            border: "2px solid #2dd4bf", borderTopColor: "transparent",
-            animation: "cdSpin 0.8s linear infinite", flexShrink: 0,
-          }} />
+        <div style={{ position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", zIndex: 50, background: "rgba(15,23,42,0.85)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "8px 16px", borderRadius: 999, display: "flex", alignItems: "center", gap: 8, backdropFilter: "blur(8px)" }}>
+          <div style={{ width: 12, height: 12, borderRadius: "50%", border: "2px solid #2dd4bf", borderTopColor: "transparent", animation: "cdSpin 0.8s linear infinite", flexShrink: 0 }} />
           Preparing screenshot…
           <style>{`@keyframes cdSpin { to { transform: rotate(360deg); } }`}</style>
         </div>
@@ -1314,71 +1185,64 @@ ${html || ""}
         {/* Header */}
         <section className="rounded-[32px] overflow-hidden border border-slate-900/10 shadow-[0_20px_60px_rgba(15,23,42,0.12)]">
           <div className="bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.18),_transparent_30%),linear-gradient(135deg,#020617,#0f172a_50%,#111827)] px-8 py-10 md:px-10 md:py-12">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-400">
-              {isGeoMode ? "Full GEO Audit" : "Full Diagnosis"}
-            </p>
-            <h1 className="mt-3 text-4xl md:text-5xl font-bold text-white tracking-tight">
-              {isGeoMode ? "AI Search Readiness Report" : "Conversion Report"}
-            </h1>
-            {auditData?.verdict && (
-              <p className="mt-4 text-lg text-slate-300 italic max-w-3xl">"{auditData.verdict}"</p>
-            )}
-            {purchase.url && (
-              <a href={purchase.url} target="_blank" rel="noopener noreferrer"
-                className="mt-3 inline-block text-teal-400 text-sm hover:underline">
-                {purchase.url} →
-              </a>
-            )}
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-400">
+                  {isGeoMode ? "Full GEO Audit" : "Full Diagnosis"}
+                </p>
+                <h1 className="mt-3 text-4xl md:text-5xl font-bold text-white tracking-tight">
+                  {isGeoMode ? "AI Search Readiness Report" : "Conversion Report"}
+                </h1>
+                {auditData?.verdict && <p className="mt-4 text-lg text-slate-300 italic max-w-3xl">"{auditData.verdict}"</p>}
+                {purchase.url && <a href={purchase.url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-teal-400 text-sm hover:underline">{purchase.url} →</a>}
+              </div>
+              {/* Logo or ConversionDoc branding */}
+              <div className="shrink-0 ml-6">
+                {isWhiteLabel && whiteLabel?.logo ? (
+                  <img src={whiteLabel.logo} alt="Logo" className="h-10 max-w-[160px] object-contain brightness-0 invert" />
+                ) : (
+                  <span className="text-sm font-bold text-teal-400 tracking-wide">ConversionDoc</span>
+                )}
+              </div>
+            </div>
           </div>
         </section>
 
         {/* Executive Summary */}
-        <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
+        <section className={`rounded-[28px] border ${cardBg} p-6 md:p-8 shadow-sm`}>
           <div className="mb-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">Executive Summary</p>
-            <h2 className="mt-2 text-3xl font-bold text-slate-900">
+            <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${labelColor}`}>Executive Summary</p>
+            <h2 className={`mt-2 text-3xl font-bold ${headingColor}`}>
               {isGeoMode ? "Your biggest opportunity to improve AI search visibility" : "Your strongest opportunity to improve conversions"}
             </h2>
           </div>
           <div className="grid gap-5 md:grid-cols-3 mb-6">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm text-slate-500">{isGeoMode ? "GEO Readiness Score" : "Overall Score"}</p>
-              <p className={`mt-2 text-3xl font-bold ${overallScore !== null && overallScore >= 70 ? "text-emerald-600" : overallScore !== null && overallScore >= 50 ? "text-amber-500" : "text-red-500"}`}>
-                {overallScore !== null ? `${overallScore}/100` : "N/A"}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm text-slate-500">{isGeoMode ? "Strongest Dimension" : "Strongest Pillar"}</p>
-              <p className="mt-2 text-xl font-semibold text-slate-900">
-                {summary.strongest_pillar ? prettyLabel(summary.strongest_pillar) : "N/A"}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm text-slate-500">{isGeoMode ? "Weakest Dimension" : "Weakest Pillar"}</p>
-              <p className="mt-2 text-xl font-semibold text-slate-900">
-                {summary.weakest_pillar ? prettyLabel(summary.weakest_pillar) : "N/A"}
-              </p>
-            </div>
+            {[
+              { label: isGeoMode ? "GEO Readiness Score" : "Overall Score", value: overallScore !== null ? `${overallScore}/100` : "N/A", color: overallScore !== null && overallScore >= 70 ? "text-emerald-500" : overallScore !== null && overallScore >= 50 ? "text-amber-500" : "text-red-500" },
+              { label: isGeoMode ? "Strongest Dimension" : "Strongest Pillar", value: summary.strongest_pillar ? prettyLabel(summary.strongest_pillar) : "N/A", color: headingColor },
+              { label: isGeoMode ? "Weakest Dimension" : "Weakest Pillar", value: summary.weakest_pillar ? prettyLabel(summary.weakest_pillar) : "N/A", color: headingColor },
+            ].map((card) => (
+              <div key={card.label} className={`rounded-2xl border ${isDarkTheme ? "border-slate-700 bg-slate-800/50" : "border-slate-200 bg-slate-50"} p-5`}>
+                <p className={`text-sm ${isDarkTheme ? "text-slate-400" : "text-slate-500"}`}>{card.label}</p>
+                <p className={`mt-2 text-3xl font-bold ${card.color}`}>{card.value}</p>
+              </div>
+            ))}
           </div>
-          <div className="rounded-2xl border border-teal-100 bg-teal-50 p-5 mb-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-700 mb-2">
-              {isGeoMode ? "Biggest GEO Opportunity" : "Biggest Opportunity"}
-            </p>
-            <p className="text-slate-900 font-medium text-lg">{summary.biggest_opportunity || "No summary available."}</p>
+          <div className={`rounded-2xl border ${isDarkTheme ? "border-teal-900 bg-teal-950/30" : "border-teal-100 bg-teal-50"} p-5 mb-4`}>
+            <p className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${isDarkTheme ? "text-teal-400" : "text-teal-700"} mb-2`}>{isGeoMode ? "Biggest GEO Opportunity" : "Biggest Opportunity"}</p>
+            <p className={`font-medium text-lg ${headingColor}`}>{summary.biggest_opportunity || "No summary available."}</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">Diagnosis</p>
-            <p className="text-slate-700 leading-8">{summary.executive_summary || "No executive summary available."}</p>
+          <div className={`rounded-2xl border ${isDarkTheme ? "border-slate-700 bg-slate-800/50" : "border-slate-200 bg-slate-50"} p-5`}>
+            <p className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${isDarkTheme ? "text-slate-500" : "text-slate-500"} mb-2`}>Diagnosis</p>
+            <p className={`leading-8 ${bodyColor}`}>{summary.executive_summary || "No executive summary available."}</p>
           </div>
         </section>
 
         {/* Top Fixes */}
-        <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
+        <section className={`rounded-[28px] border ${cardBg} p-6 md:p-8 shadow-sm`}>
           <div className="mb-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">Action Plan</p>
-            <h2 className="mt-2 text-3xl font-bold text-slate-900">
-              {isGeoMode ? "🔍 Top AI Visibility Fixes" : "🔥 Top Priority Fixes"}
-            </h2>
+            <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${labelColor}`}>Action Plan</p>
+            <h2 className={`mt-2 text-3xl font-bold ${headingColor}`}>{isGeoMode ? "🔍 Top AI Visibility Fixes" : "🔥 Top Priority Fixes"}</h2>
           </div>
           {topFixes ? (
             <div className="space-y-4">
@@ -1386,74 +1250,42 @@ ${html || ""}
                 const color = impactColor[x.impact || "Medium"] || "#f59e0b";
                 const bg = impactBg[x.impact || "Medium"] || impactBg["Medium"];
                 return (
-                  <div key={idx} className="flex gap-4 rounded-2xl border p-5"
-                    style={{ borderColor: `${color}25`, borderLeftWidth: 4, borderLeftColor: color, background: bg }}>
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white text-sm font-bold shadow-sm"
-                      style={{ background: color }}>
-                      {x.priority ?? idx + 1}
-                    </div>
+                  <div key={idx} className="flex gap-4 rounded-2xl border p-5" style={{ borderColor: `${color}25`, borderLeftWidth: 4, borderLeftColor: color, background: bg }}>
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white text-sm font-bold shadow-sm" style={{ background: color }}>{x.priority ?? idx + 1}</div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border"
-                          style={{ color, background: `${color}15`, borderColor: `${color}30` }}>
-                          {x.impact ?? "—"} Impact
-                        </span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border" style={{ color, background: `${color}15`, borderColor: `${color}30` }}>{x.impact ?? "—"} Impact</span>
                       </div>
-                      {x.issue && <p className="font-semibold text-slate-900 mb-1">{x.issue}</p>}
+                      {x.issue && <p className={`font-semibold mb-1 ${headingColor}`}>{x.issue}</p>}
                       <div className="flex items-start gap-1.5">
                         <span className="text-teal-500 font-bold text-sm shrink-0">→</span>
-                        <p className="text-sm text-slate-700">{x.fix}</p>
+                        <p className={`text-sm ${bodyColor}`}>{x.fix}</p>
                       </div>
                     </div>
                   </div>
                 );
               })}
             </div>
-          ) : (
-            <p className="text-slate-600">No fixes available.</p>
-          )}
+          ) : <p className={bodyColor}>No fixes available.</p>}
         </section>
 
         {/* Score Breakdown */}
-        <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
+        <section className={`rounded-[28px] border ${cardBg} p-6 md:p-8 shadow-sm`}>
           <div className="mb-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">Full Analysis</p>
-            <h2 className="mt-2 text-3xl font-bold text-slate-900">
-              {isGeoMode ? "📊 GEO Dimension Breakdown" : "📊 Score Breakdown"}
-            </h2>
+            <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${labelColor}`}>Full Analysis</p>
+            <h2 className={`mt-2 text-3xl font-bold ${headingColor}`}>{isGeoMode ? "📊 GEO Dimension Breakdown" : "📊 Score Breakdown"}</h2>
           </div>
-          {orderedScores.length === 0 ? (
-            <p className="text-slate-600">No score data available.</p>
-          ) : (
+          {orderedScores.length === 0 ? <p className={bodyColor}>No score data available.</p> : (
             <div className="space-y-5">
               {orderedScores.map(([pillar, value]) => (
-                <div key={pillar} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div key={pillar} className={`rounded-2xl border ${isDarkTheme ? "border-slate-700 bg-slate-800/50" : "border-slate-200 bg-slate-50"} p-5`}>
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-semibold text-slate-900">{prettyLabel(pillar)}</h3>
-                    <span className={`text-xl font-bold ${scoreColor(value?.score)}`}>
-                      {typeof value?.score === "number" ? `${value.score}/10` : "—"}
-                    </span>
+                    <h3 className={`text-xl font-semibold ${headingColor}`}>{prettyLabel(pillar)}</h3>
+                    <span className={`text-xl font-bold ${scoreColor(value?.score)}`}>{typeof value?.score === "number" ? `${value.score}/10` : "—"}</span>
                   </div>
-                  {value?.issue && (
-                    <div className="mb-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 mb-1">Issue</p>
-                      <p className="text-slate-800">{value.issue}</p>
-                    </div>
-                  )}
-                  {value?.fix && (
-                    <div className="mb-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 mb-1">Recommended Fix</p>
-                      <p className="text-slate-800">{value.fix}</p>
-                    </div>
-                  )}
-                  {value?.rewritten_copy && (
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-600 mb-1">
-                        {isGeoMode ? "Rewritten Content" : "Rewritten Copy"}
-                      </p>
-                      <p className="text-slate-800 italic">{value.rewritten_copy}</p>
-                    </div>
-                  )}
+                  {value?.issue && <div className="mb-3"><p className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${isDarkTheme ? "text-slate-500" : "text-slate-400"} mb-1`}>Issue</p><p className={isDarkTheme ? "text-slate-300" : "text-slate-800"}>{value.issue}</p></div>}
+                  {value?.fix && <div className="mb-3"><p className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${isDarkTheme ? "text-slate-500" : "text-slate-400"} mb-1`}>Recommended Fix</p><p className={isDarkTheme ? "text-slate-300" : "text-slate-800"}>{value.fix}</p></div>}
+                  {value?.rewritten_copy && <div><p className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${labelColor} mb-1`}>{isGeoMode ? "Rewritten Content" : "Rewritten Copy"}</p><p className={`italic ${isDarkTheme ? "text-slate-300" : "text-slate-800"}`}>{value.rewritten_copy}</p></div>}
                 </div>
               ))}
             </div>
@@ -1461,86 +1293,62 @@ ${html || ""}
         </section>
 
         {/* Copy Pack */}
-        <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
+        <section className={`rounded-[28px] border ${cardBg} p-6 md:p-8 shadow-sm`}>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">Deliverable</p>
-              <h2 className="mt-2 text-3xl font-bold text-slate-900">
-                {isGeoMode ? "✍️ Content Pack" : "✍️ Copy Pack"}
-              </h2>
-              <p className="text-slate-500 text-sm mt-2">
-                {isGeoMode
-                  ? "Page-ready content written for AI extractability, clarity, and conversion."
-                  : "Homepage-ready copy written to improve clarity, trust, and action."}
-              </p>
+              <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${labelColor}`}>Deliverable</p>
+              <h2 className={`mt-2 text-3xl font-bold ${headingColor}`}>{isGeoMode ? "✍️ Content Pack" : "✍️ Copy Pack"}</h2>
+              <p className={`text-sm mt-2 ${isDarkTheme ? "text-slate-400" : "text-slate-500"}`}>{isGeoMode ? "Page-ready content written for AI extractability, clarity, and conversion." : "Homepage-ready copy written to improve clarity, trust, and action."}</p>
             </div>
-            <button onClick={handleDownloadDocx} disabled={downloadingDocx}
-              className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm disabled:opacity-50">
+            <button onClick={handleDownloadDocx} disabled={downloadingDocx} className={`rounded-xl border font-semibold px-5 py-3 transition-colors text-sm shadow-sm disabled:opacity-50 ${isDarkTheme ? "border-slate-600 bg-slate-800 hover:bg-slate-700 text-slate-200" : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"}`}>
               {downloadingDocx ? "Generating…" : isGeoMode ? "Download Content Pack (.docx)" : "Download Copy Pack (.docx)"}
             </button>
           </div>
           <div className="space-y-4">
-            <div className="rounded-2xl border border-teal-100 bg-teal-50 p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-700 mb-2">Headline</p>
-              <p className="text-2xl font-semibold text-slate-900">{copyPack.headline || "N/A"}</p>
+            <div className={`rounded-2xl border p-5 ${isDarkTheme ? "border-teal-900 bg-teal-950/30" : "border-teal-100 bg-teal-50"}`}>
+              <p className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${isDarkTheme ? "text-teal-400" : "text-teal-700"} mb-2`}>Headline</p>
+              <p className={`text-2xl font-semibold ${headingColor}`}>{copyPack.headline || "N/A"}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">Subheadline</p>
-              <p className="text-slate-800">{copyPack.subheadline || "N/A"}</p>
+            <div className={`rounded-2xl border p-5 ${isDarkTheme ? "border-slate-700 bg-slate-800/50" : "border-slate-200 bg-slate-50"}`}>
+              <p className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${isDarkTheme ? "text-slate-500" : "text-slate-500"} mb-2`}>Subheadline</p>
+              <p className={isDarkTheme ? "text-slate-300" : "text-slate-800"}>{copyPack.subheadline || "N/A"}</p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">Primary CTA</p>
-                <p className="text-slate-900 font-medium">{copyPack.primary_cta || "N/A"}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">Trust Line</p>
-                <p className="text-slate-900 font-medium">{copyPack.trust_line || "N/A"}</p>
-              </div>
+              {["primary_cta", "trust_line"].map((field) => (
+                <div key={field} className={`rounded-2xl border p-5 ${isDarkTheme ? "border-slate-700 bg-slate-800/50" : "border-slate-200 bg-slate-50"}`}>
+                  <p className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${isDarkTheme ? "text-slate-500" : "text-slate-500"} mb-2`}>{field === "primary_cta" ? "Primary CTA" : "Trust Line"}</p>
+                  <p className={`font-medium ${headingColor}`}>{(copyPack as any)[field] || "N/A"}</p>
+                </div>
+              ))}
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-3">
-                {isGeoMode ? "Key Points" : "Benefit Bullets"}
-              </p>
-              <ul className="space-y-3 text-slate-800">
+            <div className={`rounded-2xl border p-5 ${isDarkTheme ? "border-slate-700 bg-slate-800/50" : "border-slate-200 bg-slate-50"}`}>
+              <p className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${isDarkTheme ? "text-slate-500" : "text-slate-500"} mb-3`}>{isGeoMode ? "Key Points" : "Benefit Bullets"}</p>
+              <ul className="space-y-3">
                 {(copyPack.benefit_bullets || []).map((bullet, i) => (
-                  <li key={i} className="flex gap-3">
-                    <span className="text-teal-500 font-bold">✓</span>
-                    <span>{bullet}</span>
-                  </li>
+                  <li key={i} className="flex gap-3"><span className="text-teal-500 font-bold">✓</span><span className={isDarkTheme ? "text-slate-300" : "text-slate-800"}>{bullet}</span></li>
                 ))}
               </ul>
             </div>
             {copyPack.supporting_copy && (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">Supporting Copy</p>
-                <p className="text-slate-800">{copyPack.supporting_copy}</p>
+              <div className={`rounded-2xl border p-5 ${isDarkTheme ? "border-slate-700 bg-slate-800/50" : "border-slate-200 bg-slate-50"}`}>
+                <p className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${isDarkTheme ? "text-slate-500" : "text-slate-500"} mb-2`}>Supporting Copy</p>
+                <p className={isDarkTheme ? "text-slate-300" : "text-slate-800"}>{copyPack.supporting_copy}</p>
               </div>
             )}
           </div>
         </section>
 
         {/* Visual Deliverable */}
-        <section className="rounded-[28px] border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <section className={`rounded-[28px] border ${isDarkTheme ? "border-slate-800" : "border-slate-200"} shadow-sm overflow-hidden`}>
           <div className="bg-[linear-gradient(135deg,#020617,#0f172a)] px-6 py-5">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-400">Visual Deliverable</p>
-            <h2 className="mt-2 text-2xl font-bold text-white">
-              {isGeoMode ? "🎨 Your Restructured Page Mockup" : "🎨 Your Homepage Mockup"}
-            </h2>
-            <p className="text-slate-400 text-sm mt-2">
-              {isGeoMode ? "Compare your current page with a GEO-optimised direction." : "Compare your current site with a more conversion-focused direction."}
-            </p>
+            <h2 className="mt-2 text-2xl font-bold text-white">{isGeoMode ? "🎨 Your Restructured Page Mockup" : "🎨 Your Homepage Mockup"}</h2>
+            <p className="text-slate-400 text-sm mt-2">{isGeoMode ? "Compare your current page with a GEO-optimised direction." : "Compare your current site with a more conversion-focused direction."}</p>
           </div>
 
-          <div className="flex border-b border-slate-200">
-            <button onClick={() => setActiveTab("before")}
-              className={`flex-1 py-4 text-sm font-semibold transition-colors ${activeTab === "before" ? "bg-white text-red-500 border-b-2 border-red-500" : "bg-slate-50 text-slate-500 hover:text-slate-700"}`}>
-              ❌ Before (Current Page)
-            </button>
-            <button onClick={() => setActiveTab("after")}
-              className={`flex-1 py-4 text-sm font-semibold transition-colors ${activeTab === "after" ? "bg-white text-teal-600 border-b-2 border-teal-500" : "bg-slate-50 text-slate-500 hover:text-slate-700"}`}>
-              {isGeoMode ? "✅ After (GEO Fix)" : "✅ After (ConversionDoc Fix)"}
-            </button>
+          <div className={`flex border-b ${isDarkTheme ? "border-slate-800" : "border-slate-200"}`}>
+            <button onClick={() => setActiveTab("before")} className={`flex-1 py-4 text-sm font-semibold transition-colors ${activeTab === "before" ? `${isDarkTheme ? "bg-slate-900" : "bg-white"} text-red-500 border-b-2 border-red-500` : `${isDarkTheme ? "bg-slate-950 text-slate-500" : "bg-slate-50 text-slate-500"} hover:text-slate-400`}`}>❌ Before (Current Page)</button>
+            <button onClick={() => setActiveTab("after")} className={`flex-1 py-4 text-sm font-semibold transition-colors ${activeTab === "after" ? `${isDarkTheme ? "bg-slate-900" : "bg-white"} text-teal-500 border-b-2 border-teal-500` : `${isDarkTheme ? "bg-slate-950 text-slate-500" : "bg-slate-50 text-slate-500"} hover:text-slate-400`}`}>{isGeoMode ? "✅ After (GEO Fix)" : "✅ After (ConversionDoc Fix)"}</button>
           </div>
 
           <div style={{ display: activeTab === "before" ? "block" : "none" }}>
@@ -1554,46 +1362,26 @@ ${html || ""}
                 )}
                 {screenshotLoaded && (
                   <div style={{ position: "relative", width: "100%" }}>
-                    <img src={displayScreenshotUrl} alt="Current page screenshot"
-                      style={{ width: "100%", display: "block", maxHeight: 600, objectFit: "cover", objectPosition: "top" }} />
-                    {purchase.url && (
-                      <a href={purchase.url} target="_blank" rel="noopener noreferrer"
-                        style={{ position: "absolute", bottom: 12, right: 12, background: "rgba(0,0,0,0.7)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "6px 12px", borderRadius: 8, textDecoration: "none", border: "1px solid rgba(255,255,255,0.15)" }}>
-                        View Live Page →
-                      </a>
-                    )}
+                    <img src={displayScreenshotUrl} alt="Current page screenshot" style={{ width: "100%", display: "block", maxHeight: 600, objectFit: "cover", objectPosition: "top" }} />
+                    {purchase.url && <a href={purchase.url} target="_blank" rel="noopener noreferrer" style={{ position: "absolute", bottom: 12, right: 12, background: "rgba(0,0,0,0.7)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "6px 12px", borderRadius: 8, textDecoration: "none", border: "1px solid rgba(255,255,255,0.15)" }}>View Live Page →</a>}
                   </div>
                 )}
                 <style>{`@keyframes cdSpin { to { transform: rotate(360deg); } }`}</style>
               </div>
             )}
             {topFixes && topFixes.length > 0 && (
-              <div className="p-6 bg-slate-50 space-y-3">
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">
-                  {isGeoMode ? "AI Visibility Issues on Current Page" : "Issues Identified on Current Site"}
-                </p>
+              <div className={`p-6 space-y-3 ${isDarkTheme ? "bg-slate-900" : "bg-slate-50"}`}>
+                <p className={`text-xs font-bold uppercase tracking-widest mb-4 ${isDarkTheme ? "text-slate-500" : "text-slate-500"}`}>{isGeoMode ? "AI Visibility Issues on Current Page" : "Issues Identified on Current Site"}</p>
                 {topFixes.map((fix, i) => {
                   const color = impactColor[fix.impact || "Medium"] || "#f59e0b";
                   const bg = impactBg[fix.impact || "Medium"] || impactBg["Medium"];
                   return (
-                    <div key={i} className="rounded-2xl border bg-white p-5 flex gap-4"
-                      style={{ borderColor: `${color}30`, borderLeftWidth: 4, borderLeftColor: color }}>
-                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
-                        style={{ background: color }}>
-                        {fix.priority ?? i + 1}
-                      </div>
+                    <div key={i} className={`rounded-2xl border p-5 flex gap-4 ${isDarkTheme ? "bg-slate-800" : "bg-white"}`} style={{ borderColor: `${color}30`, borderLeftWidth: 4, borderLeftColor: color }}>
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0" style={{ background: color }}>{fix.priority ?? i + 1}</div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border"
-                            style={{ color, background: bg, borderColor: `${color}30` }}>
-                            {fix.impact} Impact
-                          </span>
-                        </div>
-                        <p className="font-semibold text-slate-900 text-sm mb-1 leading-snug">{fix.issue}</p>
-                        <div className="flex items-start gap-1.5">
-                          <span className="text-teal-500 text-xs font-bold shrink-0 mt-0.5">→</span>
-                          <p className="text-xs text-slate-600 leading-relaxed">{fix.fix}</p>
-                        </div>
+                        <div className="flex items-center gap-2 mb-2"><span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border" style={{ color, background: bg, borderColor: `${color}30` }}>{fix.impact} Impact</span></div>
+                        <p className={`font-semibold text-sm mb-1 leading-snug ${headingColor}`}>{fix.issue}</p>
+                        <div className="flex items-start gap-1.5"><span className="text-teal-500 text-xs font-bold shrink-0 mt-0.5">→</span><p className={`text-xs leading-relaxed ${bodyColor}`}>{fix.fix}</p></div>
                       </div>
                     </div>
                   );
@@ -1604,96 +1392,59 @@ ${html || ""}
 
           <div style={{ display: activeTab === "after" ? "block" : "none" }}>
             {mockupHtml ? (
-              <div className="bg-white">
-                <div className="flex items-center gap-2 px-6 pt-4 pb-0 bg-slate-50 border-b border-slate-100">
-                  <button onClick={() => setMockupVersion("a")}
-                    className={`px-4 py-2 rounded-t-lg text-sm font-semibold transition-colors border-b-2 -mb-px ${mockupVersion === "a" ? "bg-white text-teal-600 border-teal-500 shadow-sm" : "bg-transparent text-slate-500 border-transparent hover:text-slate-700"}`}>
-                    ★ Version A
-                  </button>
-                  {mockupHtmlB && (
-                    <button onClick={() => setMockupVersion("b")}
-                      className={`px-4 py-2 rounded-t-lg text-sm font-semibold transition-colors border-b-2 -mb-px ${mockupVersion === "b" ? "bg-white text-teal-600 border-teal-500 shadow-sm" : "bg-transparent text-slate-500 border-transparent hover:text-slate-700"}`}>
-                      Version B
-                    </button>
-                  )}
-                  <span className="ml-auto text-xs text-slate-400 pb-2">
-                    {mockupVersion === "a" ? "Recommended layout" : "Alternative layout"}
-                  </span>
+              <div className={isDarkTheme ? "bg-slate-900" : "bg-white"}>
+                <div className={`flex items-center gap-2 px-6 pt-4 pb-0 border-b ${isDarkTheme ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-100"}`}>
+                  <button onClick={() => setMockupVersion("a")} className={`px-4 py-2 rounded-t-lg text-sm font-semibold transition-colors border-b-2 -mb-px ${mockupVersion === "a" ? `${isDarkTheme ? "bg-slate-900" : "bg-white"} text-teal-500 border-teal-500 shadow-sm` : "bg-transparent text-slate-500 border-transparent hover:text-slate-400"}`}>★ Version A</button>
+                  {mockupHtmlB && <button onClick={() => setMockupVersion("b")} className={`px-4 py-2 rounded-t-lg text-sm font-semibold transition-colors border-b-2 -mb-px ${mockupVersion === "b" ? `${isDarkTheme ? "bg-slate-900" : "bg-white"} text-teal-500 border-teal-500 shadow-sm` : "bg-transparent text-slate-500 border-transparent hover:text-slate-400"}`}>Version B</button>}
+                  <span className={`ml-auto text-xs pb-2 ${isDarkTheme ? "text-slate-500" : "text-slate-400"}`}>{mockupVersion === "a" ? "Recommended layout" : "Alternative layout"}</span>
                 </div>
                 <div className="relative">
-                  <div ref={mockupRef} className="w-full overflow-hidden"
-                    dangerouslySetInnerHTML={{ __html: activeMockupHtml || "" }} />
-                  <button onClick={() => setFullscreen(true)}
-                    className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
-                    ⛶ Fullscreen
-                  </button>
+                  <div ref={mockupRef} className="w-full overflow-hidden" dangerouslySetInnerHTML={{ __html: activeMockupHtml || "" }} />
+                  <button onClick={() => setFullscreen(true)} className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">⛶ Fullscreen</button>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center min-h-[400px] bg-slate-50">
-                <p className="text-slate-400">Mockup not available</p>
-              </div>
+              <div className={`flex items-center justify-center min-h-[400px] ${isDarkTheme ? "bg-slate-900" : "bg-slate-50"}`}><p className="text-slate-400">Mockup not available</p></div>
             )}
           </div>
 
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-wrap gap-3">
+          <div className={`px-6 py-4 border-t flex flex-wrap gap-3 ${isDarkTheme ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-200"}`}>
             {mockupHtml && (
               <>
-                <button onClick={handleCopyCode}
-                  className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-3 transition-colors text-sm shadow-sm">
-                  {copySuccess ? "✓ Copied!" : "Copy HTML"}
-                </button>
-                <button onClick={handleDownloadPng} disabled={downloading}
-                  className="rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm disabled:opacity-50">
-                  {downloading ? "Generating…" : "Download PNG"}
-                </button>
-                <button onClick={handleDownloadPdf} disabled={downloadingPdf}
-                  className="rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm disabled:opacity-50">
-                  {downloadingPdf ? "Generating PDF…" : "Download Report PDF"}
-                </button>
-                <button onClick={handleDownloadKit} disabled={downloadingKit}
-                  className="rounded-xl bg-slate-900 hover:bg-black text-white font-semibold px-5 py-3 transition-colors text-sm shadow-sm disabled:opacity-50">
-                  {downloadingKit ? "Building Kit…" : isGeoMode ? "Download GEO Kit (.zip)" : "Download Homepage Kit (.zip)"}
-                </button>
+                <button onClick={handleCopyCode} className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-3 transition-colors text-sm shadow-sm">{copySuccess ? "✓ Copied!" : "Copy HTML"}</button>
+                <button onClick={handleDownloadPng} disabled={downloading} className={`rounded-xl border font-semibold px-5 py-3 transition-colors text-sm shadow-sm disabled:opacity-50 ${isDarkTheme ? "border-slate-600 bg-slate-800 hover:bg-slate-700 text-slate-200" : "border-slate-200 bg-white hover:bg-slate-100 text-slate-700"}`}>{downloading ? "Generating…" : "Download PNG"}</button>
+                <button onClick={handleDownloadPdf} disabled={downloadingPdf} className={`rounded-xl border font-semibold px-5 py-3 transition-colors text-sm shadow-sm disabled:opacity-50 ${isDarkTheme ? "border-slate-600 bg-slate-800 hover:bg-slate-700 text-slate-200" : "border-slate-200 bg-white hover:bg-slate-100 text-slate-700"}`}>{downloadingPdf ? "Generating PDF…" : "Download Report PDF"}</button>
+                <button onClick={handleDownloadKit} disabled={downloadingKit} className={`rounded-xl font-semibold px-5 py-3 transition-colors text-sm shadow-sm disabled:opacity-50 ${isDarkTheme ? "bg-slate-700 hover:bg-slate-600 text-white" : "bg-slate-900 hover:bg-black text-white"}`}>{downloadingKit ? "Building Kit…" : isGeoMode ? "Download GEO Kit (.zip)" : "Download Homepage Kit (.zip)"}</button>
               </>
             )}
-            {purchase.url && (
-              <a href={purchase.url} target="_blank" rel="noopener noreferrer"
-                className="rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold px-5 py-3 transition-colors text-sm shadow-sm">
-                {isGeoMode ? "View Current Page →" : "View Current Site →"}
-              </a>
-            )}
+            {purchase.url && <a href={purchase.url} target="_blank" rel="noopener noreferrer" className={`rounded-xl border font-semibold px-5 py-3 transition-colors text-sm shadow-sm ${isDarkTheme ? "border-slate-600 bg-slate-800 hover:bg-slate-700 text-slate-200" : "border-slate-200 bg-white hover:bg-slate-100 text-slate-700"}`}>{isGeoMode ? "View Current Page →" : "View Current Site →"}</a>}
           </div>
         </section>
 
-        {/* Next Step */}
-        <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600 mb-2">Next Step</p>
-          <h2 className="text-3xl font-bold text-slate-900 mb-3">
-            {isGeoMode ? "Need help implementing your GEO fixes?" : "Need help implementing these recommendations?"}
-          </h2>
-          <p className="text-slate-600 mb-6 max-w-3xl leading-7">
-            {isGeoMode
-              ? "If you'd like expert help applying your GEO fixes — from content restructuring to full page implementation — tell us what you need and we'll come back to you within 1–2 business days."
-              : "If you'd like expert help putting these fixes into action — from copy rewrites to full page redesigns — tell us what you need and we'll come back to you within 1–2 business days."}
-          </p>
-          <button
-            onClick={() => setEnquiryOpen(true)}
-            className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-6 py-3 transition-colors text-sm shadow-sm"
-          >
-            Get Implementation Help →
-          </button>
-        </section>
+        {/* Next Step — only show for one-off purchases, not white label subscribers */}
+        {!isWhiteLabel && (
+          <section className={`rounded-[28px] border ${cardBg} p-6 md:p-8 shadow-sm`}>
+            <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${labelColor} mb-2`}>Next Step</p>
+            <h2 className={`text-3xl font-bold ${headingColor} mb-3`}>
+              {isGeoMode ? "Need help implementing your GEO fixes?" : "Need help implementing these recommendations?"}
+            </h2>
+            <p className={`mb-6 max-w-3xl leading-7 ${bodyColor}`}>
+              {isGeoMode
+                ? "If you'd like expert help applying your GEO fixes — from content restructuring to full page implementation — tell us what you need and we'll come back to you within 1–2 business days."
+                : "If you'd like expert help putting these fixes into action — from copy rewrites to full page redesigns — tell us what you need and we'll come back to you within 1–2 business days."}
+            </p>
+            <button onClick={() => setEnquiryOpen(true)} className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-6 py-3 transition-colors text-sm shadow-sm">
+              Get Implementation Help →
+            </button>
+          </section>
+        )}
 
       </div>
 
       {fullscreen && activeMockupHtml && (
         <div className="fixed inset-0 z-50 bg-black/90 flex flex-col" onClick={() => setFullscreen(false)}>
           <div className="flex items-center justify-between px-6 py-4 bg-slate-950 shrink-0" onClick={(e) => e.stopPropagation()}>
-            <p className="text-white font-semibold">
-              {isGeoMode ? "✅ GEO-Optimised Direction" : "✅ Improved Direction"} —{" "}
-              {mockupVersion === "a" ? "Version A (Recommended)" : "Version B (Alternative)"}
-            </p>
+            <p className="text-white font-semibold">{isGeoMode ? "✅ GEO-Optimised Direction" : "✅ Improved Direction"} — {mockupVersion === "a" ? "Version A (Recommended)" : "Version B (Alternative)"}</p>
             <button onClick={() => setFullscreen(false)} className="text-slate-400 hover:text-white text-2xl leading-none">✕</button>
           </div>
           <div className="flex-1 overflow-auto bg-white" onClick={(e) => e.stopPropagation()}>
