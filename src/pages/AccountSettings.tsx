@@ -86,7 +86,7 @@ export default function AccountSettings() {
       const uploadRes = await fetch(
         `${SUPABASE_URL}/storage/v1/object/white-label-logos/${filename}`,
         {
-          method: "POST",
+          method: "PUT",
           headers: {
             Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
             "Content-Type": file.type,
