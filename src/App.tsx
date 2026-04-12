@@ -19,12 +19,12 @@ import Terms from "./pages/Terms.tsx";
 import Privacy from "./pages/Privacy.tsx";
 import Refund from "./pages/Refund.tsx";
 import GeoAudit from "./pages/GeoAudit.tsx";
+import AccountSettings from "./pages/AccountSettings.tsx";
 
 const queryClient = new QueryClient();
 
 function AuthHandler() {
   const navigate = useNavigate();
-
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
@@ -34,10 +34,8 @@ function AuthHandler() {
         }
       }
     });
-
     return () => subscription.unsubscribe();
   }, [navigate]);
-
   return null;
 }
 
@@ -62,6 +60,7 @@ const App = () => (
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/refund" element={<Refund />} />
               <Route path="/geo-audit" element={<GeoAudit />} />
+              <Route path="/account" element={<AccountSettings />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
