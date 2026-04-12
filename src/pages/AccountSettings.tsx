@@ -80,7 +80,7 @@ export default function AccountSettings() {
 
       const safeEmail = email.replace(/[^a-zA-Z0-9]/g, "_");
       const ext = file.name.split(".").pop();
-      const filename = `${safeEmail}/logo.${ext}`;
+      const filename = `${safeEmail}_logo.${ext}`;
 
       // Upload to Supabase Storage via REST API
       const uploadRes = await fetch(
