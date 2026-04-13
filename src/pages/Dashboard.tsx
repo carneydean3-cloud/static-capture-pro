@@ -6,6 +6,11 @@ type SubscriptionData = {
   plan: string;
   audits_remaining: number;
   limit_reached: boolean;
+  allowed: boolean;
+  upgrade?: {
+    target_plan: string;
+    cta: string;
+  };
 };
 
 type AuditHistoryItem = {
@@ -25,6 +30,7 @@ export default function Dashboard() {
   const [authLoading, setAuthLoading] = useState(true);
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [subError, setSubError] = useState("");
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   const [url, setUrl] = useState("");
   const [auditLoading, setAuditLoading] = useState(false);
@@ -56,7 +62,7 @@ export default function Dashboard() {
     try {
       const { data, error } = await supabase.functions.invoke("verify-subscription", {
         method: "POST",
-        body: { email },
+        body: { email, product: "conversion" }, // ✅ strict gating
       });
       if (error || !data?.subscribed) {
         setSubError("No active subscription found for this email.");
@@ -66,6 +72,8 @@ export default function Dashboard() {
         plan: data.plan,
         audits_remaining: data.audits_remaining,
         limit_reached: data.limit_reached,
+        allowed: data.allowed !== false, // ✅ default true if not present
+        upgrade: data.upgrade,
       });
     } catch (e: any) {
       setSubError("Could not verify subscription.");
@@ -105,6 +113,30 @@ export default function Dashboard() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate("/login");
+  };
+
+  // ✅ Upsell checkout handler
+  const handleUpgradeCheckout = async (plan: string) => {
+    setCheckoutLoading(true);
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-subscription-checkout`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ userEmail, plan }),
+        }
+      );
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch (err) {
+      console.error("Upgrade checkout error:", err);
+    } finally {
+      setCheckoutLoading(false);
+    }
   };
 
   const handleRunAudit = async (e: React.FormEvent) => {
@@ -165,9 +197,22 @@ export default function Dashboard() {
     }
   };
 
+  // ✅ Full plan label map
   const planLabel: Record<string, string> = {
     starter_pro: "Starter Pro",
     agency_pro: "Agency Pro",
+    geo_starter_pro: "GEO Starter Pro",
+    geo_agency_pro: "GEO Agency Pro",
+    agency_max: "Agency Max",
+  };
+
+  // ✅ Upsell CTA by plan
+  const upsellByPlan: Record<string, { cta: string; target: string } | null> = {
+    starter_pro: { cta: "Need unlimited audits? Upgrade to Agency Pro →", target: "agency_pro" },
+    agency_pro: { cta: "Add GEO + AI Search Readiness — Upgrade to Agency Max →", target: "agency_max" },
+    geo_starter_pro: { cta: "Need unlimited GEO audits? Upgrade to GEO Agency Pro →", target: "geo_agency_pro" },
+    geo_agency_pro: { cta: "Add Conversion Audits — Upgrade to Agency Max →", target: "agency_max" },
+    agency_max: null,
   };
 
   const scoreColor = (score: number) => {
@@ -222,6 +267,56 @@ export default function Dashboard() {
 
       <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
 
+        {/* ✅ Agency Max top banner */}
+        {subscription?.plan === "agency_max" && (
+          <div className="rounded-[20px] bg-teal-50 border border-teal-200 p-5 flex flex-wrap items-center justify-between gap-4">
+            <p className="text-teal-800 font-semibold text-sm">
+              🚀 You're on Agency Max — unlimited conversion + GEO audits.
+            </p>
+            <button
+              onClick={() => navigate("/referral")}
+              className="text-xs font-semibold text-teal-700 hover:underline"
+            >
+              Know another agency? Share ConversionDoc →
+            </button>
+          </div>
+        )}
+
+        {/* ✅ Upsell banner for all other plans */}
+        {subscription && subscription.plan !== "agency_max" && upsellByPlan[subscription.plan] && (
+          <div className="rounded-[20px] bg-slate-50 border border-slate-200 p-5 flex flex-wrap items-center justify-between gap-4">
+            <p className="text-slate-600 text-sm">
+              {upsellByPlan[subscription.plan]?.cta}
+            </p>
+            <button
+              onClick={() => handleUpgradeCheckout(upsellByPlan[subscription.plan]!.target)}
+              disabled={checkoutLoading}
+              className="text-xs font-semibold bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {checkoutLoading ? "Loading…" : "Upgrade →"}
+            </button>
+          </div>
+        )}
+
+        {/* ✅ Wrong tool banner — GEO-only plan on Conversion dashboard */}
+        {subscription && subscription.allowed === false && (
+          <div className="rounded-[20px] bg-amber-50 border border-amber-200 p-6 text-center">
+            <p className="text-amber-800 font-semibold mb-2">
+              Your current plan doesn't include Conversion audits.
+            </p>
+            <p className="text-amber-700 text-sm mb-4">
+              You're on {planLabel[subscription.plan] || subscription.plan}. Upgrade to Agency Max to unlock both tools.
+            </p>
+            <button
+              onClick={() => handleUpgradeCheckout("agency_max")}
+              disabled={checkoutLoading}
+              className="bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-colors disabled:opacity-50"
+            >
+              {checkoutLoading ? "Loading…" : "Upgrade to Agency Max →"}
+            </button>
+          </div>
+        )}
+
         {/* Subscription error */}
         {subError && (
           <div className="rounded-[20px] bg-red-50 border border-red-200 p-6 text-center">
@@ -233,7 +328,7 @@ export default function Dashboard() {
         )}
 
         {/* Subscription status bar */}
-        {subscription && (
+        {subscription && subscription.allowed !== false && (
           <div className="rounded-[20px] bg-white border border-slate-200 shadow-sm p-6 flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1">
@@ -256,7 +351,6 @@ export default function Dashboard() {
                 <p className="text-amber-700 text-sm font-medium">Monthly limit reached</p>
               </div>
             )}
-            {/* White label settings link */}
             <a
               href="/account"
               className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 px-4 py-2.5 transition-colors"
@@ -270,8 +364,8 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Run audit */}
-        {subscription && !subscription.limit_reached && (
+        {/* Run audit — only shown if allowed and not limit reached */}
+        {subscription && subscription.allowed !== false && !subscription.limit_reached && (
           <div className="rounded-[28px] bg-white border border-slate-200 shadow-sm p-8">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600 mb-2">
               New Audit
@@ -279,7 +373,6 @@ export default function Dashboard() {
             <h2 className="text-2xl font-bold text-slate-900 mb-6">
               Run a full audit
             </h2>
-
             <form onSubmit={handleRunAudit} className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
@@ -295,20 +388,17 @@ export default function Dashboard() {
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50"
                 />
               </div>
-
               {auditError && (
                 <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3">
                   <p className="text-red-600 text-sm">{auditError}</p>
                 </div>
               )}
-
               {auditLoading && (
                 <div className="rounded-xl bg-teal-50 border border-teal-100 px-4 py-3 flex items-center gap-3">
                   <div className="w-4 h-4 border-2 border-teal-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
                   <p className="text-teal-700 text-sm font-medium">{auditStep}</p>
                 </div>
               )}
-
               <button
                 type="submit"
                 disabled={auditLoading || !url}
@@ -328,7 +418,6 @@ export default function Dashboard() {
           <h2 className="text-2xl font-bold text-slate-900 mb-6">
             Previous Audits
           </h2>
-
           {historyLoading ? (
             <div className="flex items-center gap-3 text-slate-400">
               <div className="w-4 h-4 border-2 border-slate-300 border-t-transparent rounded-full animate-spin" />
