@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Check, Star, ArrowRight } from "lucide-react";
+import { Check, Star, ArrowRight, Lock } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 
 const Pricing = () => {
@@ -92,7 +92,7 @@ const Pricing = () => {
         "Everything in Full Diagnosis",
         "20 Full Audits Per Month",
         "Run Audits on Client Sites",
-        "Full Reports on Every Audit",
+        "White Label Reports (Your Logo + Branding)",
         "AI Search Readiness on Every Audit",
         "Priority Support",
       ],
@@ -100,6 +100,9 @@ const Pricing = () => {
       ctaAction: "starter_pro",
       popular: true,
       popularLabel: "Best Value",
+      upsellCta: "Need unlimited audits? Upgrade to Agency Pro →",
+      upsellTarget: "agency_pro",
+      isLaunchPrice: true,
     },
     {
       name: "Agency Pro",
@@ -110,13 +113,34 @@ const Pricing = () => {
         "Everything in Starter Pro",
         "Unlimited Full Audits",
         "Audit All Client Sites",
-        "Full Reports on Every Audit",
+        "White Label Reports (Your Logo + Branding)",
         "AI Search Readiness on Every Audit",
         "Priority Support",
       ],
       cta: "Start Agency Pro",
       ctaAction: "agency_pro",
       popular: false,
+      upsellCta: "Add GEO + AI Search Readiness — Upgrade to Agency Max →",
+      upsellTarget: "agency_max",
+      isLaunchPrice: true,
+    },
+    {
+      name: "Agency Max",
+      price: 279,
+      isMonthly: true,
+      description: "Unlimited conversion + GEO audits. The full stack for serious agencies.",
+      features: [
+        "Everything in Agency Pro",
+        "Unlimited GEO + Conversion Audits",
+        "Full GEO + AI Search Readiness Reports",
+        "White Label Reports (Your Logo + Branding)",
+        "Multi-Tool Dashboard",
+        "Priority Support",
+      ],
+      cta: "Start Agency Max",
+      ctaAction: "agency_max",
+      popular: false,
+      isLaunchPrice: true,
     },
   ];
 
@@ -156,7 +180,7 @@ const Pricing = () => {
       refundText: "If we don't find at least 5 issues we'll refund you. No questions asked.",
     },
     {
-      name: "Starter Pro",
+      name: "GEO Starter Pro",
       price: 99,
       isMonthly: true,
       description: "20 full GEO + conversion audits per month. Built for freelancers managing client visibility.",
@@ -165,30 +189,54 @@ const Pricing = () => {
         "Full GEO + Conversion Reports",
         "20 Full Audits Per Month",
         "Audit Client Sites",
-        "Structured Fix Recommendations",
+        "White Label Reports (Your Logo + Branding)",
         "Priority Support",
       ],
-      cta: "Start Starter Pro",
-      ctaAction: "starter_pro",
+      cta: "Start GEO Starter Pro",
+      ctaAction: "geo_starter_pro",
       popular: true,
       popularLabel: "Best Value",
+      upsellCta: "Need unlimited GEO audits? Upgrade to GEO Agency Pro →",
+      upsellTarget: "geo_agency_pro",
+      isLaunchPrice: true,
     },
     {
-      name: "Agency Pro",
+      name: "GEO Agency Pro",
       price: 199,
       isMonthly: true,
-      description: "Unlimited audits. Built for agencies managing AI visibility across multiple client sites.",
+      description: "Unlimited GEO + conversion audits. Built for agencies managing AI visibility across multiple client sites.",
       features: [
         "Unlimited GEO + Conversion Audits",
         "AI Search Readiness on Every Audit",
         "Full Reports on Every Client Site",
         "Audit All Client Sites",
-        "Structured Fix Recommendations",
+        "White Label Reports (Your Logo + Branding)",
         "Priority Support",
       ],
-      cta: "Start Agency Pro",
-      ctaAction: "agency_pro",
+      cta: "Start GEO Agency Pro",
+      ctaAction: "geo_agency_pro",
       popular: false,
+      upsellCta: "Add Conversion Audits — Upgrade to Agency Max →",
+      upsellTarget: "agency_max",
+      isLaunchPrice: true,
+    },
+    {
+      name: "Agency Max",
+      price: 279,
+      isMonthly: true,
+      description: "Unlimited conversion + GEO audits. The full stack for serious agencies.",
+      features: [
+        "Everything in GEO Agency Pro",
+        "Unlimited Conversion + GEO Audits",
+        "Full GEO + AI Search Readiness Reports",
+        "White Label Reports (Your Logo + Branding)",
+        "Multi-Tool Dashboard",
+        "Priority Support",
+      ],
+      cta: "Start Agency Max",
+      ctaAction: "agency_max",
+      popular: false,
+      isLaunchPrice: true,
     },
   ];
 
@@ -215,7 +263,7 @@ const Pricing = () => {
           </div>
         )}
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl mx-auto">
           {plans.map((plan, index) => (
             <motion.div
               key={index}
@@ -223,11 +271,21 @@ const Pricing = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className={`glass-card p-8 relative ${plan.popular ? "border-primary/50 scale-105" : ""}`}
+              className={`glass-card p-8 relative flex flex-col ${plan.popular ? "border-primary/50 scale-105" : ""}`}
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full flex items-center gap-1.5">
                   <Star className="w-3 h-3" /> {plan.popularLabel}
+                </div>
+              )}
+
+              {/* Launch price badge */}
+              {plan.isLaunchPrice && (
+                <div className="flex items-center gap-1.5 mb-3">
+                  <Lock className="w-3 h-3 text-primary" />
+                  <span className="text-xs font-semibold text-primary">
+                    Launch Price — Price increases in 30 days
+                  </span>
                 </div>
               )}
 
@@ -244,7 +302,7 @@ const Pricing = () => {
                 {plan.description}
               </p>
 
-              <ul className="space-y-3 mb-8">
+              <ul className="space-y-3 mb-8 flex-1">
                 {plan.features.map((feature, i) => (
                   <li key={i} className="flex items-center gap-3 text-sm">
                     <Check className="w-4 h-4 text-primary shrink-0" />
@@ -253,6 +311,7 @@ const Pricing = () => {
                 ))}
               </ul>
 
+              {/* Main CTA */}
               {plan.ctaAction === "free" ? (
                 <a
                   href="#hero-cta"
@@ -282,10 +341,25 @@ const Pricing = () => {
                 </button>
               )}
 
+              {/* Refund text */}
               {plan.refundText && (
                 <p className="text-xs text-muted-foreground mt-4 text-center">
                   {plan.refundText}
                 </p>
+              )}
+
+              {/* Upsell CTA */}
+              {plan.upsellCta && plan.upsellTarget && (
+                <button
+                  type="button"
+                  onClick={() => handleSubscriptionCheckout(plan.upsellTarget!)}
+                  disabled={checkoutLoading === plan.upsellTarget}
+                  className="mt-4 text-xs text-primary hover:underline text-center w-full disabled:opacity-60"
+                >
+                  {checkoutLoading === plan.upsellTarget
+                    ? "Processing..."
+                    : plan.upsellCta}
+                </button>
               )}
             </motion.div>
           ))}
