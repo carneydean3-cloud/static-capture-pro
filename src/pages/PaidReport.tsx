@@ -156,7 +156,6 @@ const buildPdf = ({
   const AMBER: [number, number, number] = [245, 158, 11];
   const RED: [number, number, number] = [239, 68, 68];
 
-  // Theme-aware colors
   const BG: [number, number, number] = isDark ? NAVY : WHITE;
   const BODY_TEXT: [number, number, number] = isDark ? [203, 213, 225] : SLATE_700;
   const CARD_BG: [number, number, number] = isDark ? [15, 23, 42] : SLATE_50;
@@ -178,7 +177,6 @@ const buildPdf = ({
     if (y + neededMm > H - BOTTOM_MARGIN) {
       pdf.addPage();
       y = 16;
-      // Fill dark background on new page
       if (isDark) {
         pdf.setFillColor(...BG);
         pdf.rect(0, 0, W, H, "F");
@@ -186,7 +184,6 @@ const buildPdf = ({
     }
   };
 
-  // Fill background on first page
   if (isDark) {
     pdf.setFillColor(...BG);
     pdf.rect(0, 0, W, H, "F");
@@ -262,7 +259,6 @@ const buildPdf = ({
   setFont("bold", 7, TEAL);
   pdf.text(isGeoMode ? "FULL GEO AUDIT" : "FULL DIAGNOSIS", ML + 6, 20);
 
-  // Brand — logo text or "ConversionDoc" depending on white label
   const brandName = whiteLabel?.is_subscriber && whiteLabel.logo ? "" : "ConversionDoc";
   if (brandName) {
     setFont("bold", 8, TEAL);
@@ -419,7 +415,7 @@ const buildPdf = ({
     pdf.setFontSize(7);
     pdf.setTextColor(...iRgb);
     const pillW = pdf.getTextWidth(pillLabel) + 6;
-    pdf.setFillColor(...(isDark ? [15, 23, 42] as [number,number,number] : [255, 255, 255] as [number,number,number]));
+    pdf.setFillColor(...(isDark ? [15, 23, 42] as [number, number, number] : [255, 255, 255] as [number, number, number]));
     pdf.roundedRect(TEXT_X, y + V_PAD_TOP, pillW, PILL_H, 1.5, 1.5, "F");
     pdf.text(pillLabel, TEXT_X + 3, y + V_PAD_TOP + 3.8);
 
@@ -523,118 +519,6 @@ const buildPdf = ({
     y += contentH + 4;
   });
 
-  // ── HOW TO USE THIS KIT ────────────────────────────────────────────────────
-  pdf.addPage();
-  if (isDark) {
-    pdf.setFillColor(...BG);
-    pdf.rect(0, 0, W, H, "F");
-  }
-  y = 16;
-
-  roundedRect(ML, y, CW, 28, NAVY, undefined, 4);
-  pdf.setFillColor(...TEAL);
-  pdf.rect(ML, y, CW, 1.2, "F");
-  setFont("bold", 7, TEAL);
-  pdf.text("NEXT STEPS", ML + 6, y + 9);
-  setFont("bold", 16, WHITE);
-  pdf.text("How to use this kit", ML + 6, y + 21);
-  y += 36;
-
-  const prefix = isGeoMode ? "geo" : "homepage";
-  const docxName = isGeoMode ? "geo-content-pack.docx" : "copy-pack.docx";
-
-  const steps = [
-    {
-      number: "1",
-      title: "Read the full report",
-      body: `Start with ${prefix}-audit-report.pdf (this document). It contains your score, the diagnosis, and every recommended fix in priority order.`,
-    },
-    {
-      number: "2",
-      title: isGeoMode ? "Use the content pack" : "Use the copy pack",
-      body: `Open ${docxName} in Word or Google Docs. This contains your rewritten headline, subheadline, CTA, trust line, and bullet points — ready to paste directly into your page.`,
-    },
-    {
-      number: "3",
-      title: "Preview the mockup",
-      body: `Open ${prefix}-mockup-a.html in any browser to see a visual direction for your improved page.${hasMockupB ? ` A second direction is available in ${prefix}-mockup-b.html.` : ""} Share with your developer or designer.`,
-    },
-    {
-      number: "4",
-      title: "Apply highest-impact changes first",
-      body: `Focus on Priority 1 and 2 fixes before anything else. Small, targeted changes to your headline and CTA typically deliver the fastest results.`,
-    },
-    {
-      number: "5",
-      title: "Need help implementing?",
-      body: `Get in touch at hello@conversiondoc.co.uk — we offer implementation support, copy rewrites, and full page redesigns.`,
-    },
-  ];
-
-  steps.forEach((step) => {
-    const bodyLines: string[] = pdf.splitTextToSize(step.body, CW - 22);
-    const stepH = 8 + bodyLines.length * 4.5 + 7;
-    checkPageBreak(stepH + 4);
-
-    pdf.setFillColor(...TEAL);
-    pdf.circle(ML + 5, y + 6, 4.5, "F");
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(8);
-    pdf.setTextColor(...WHITE);
-    pdf.text(step.number, ML + 5, y + 7.8, { align: "center" });
-
-    setFont("bold", 10, HEADING_COLOR);
-    pdf.text(step.title, ML + 14, y + 7);
-
-    setFont("normal", 8.5, BODY_TEXT);
-    bodyLines.forEach((line: string, i: number) => {
-      pdf.text(line, ML + 14, y + 13 + i * 4.5);
-    });
-
-    y += stepH + 4;
-  });
-
-  y += 4;
-  checkPageBreak(50);
-  const fileList = [
-    `${prefix}-audit-report.pdf — Full audit report (this document)`,
-    `${docxName} — ${isGeoMode ? "Content" : "Copy"} pack for your page`,
-    `${prefix}-mockup-a.html / .png — Improved page direction (Version A)`,
-    ...(hasMockupB ? [`${prefix}-mockup-b.html / .png — Alternative direction (Version B)`] : []),
-  ];
-  const kitBoxH = 12 + fileList.length * 5.5;
-  roundedRect(ML, y, CW, kitBoxH, CARD_BG, CARD_BORDER);
-  setFont("bold", 7, SLATE_500);
-  pdf.text("FILES IN THIS KIT", ML + 5, y + 7);
-  fileList.forEach((f, i) => {
-    setFont("bold", 8, TEAL);
-    pdf.text("-", ML + 5, y + 13 + i * 5.5);
-    setFont("normal", 8, BODY_TEXT);
-    pdf.text(f, ML + 10, y + 13 + i * 5.5);
-  });
-  y += kitBoxH + 8;
-
-  checkPageBreak(20);
-  pdf.setDrawColor(...TEAL_BORDER);
-  pdf.setLineWidth(0.5);
-  pdf.line(ML, y, W - MR, y);
-  y += 8;
-
-  // Footer branding — show subscriber's name placeholder or ConversionDoc
-  const footerBrand = whiteLabel?.is_subscriber ? "" : "ConversionDoc";
-  if (footerBrand) {
-    setFont("bold", 9, TEAL);
-    pdf.text(footerBrand, ML, y);
-    y += 5;
-    setFont("normal", 8, SLATE_500);
-    pdf.text("conversiondoc.co.uk", ML, y);
-  }
-  if (purchaseUrl) {
-    y += 5;
-    setFont("normal", 8, SLATE_500);
-    pdf.text(`Audited: ${purchaseUrl}`, ML, y);
-  }
-
   // ── FOOTER on every page ───────────────────────────────────────────────────
   const totalPages = pdf.getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
@@ -661,7 +545,7 @@ const buildPdf = ({
   return pdf;
 };
 
-// ─── DOCX BUILDER ──────────────────────────────────────────────────────────
+// ─── COPY PACK DOCX BUILDER ────────────────────────────────────────────────
 
 const buildDocx = async ({
   isGeoMode,
@@ -726,7 +610,6 @@ const buildDocx = async ({
       children: [],
     });
 
-  // Brand line — hide ConversionDoc if white label subscriber
   const brandLine = whiteLabel?.is_subscriber
     ? []
     : [new Paragraph({
@@ -801,6 +684,202 @@ const buildDocx = async ({
       children: [new TextRun({ text: "Generated by ConversionDoc — conversiondoc.co.uk", color: tealColor, size: 18, font: "Inter", bold: true })],
       spacing: { before: 200 },
     })] : []),
+  ];
+
+  const doc = new Document({
+    sections: [{
+      properties: { page: { margin: { top: 1000, right: 1000, bottom: 1000, left: 1000 } } },
+      children,
+    }],
+  });
+
+  return await Packer.toBlob(doc);
+};
+
+// ─── INSTRUCTIONS DOCX BUILDER ─────────────────────────────────────────────
+
+const buildInstructionsDocx = async ({
+  isGeoMode,
+  hasMockupB,
+  purchaseUrl,
+  whiteLabel,
+}: {
+  isGeoMode: boolean;
+  hasMockupB: boolean;
+  purchaseUrl?: string | null;
+  whiteLabel?: WhiteLabel;
+}): Promise<Blob> => {
+  const tealColor = "0D9488";
+  const navyColor = "1E3A5F";
+  const slateColor = "475569";
+  const darkColor = "1E293B";
+  const mutedColor = "94A3B8";
+
+  const prefix = isGeoMode ? "geo" : "homepage";
+  const docxName = isGeoMode ? "geo-content-pack.docx" : "copy-pack.docx";
+
+  const heading1 = (text: string) =>
+    new Paragraph({
+      heading: HeadingLevel.HEADING_1,
+      children: [new TextRun({ text, color: navyColor, size: 48, font: "Inter", bold: true })],
+      spacing: { after: 120 },
+    });
+
+  const heading2 = (text: string) =>
+    new Paragraph({
+      heading: HeadingLevel.HEADING_2,
+      children: [new TextRun({ text, color: darkColor, size: 28, font: "Inter", bold: true })],
+      spacing: { before: 320, after: 100 },
+    });
+
+  const sectionLabel = (text: string) =>
+    new Paragraph({
+      children: [new TextRun({ text: text.toUpperCase(), color: tealColor, size: 18, font: "Inter", bold: true, characterSpacing: 80 })],
+      spacing: { before: 400, after: 80 },
+    });
+
+  const bodyText = (text: string) =>
+    new Paragraph({
+      children: [new TextRun({ text, color: slateColor, size: 22, font: "Inter" })],
+      spacing: { after: 100 },
+    });
+
+  const mutedText = (text: string) =>
+    new Paragraph({
+      children: [new TextRun({ text, color: mutedColor, size: 20, font: "Inter", italics: true })],
+      spacing: { after: 80 },
+    });
+
+  const fileRow = (filename: string, description: string) =>
+    new Paragraph({
+      children: [
+        new TextRun({ text: `${filename}`, color: tealColor, size: 22, font: "Inter", bold: true }),
+        new TextRun({ text: `  —  ${description}`, color: slateColor, size: 22, font: "Inter" }),
+      ],
+      spacing: { after: 100 },
+    });
+
+  const divider = () =>
+    new Paragraph({
+      border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "E2E8F0" } },
+      spacing: { before: 200, after: 200 },
+      children: [],
+    });
+
+  const stepNumber = (n: string, title: string) =>
+    new Paragraph({
+      children: [
+        new TextRun({ text: `${n}.  `, color: tealColor, size: 24, font: "Inter", bold: true }),
+        new TextRun({ text: title, color: darkColor, size: 24, font: "Inter", bold: true }),
+      ],
+      spacing: { before: 280, after: 80 },
+    });
+
+  const isSubscriber = whiteLabel?.is_subscriber ?? false;
+
+  const brandLine = isSubscriber
+    ? []
+    : [new Paragraph({
+        children: [new TextRun({ text: "ConversionDoc", color: tealColor, size: 20, font: "Inter", bold: true, characterSpacing: 60 })],
+        spacing: { after: 60 },
+      })];
+
+  const footerLine = isSubscriber
+    ? []
+    : [
+        divider(),
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: "Generated by ConversionDoc — conversiondoc.co.uk", color: tealColor, size: 18, font: "Inter", bold: true })],
+          spacing: { before: 200 },
+        }),
+      ];
+
+  const children = [
+    ...brandLine,
+
+    heading1(isGeoMode ? "How to use your GEO Audit Kit" : "How to use your Conversion Kit"),
+
+    ...(purchaseUrl ? [new Paragraph({
+      children: [new TextRun({ text: `Audited: ${purchaseUrl}`, color: tealColor, size: 20, font: "Inter" })],
+      spacing: { after: 80 },
+    })] : []),
+
+    divider(),
+
+    sectionLabel("What's in this kit"),
+
+    fileRow(
+      `${prefix}-audit-report.pdf`,
+      isGeoMode ? "Full GEO audit report — scores, diagnosis, and all recommended fixes" : "Full conversion audit report — scores, diagnosis, and all recommended fixes"
+    ),
+    fileRow(
+      docxName,
+      isGeoMode ? "Page-ready content rewritten for AI extractability and conversion" : "Homepage-ready copy rewritten to improve clarity, trust, and action"
+    ),
+    fileRow(
+      `${prefix}-mockup-a.html / .png`,
+      "Improved page direction (Version A) — open the HTML in any browser or share the PNG"
+    ),
+    ...(hasMockupB ? [fileRow(
+      `${prefix}-mockup-b.html / .png`,
+      "Alternative page direction (Version B)"
+    )] : []),
+    fileRow(
+      "INSTRUCTIONS.docx",
+      "This document"
+    ),
+
+    divider(),
+
+    sectionLabel("Step-by-step"),
+
+    stepNumber("1", "Read the full report"),
+    bodyText(
+      `Open ${prefix}-audit-report.pdf. It contains the overall score, diagnosis, and every recommended fix in priority order. Start here before making any changes.`
+    ),
+
+    stepNumber("2", isGeoMode ? "Use the content pack" : "Use the copy pack"),
+    bodyText(
+      `Open ${docxName} in Word or Google Docs. It contains rewritten ${isGeoMode ? "content structured for AI search engines" : "headline, subheadline, CTA, trust line, and benefit bullets"} — ready to paste directly into the page.`
+    ),
+
+    stepNumber("3", "Preview the mockup"),
+    bodyText(
+      `Open ${prefix}-mockup-a.html in any browser to see a visual direction for the improved page.${hasMockupB ? ` A second direction is available in ${prefix}-mockup-b.html.` : ""} Share the PNG with a developer or designer if needed.`
+    ),
+
+    stepNumber("4", "Apply highest-impact changes first"),
+    bodyText(
+      "Focus on Priority 1 and 2 fixes before anything else. Small, targeted changes to the headline and CTA typically deliver the fastest results."
+    ),
+
+    ...(isSubscriber ? [] : [
+      stepNumber("5", "Need help implementing?"),
+      bodyText(
+        "Get in touch at hello@conversiondoc.co.uk — we offer implementation support, copy rewrites, and full page redesigns."
+      ),
+    ]),
+
+    divider(),
+
+    sectionLabel("Tips"),
+
+    bodyText("✓  Make one change at a time so you can measure the impact of each fix."),
+    bodyText("✓  Prioritise mobile — check every change on a phone before publishing."),
+    bodyText(
+      isGeoMode
+        ? "✓  AI search engines update their indexes regularly — re-run your GEO audit in 30 days to track progress."
+        : "✓  Re-run your audit in 30 days to track your score improvement."
+    ),
+    bodyText("✓  If in doubt, follow the Priority order in the report — it's ranked by impact."),
+
+    ...(purchaseUrl ? [
+      divider(),
+      mutedText(`Audited: ${purchaseUrl}`),
+    ] : []),
+
+    ...footerLine,
   ];
 
   const doc = new Document({
@@ -997,7 +1076,6 @@ export default function PaidReport() {
 
   const isGeoMode = searchParams.get("focus") === "geo" || purchase?.focus === "geo";
 
-  // White label theme classes
   const isWhiteLabel = whiteLabel?.is_subscriber;
   const isDarkTheme = whiteLabel?.theme === "dark";
   const pageBg = isDarkTheme ? "bg-[#020617]" : "bg-[#f5f8fc]";
@@ -1124,12 +1202,27 @@ ${html || ""}
       setDownloadingKit(true);
       const zip = new JSZip();
       const prefix = isGeoMode ? "geo" : "homepage";
+
+      // PDF report (no "How to use this kit" page)
       try {
         const pdf = buildPdf({ isGeoMode, overallScore, auditData, topFixes, orderedScores, summary, purchaseUrl: purchase?.url, hasMockupB: !!mockupHtmlB, whiteLabel });
         zip.file(`${prefix}-audit-report.pdf`, await pdf.output("blob").arrayBuffer());
       } catch (e) { console.error("PDF for ZIP failed:", e); }
+
+      // Copy pack / content pack docx
       const docxBlob = await buildDocx({ isGeoMode, copyPack, overallScore, summary, topFixes, purchaseUrl: purchase?.url, whiteLabel });
       zip.file(isGeoMode ? "geo-content-pack.docx" : "copy-pack.docx", await docxBlob.arrayBuffer());
+
+      // Instructions docx (replaces the old "How to use this kit" PDF page)
+      const instructionsBlob = await buildInstructionsDocx({
+        isGeoMode,
+        hasMockupB: !!mockupHtmlB,
+        purchaseUrl: purchase?.url,
+        whiteLabel,
+      });
+      zip.file("INSTRUCTIONS.docx", await instructionsBlob.arrayBuffer());
+
+      // Mockup files
       if (mockupHtml) {
         zip.file(`${prefix}-mockup-a.html`, buildMockupHtmlFile(mockupHtml));
         try { const pngA = await generateMockupPng(mockupHtml); zip.file(`${prefix}-mockup-a.png`, pngA.split(",")[1], { base64: true }); } catch (e) { console.error("PNG A failed:", e); }
@@ -1138,6 +1231,7 @@ ${html || ""}
         zip.file(`${prefix}-mockup-b.html`, buildMockupHtmlFile(mockupHtmlB));
         try { const pngB = await generateMockupPng(mockupHtmlB); zip.file(`${prefix}-mockup-b.png`, pngB.split(",")[1], { base64: true }); } catch (e) { console.error("PNG B failed:", e); }
       }
+
       saveAs(await zip.generateAsync({ type: "blob" }), `${isWhiteLabel ? "" : "conversiondoc-"}${prefix}-kit.zip`);
     } catch (e) { console.error("Kit download failed:", e); }
     finally { setDownloadingKit(false); }
@@ -1196,7 +1290,6 @@ ${html || ""}
                 {auditData?.verdict && <p className="mt-4 text-lg text-slate-300 italic max-w-3xl">"{auditData.verdict}"</p>}
                 {purchase.url && <a href={purchase.url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-teal-400 text-sm hover:underline">{purchase.url} →</a>}
               </div>
-              {/* Logo or ConversionDoc branding */}
               <div className="shrink-0 ml-6">
                 {isWhiteLabel && whiteLabel?.logo ? (
                   <img src={whiteLabel.logo} alt="Logo" className="h-10 max-w-[160px] object-contain brightness-0 invert" />
