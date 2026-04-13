@@ -284,55 +284,7 @@ const buildPdf = ({
     y += contentH + 4;
   });
 
-  // How to use
-  pdf.addPage();
-  if (isDark) { pdf.setFillColor(...BG); pdf.rect(0, 0, W, H, "F"); }
-  y = 16;
-  roundedRect(ML, y, CW, 28, NAVY, undefined, 4);
-  pdf.setFillColor(...TEAL); pdf.rect(ML, y, CW, 1.2, "F");
-  setFont("bold", 7, TEAL); pdf.text("NEXT STEPS", ML + 6, y + 9);
-  setFont("bold", 16, WHITE); pdf.text("How to use this kit", ML + 6, y + 21);
-  y += 36;
-
-  const docxName = "copy-pack.docx";
-  const steps = [
-    { number: "1", title: "Read the full report", body: `Start with homepage-audit-report.pdf (this document). It contains your score, diagnosis, and every recommended fix in priority order.` },
-    { number: "2", title: "Use the copy pack", body: `Open ${docxName} in Word or Google Docs. This contains your rewritten headline, subheadline, CTA, trust line, and bullet points — ready to paste directly into your page.` },
-    { number: "3", title: "Preview the mockup", body: `Open homepage-mockup-a.html in any browser to see a visual direction for your improved page.${hasMockupB ? " A second direction is available in homepage-mockup-b.html." : ""} Share with your developer or designer.` },
-    { number: "4", title: "Apply highest-impact changes first", body: "Focus on Priority 1 and 2 fixes before anything else. Small, targeted changes to your headline and CTA typically deliver the fastest results." },
-    { number: "5", title: "Need help implementing?", body: "Get in touch at hello@conversiondoc.co.uk — we offer implementation support, copy rewrites, and full page redesigns." },
-  ];
-  steps.forEach((step) => {
-    const bodyLines: string[] = pdf.splitTextToSize(step.body, CW - 22);
-    const stepH = 8 + bodyLines.length * 4.5 + 7;
-    checkPageBreak(stepH + 4);
-    pdf.setFillColor(...TEAL); pdf.circle(ML + 5, y + 6, 4.5, "F");
-    pdf.setFont("helvetica", "bold"); pdf.setFontSize(8); pdf.setTextColor(...WHITE);
-    pdf.text(step.number, ML + 5, y + 7.8, { align: "center" });
-    setFont("bold", 10, HEADING_COLOR); pdf.text(step.title, ML + 14, y + 7);
-    setFont("normal", 8.5, BODY_TEXT); bodyLines.forEach((line: string, i: number) => pdf.text(line, ML + 14, y + 13 + i * 4.5));
-    y += stepH + 4;
-  });
-
-  y += 4;
-  checkPageBreak(50);
-  const fileList = [
-    "homepage-audit-report.pdf — Full audit report (this document)",
-    `${docxName} — Copy pack for your page`,
-    "homepage-mockup-a.html / .png — Improved page direction (Version A)",
-    ...(hasMockupB ? ["homepage-mockup-b.html / .png — Alternative direction (Version B)"] : []),
-  ];
-  const kitBoxH = 12 + fileList.length * 5.5;
-  roundedRect(ML, y, CW, kitBoxH, CARD_BG, CARD_BORDER);
-  setFont("bold", 7, SLATE_500); pdf.text("FILES IN THIS KIT", ML + 5, y + 7);
-  fileList.forEach((f, i) => { setFont("bold", 8, TEAL); pdf.text("-", ML + 5, y + 13 + i * 5.5); setFont("normal", 8, BODY_TEXT); pdf.text(f, ML + 10, y + 13 + i * 5.5); });
-  y += kitBoxH + 8;
-
-  checkPageBreak(20);
-  pdf.setDrawColor(...TEAL_BORDER); pdf.setLineWidth(0.5); pdf.line(ML, y, W - MR, y); y += 8;
-  if (!whiteLabel?.is_subscriber) { setFont("bold", 9, TEAL); pdf.text("ConversionDoc", ML, y); y += 5; setFont("normal", 8, SLATE_500); pdf.text("conversiondoc.co.uk", ML, y); }
-  if (purchaseUrl) { y += 5; setFont("normal", 8, SLATE_500); pdf.text(`Audited: ${purchaseUrl}`, ML, y); }
-
+  // ── FOOTER on every page (no "How to use this kit" page) ──────────────────
   const totalPages = pdf.getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     pdf.setPage(p);
@@ -346,7 +298,7 @@ const buildPdf = ({
   return pdf;
 };
 
-// ─── DOCX BUILDER ──────────────────────────────────────────────────────────
+// ─── COPY PACK DOCX BUILDER ────────────────────────────────────────────────
 const buildDocx = async ({
   copyPack, overallScore, summary, topFixes, purchaseUrl, whiteLabel,
 }: {
@@ -397,6 +349,140 @@ const buildDocx = async ({
   ];
 
   const doc = new Document({ sections: [{ properties: { page: { margin: { top: 1000, right: 1000, bottom: 1000, left: 1000 } } }, children }] });
+  return await Packer.toBlob(doc);
+};
+
+// ─── INSTRUCTIONS DOCX BUILDER ─────────────────────────────────────────────
+const buildInstructionsDocx = async ({
+  hasMockupB,
+  purchaseUrl,
+  whiteLabel,
+}: {
+  hasMockupB: boolean;
+  purchaseUrl?: string | null;
+  whiteLabel?: WhiteLabel;
+}): Promise<Blob> => {
+  const tealColor = "0D9488";
+  const navyColor = "1E3A5F";
+  const slateColor = "475569";
+  const darkColor = "1E293B";
+  const mutedColor = "94A3B8";
+
+  const heading1 = (text: string) =>
+    new Paragraph({
+      heading: HeadingLevel.HEADING_1,
+      children: [new TextRun({ text, color: navyColor, size: 48, font: "Inter", bold: true })],
+      spacing: { after: 120 },
+    });
+
+  const sectionLabel = (text: string) =>
+    new Paragraph({
+      children: [new TextRun({ text: text.toUpperCase(), color: tealColor, size: 18, font: "Inter", bold: true, characterSpacing: 80 })],
+      spacing: { before: 400, after: 80 },
+    });
+
+  const bodyText = (text: string) =>
+    new Paragraph({
+      children: [new TextRun({ text, color: slateColor, size: 22, font: "Inter" })],
+      spacing: { after: 100 },
+    });
+
+  const mutedText = (text: string) =>
+    new Paragraph({
+      children: [new TextRun({ text, color: mutedColor, size: 20, font: "Inter", italics: true })],
+      spacing: { after: 80 },
+    });
+
+  const fileRow = (filename: string, description: string) =>
+    new Paragraph({
+      children: [
+        new TextRun({ text: filename, color: tealColor, size: 22, font: "Inter", bold: true }),
+        new TextRun({ text: `  —  ${description}`, color: slateColor, size: 22, font: "Inter" }),
+      ],
+      spacing: { after: 100 },
+    });
+
+  const divider = () =>
+    new Paragraph({
+      border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "E2E8F0" } },
+      spacing: { before: 200, after: 200 },
+      children: [],
+    });
+
+  const stepNumber = (n: string, title: string) =>
+    new Paragraph({
+      children: [
+        new TextRun({ text: `${n}.  `, color: tealColor, size: 24, font: "Inter", bold: true }),
+        new TextRun({ text: title, color: darkColor, size: 24, font: "Inter", bold: true }),
+      ],
+      spacing: { before: 280, after: 80 },
+    });
+
+  const isSubscriber = whiteLabel?.is_subscriber ?? false;
+
+  const brandLine = isSubscriber
+    ? []
+    : [new Paragraph({
+        children: [new TextRun({ text: "ConversionDoc", color: tealColor, size: 20, font: "Inter", bold: true, characterSpacing: 60 })],
+        spacing: { after: 60 },
+      })];
+
+  const footerLine = isSubscriber
+    ? []
+    : [
+        divider(),
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: "Generated by ConversionDoc — conversiondoc.co.uk", color: tealColor, size: 18, font: "Inter", bold: true })],
+          spacing: { before: 200 },
+        }),
+      ];
+
+  const children = [
+    ...brandLine,
+    heading1("How to use your Conversion Kit"),
+    ...(purchaseUrl ? [new Paragraph({
+      children: [new TextRun({ text: `Audited: ${purchaseUrl}`, color: tealColor, size: 20, font: "Inter" })],
+      spacing: { after: 80 },
+    })] : []),
+    divider(),
+    sectionLabel("What's in this kit"),
+    fileRow("homepage-audit-report.pdf", "Full conversion audit report — scores, diagnosis, and all recommended fixes"),
+    fileRow("copy-pack.docx", "Homepage-ready copy rewritten to improve clarity, trust, and action"),
+    fileRow("homepage-mockup-a.html / .png", "Improved page direction (Version A) — open the HTML in any browser or share the PNG"),
+    ...(hasMockupB ? [fileRow("homepage-mockup-b.html / .png", "Alternative page direction (Version B)")] : []),
+    fileRow("INSTRUCTIONS.docx", "This document"),
+    divider(),
+    sectionLabel("Step-by-step"),
+    stepNumber("1", "Read the full report"),
+    bodyText("Open homepage-audit-report.pdf. It contains the overall score, diagnosis, and every recommended fix in priority order. Start here before making any changes."),
+    stepNumber("2", "Use the copy pack"),
+    bodyText("Open copy-pack.docx in Word or Google Docs. It contains rewritten headline, subheadline, CTA, trust line, and benefit bullets — ready to paste directly into the page."),
+    stepNumber("3", "Preview the mockup"),
+    bodyText(`Open homepage-mockup-a.html in any browser to see a visual direction for the improved page.${hasMockupB ? " A second direction is available in homepage-mockup-b.html." : ""} Share the PNG with a developer or designer if needed.`),
+    stepNumber("4", "Apply highest-impact changes first"),
+    bodyText("Focus on Priority 1 and 2 fixes before anything else. Small, targeted changes to the headline and CTA typically deliver the fastest results."),
+    ...(isSubscriber ? [] : [
+      stepNumber("5", "Need help implementing?"),
+      bodyText("Get in touch at hello@conversiondoc.co.uk — we offer implementation support, copy rewrites, and full page redesigns."),
+    ]),
+    divider(),
+    sectionLabel("Tips"),
+    bodyText("✓  Make one change at a time so you can measure the impact of each fix."),
+    bodyText("✓  Prioritise mobile — check every change on a phone before publishing."),
+    bodyText("✓  Re-run your audit in 30 days to track your score improvement."),
+    bodyText("✓  If in doubt, follow the Priority order in the report — it's ranked by impact."),
+    ...(purchaseUrl ? [divider(), mutedText(`Audited: ${purchaseUrl}`)] : []),
+    ...footerLine,
+  ];
+
+  const doc = new Document({
+    sections: [{
+      properties: { page: { margin: { top: 1000, right: 1000, bottom: 1000, left: 1000 } } },
+      children,
+    }],
+  });
+
   return await Packer.toBlob(doc);
 };
 
@@ -491,7 +577,6 @@ export default function ReportById() {
         if (error || !data) throw new Error("Report not found");
         setPurchase(data as PurchaseRow);
 
-        // Load white label settings
         const { data: subData } = await supabase
           .from("subscriptions")
           .select("white_label_logo, white_label_theme, status")
@@ -631,12 +716,26 @@ export default function ReportById() {
     try {
       setDownloadingKit(true);
       const zip = new JSZip();
+
+      // PDF report (no "How to use this kit" page)
       try {
         const pdf = buildPdf({ overallScore, auditData, topFixes, orderedScores, summary, purchaseUrl: purchase?.url, hasMockupB: !!mockupHtmlB, whiteLabel });
         zip.file("homepage-audit-report.pdf", await pdf.output("blob").arrayBuffer());
       } catch (e) { console.error("PDF for ZIP failed:", e); }
+
+      // Copy pack docx
       const docxBlob = await buildDocx({ copyPack, overallScore, summary, topFixes, purchaseUrl: purchase?.url, whiteLabel });
       zip.file("copy-pack.docx", await docxBlob.arrayBuffer());
+
+      // Instructions docx
+      const instructionsBlob = await buildInstructionsDocx({
+        hasMockupB: !!mockupHtmlB,
+        purchaseUrl: purchase?.url,
+        whiteLabel,
+      });
+      zip.file("INSTRUCTIONS.docx", await instructionsBlob.arrayBuffer());
+
+      // Mockup files
       if (mockupHtml) {
         zip.file("homepage-mockup-a.html", buildMockupHtmlFile(mockupHtml));
         try { const png = await generateMockupPng(mockupHtml); zip.file("homepage-mockup-a.png", png.split(",")[1], { base64: true }); } catch (e) { console.error(e); }
@@ -645,6 +744,7 @@ export default function ReportById() {
         zip.file("homepage-mockup-b.html", buildMockupHtmlFile(mockupHtmlB));
         try { const png = await generateMockupPng(mockupHtmlB); zip.file("homepage-mockup-b.png", png.split(",")[1], { base64: true }); } catch (e) { console.error(e); }
       }
+
       saveAs(await zip.generateAsync({ type: "blob" }), `${isWhiteLabel ? "" : "conversiondoc-"}homepage-kit.zip`);
     } catch (e) { console.error(e); } finally { setDownloadingKit(false); }
   };
