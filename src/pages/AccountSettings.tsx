@@ -77,7 +77,6 @@ export default function AccountSettings() {
     try {
       setUploading(true);
 
-      // Send file to edge function which uploads using service role key
       const formData = new FormData();
       formData.append("email", email);
       formData.append("file", file);
@@ -356,7 +355,7 @@ export default function AccountSettings() {
                     <img
                       src={settings.logo}
                       alt="Your logo"
-                      className={`h-10 max-w-[140px] object-contain ${settings.theme === "dark" ? "brightness-0 invert" : ""}`}
+                      className="h-10 max-w-[140px] object-contain"
                     />
                   ) : (
                     <div className={`text-sm font-bold tracking-wide ${settings.theme === "dark" ? "text-teal-400" : "text-teal-600"}`}>
