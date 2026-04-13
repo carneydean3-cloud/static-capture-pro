@@ -77,6 +77,7 @@ export default function AccountSettings() {
     try {
       setUploading(true);
 
+      // Send file to edge function which uploads using service role key
       const formData = new FormData();
       formData.append("email", email);
       formData.append("file", file);
@@ -98,7 +99,11 @@ export default function AccountSettings() {
         throw new Error(data.error || "Upload failed");
       }
 
-      setSettings((prev) => ({ ...prev, logo: data.url }));
+      // Cache-bust so new uploads always appear immediately
+      const v = Date.now();
+      const busted = data.url.includes("?") ? `${data.url}&v=${v}` : `${data.url}?v=${v}`;
+
+      setSettings((prev) => ({ ...prev, logo: busted }));
     } catch (e: any) {
       setUploadError("Upload failed. Please try again.");
       console.error("Logo upload error:", e);
