@@ -185,7 +185,7 @@ const HeroSection = () => {
           </span>
         </motion.div>
 
-        {/* Headline */}
+        {/* Headline — ✅ teal accent on "fix." */}
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -193,7 +193,7 @@ const HeroSection = () => {
           className="text-5xl md:text-7xl font-bold tracking-tight mb-8 leading-[1.1]"
         >
           Other tools diagnose.<br />
-          We fix.
+          We <span className="text-teal-400">fix.</span>
         </motion.h1>
 
         {/* Subheadline */}
