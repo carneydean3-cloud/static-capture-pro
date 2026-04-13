@@ -56,12 +56,12 @@ const Footer = () => (
         >
           Refund
         </Link>
-        <a
-          href="mailto:support@conversiondoc.co.uk"
+        <Link
+          to="/contact"
           className="hover:text-foreground transition-colors"
         >
           Contact
-        </a>
+        </Link>
       </div>
 
       {/* Copyright */}
