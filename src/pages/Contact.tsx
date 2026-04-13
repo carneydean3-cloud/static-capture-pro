@@ -10,9 +10,7 @@ export default function Contact() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  // Honeypot (bots will fill this)
-  const [company, setCompany] = useState("");
-  // Time-gate timestamp
+  const [company, setCompany] = useState(""); // honeypot
   const formTsRef = useRef<number>(Date.now());
 
   useEffect(() => {
@@ -33,25 +31,14 @@ export default function Contact() {
     try {
       const { error } = await supabase.functions.invoke("submit-contact", {
         method: "POST",
-        body: {
-          name,
-          email,
-          message,
-          hp: company,
-          ts: formTsRef.current,
-        },
+        body: { name, email, message, hp: company, ts: formTsRef.current },
       });
-
       if (error) throw error;
 
       setSuccess(true);
-      setName("");
-      setEmail("");
-      setMessage("");
-      setCompany("");
+      setName(""); setEmail(""); setMessage(""); setCompany("");
       formTsRef.current = Date.now();
     } catch (err: any) {
-      console.error(err);
       setError(err?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
@@ -63,88 +50,41 @@ export default function Contact() {
       <div className="max-w-2xl mx-auto px-6 py-16">
         <div className="rounded-[28px] border border-slate-200 bg-white shadow-sm p-8 md:p-10">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Contact Us</h1>
-          <p className="text-slate-500 mb-8">
-            Questions, support, or partnership ideas — we’d love to hear from you.
-          </p>
+          <p className="text-slate-500 mb-8">Questions, support, or partnership ideas — we’d love to hear from you.</p>
 
-          {error && (
-            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-              Thanks — your message has been sent. We’ll get back to you shortly.
-            </div>
-          )}
+          {error && <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
+          {success && <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">Thanks — your message has been sent. We’ll get back to you shortly.</div>}
 
           <form onSubmit={onSubmit} className="space-y-5">
-            {/* Honeypot (hidden) */}
             <div className="absolute -z-10 opacity-0 pointer-events-none" aria-hidden="true">
               <label>
                 Company
-                <input
-                  type="text"
-                  value={company}
-                  onChange={(e) => setCompany(e.target.value)}
-                  tabIndex={-1}
-                  autoComplete="off"
-                />
+                <input type="text" value={company} onChange={(e) => setCompany(e.target.value)} tabIndex={-1} autoComplete="off" />
               </label>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              />
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Name</label>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              />
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Email</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Message
-              </label>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                required
-                rows={6}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-vertical"
-              />
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Message</label>
+              <textarea value={message} onChange={(e) => setMessage(e.target.value)} required rows={6} className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-vertical" />
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-teal-500 hover:bg-teal-600 disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm shadow-sm"
-            >
+            <button type="submit" disabled={loading} className="w-full bg-teal-500 hover:bg-teal-600 disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm shadow-sm">
               {loading ? "Sending…" : "Send Message →"}
             </button>
 
             <p className="text-xs text-slate-400">
               We’ll use your details only to reply to your message. See our{" "}
-              <a className="text-teal-600 hover:text-teal-700 underline" href="/privacy">
-                Privacy Policy
-              </a>.
+              <a className="text-teal-600 hover:text-teal-700 underline" href="/privacy">Privacy Policy</a>.
             </p>
           </form>
         </div>
