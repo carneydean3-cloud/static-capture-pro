@@ -1,3 +1,4 @@
+// src/App.tsx
 import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, useNavigate } from "react-router-dom";
@@ -20,6 +21,7 @@ import Privacy from "./pages/Privacy.tsx";
 import Refund from "./pages/Refund.tsx";
 import GeoAudit from "./pages/GeoAudit.tsx";
 import AccountSettings from "./pages/AccountSettings.tsx";
+import Contact from "./pages/Contact.tsx"; // ← added
 
 const queryClient = new QueryClient();
 
@@ -61,6 +63,7 @@ const App = () => (
               <Route path="/refund" element={<Refund />} />
               <Route path="/geo-audit" element={<GeoAudit />} />
               <Route path="/account" element={<AccountSettings />} />
+              <Route path="/contact" element={<Contact />} /> {/* ← added */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
