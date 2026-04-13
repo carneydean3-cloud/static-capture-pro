@@ -116,7 +116,7 @@ const GeoHeroSection = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${supabaseKey}`,
         },
-        body: JSON.stringify({ url: normalizedUrl, focus: "geo" }), // ← ONLY CHANGE
+        body: JSON.stringify({ url: normalizedUrl, focus: "geo" }),
       });
 
       clearTimeout(timer1);
@@ -175,14 +175,14 @@ const GeoHeroSection = () => {
           </span>
         </motion.div>
 
-        {/* Headline */}
+        {/* Headline — ✅ teal accent on "invisible" */}
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
           className="text-5xl md:text-7xl font-bold tracking-tight mb-8 leading-[1.1]"
         >
-          Is your page invisible<br />
+          Is your page <span className="text-teal-400">invisible</span><br />
           to AI search?
         </motion.h1>
 
