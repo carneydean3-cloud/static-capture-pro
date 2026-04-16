@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "../integrations/supabase/client";
+import { cn } from "@/lib/utils";
+import { AlertCircle, ArrowRight, CheckCircle2, Zap, LayoutDashboard } from "lucide-react";
 
 type TopFix = {
   priority?: number;
@@ -35,39 +37,15 @@ type AuditRow = {
   tier?: string | null;
 };
 
-const impactColor: Record<string, string> = {
-  High: "#ef4444",
-  Medium: "#f59e0b",
-  Low: "#6b7280",
-};
-
-const impactBg: Record<string, string> = {
-  High: "rgba(239,68,68,0.08)",
-  Medium: "rgba(245,158,11,0.08)",
-  Low: "rgba(107,114,128,0.08)",
-};
-
 const scoreColor = (score?: number | null) => {
-  if (typeof score !== "number") return "text-slate-400";
-  if (score >= 70) return "text-emerald-600";
-  if (score >= 50) return "text-amber-500";
-  return "text-red-500";
+  if (typeof score !== "number") return "text-data";
+  if (score >= 70) return "text-[#10b981]";
+  if (score >= 40) return "text-[#f59e0b]";
+  return "text-[#E11D48]";
 };
 
 const prettyLabel = (key: string) =>
   key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-
-// GEO-related pillar key fragments to match against
-const GEO_PILLAR_KEYS = [
-  "ai_search",
-  "ai_readiness",
-  "geo",
-  "search_readiness",
-  "ai_search_readiness",
-];
-
-const isGeoPillar = (key: string) =>
-  GEO_PILLAR_KEYS.some((fragment) => key.toLowerCase().includes(fragment));
 
 export default function FreeAuditReport() {
   const { id } = useParams<{ id: string }>();
@@ -78,19 +56,21 @@ export default function FreeAuditReport() {
   const [error, setError] = useState("");
   const [audit, setAudit] = useState<AuditRow | null>(null);
 
+  const activeColor = isGeoFocus ? "text-neon" : "text-pulse";
+  const activeBorder = isGeoFocus ? "border-neon/30" : "border-pulse/30";
+  const activeBg = isGeoFocus ? "bg-neon/10" : "bg-pulse/10";
+  const activeBtn = isGeoFocus ? "btn-neon" : "btn-pulse";
+
   useEffect(() => {
     const load = async () => {
       try {
         if (!id) throw new Error("Missing audit ID");
-
         const { data, error } = await supabase
           .from("audits")
           .select("id, email, url, overall_score, verdict, top_3_fixes, full_results, tier")
           .eq("id", id)
           .single();
-
         if (error || !data) throw new Error("Audit not found");
-
         setAudit(data as AuditRow);
       } catch (e: any) {
         setError(e?.message || "Could not load audit");
@@ -98,270 +78,142 @@ export default function FreeAuditReport() {
         setLoading(false);
       }
     };
-
     load();
   }, [id]);
 
   const topFixes = useMemo(() => {
     const direct = audit?.top_3_fixes;
-    if (Array.isArray(direct) && direct.length) {
-      return [...direct].sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99));
-    }
-
+    if (Array.isArray(direct) && direct.length) return [...direct].sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99));
     const nested = audit?.full_results?.top_3_fixes;
-    if (Array.isArray(nested) && nested.length) {
-      return [...nested].sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99));
-    }
-
+    if (Array.isArray(nested) && nested.length) return [...nested].sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99));
     return [];
   }, [audit]);
 
   const scores = audit?.full_results?.scores ?? {};
   const summary = audit?.full_results?.summary ?? {};
 
-  // Reorder scores based on focus
-  const orderedScores = useMemo(() => {
-    const entries = Object.entries(scores);
-    if (!isGeoFocus) return entries.slice(0, 3);
-
-    const geoEntries = entries.filter(([key]) => isGeoPillar(key));
-    const otherEntries = entries.filter(([key]) => !isGeoPillar(key));
-    return [...geoEntries, ...otherEntries].slice(0, 3);
-  }, [scores, isGeoFocus]);
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f5f8fc] flex items-center justify-center">
+      <div className="min-h-screen bg-obsidian flex items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-slate-600 font-medium">Loading your audit…</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !audit) {
-    return (
-      <div className="min-h-screen bg-[#f5f8fc] flex items-center justify-center px-6">
-        <div className="max-w-md w-full bg-white rounded-[24px] border border-red-100 shadow-sm p-8 text-center space-y-4">
-          <p className="text-4xl">⚠️</p>
-          <h1 className="text-xl font-bold text-slate-900">Audit unavailable</h1>
-          <p className="text-slate-600 text-sm">{error || "Could not load this audit."}</p>
-          <a
-            href="/"
-            className="inline-block mt-4 rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-3 transition-colors text-sm"
-          >
-            Back to home
-          </a>
+          <div className={cn("w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mx-auto", isGeoFocus ? "border-neon" : "border-pulse")} />
+          <p className="text-data font-mono uppercase tracking-widest text-xs">Decrypting Lab Results...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f8fc] px-6 py-16">
-      <div className="mx-auto max-w-5xl space-y-8">
-        <a
-          href={isGeoFocus ? "/geo-audit" : "/"}
-          className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors"
-        >
-          ← Back to {isGeoFocus ? "GEO Audit" : "home"}
-        </a>
+    <div className="min-h-screen bg-obsidian text-clinic px-6 py-16">
+      <div className="mx-auto max-w-5xl space-y-12">
+        
+        <Link to={isGeoFocus ? "/geo-audit" : "/conversion-audit"} className="inline-flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-widest text-data hover:text-clinic transition-colors">
+          ← Return to Diagnostic Suite
+        </Link>
 
-        {/* Header */}
-        <section className="rounded-[32px] overflow-hidden border border-slate-900/10 shadow-[0_20px_60px_rgba(15,23,42,0.12)]">
-          <div className="bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.18),_transparent_30%),linear-gradient(135deg,#020617,#0f172a_50%,#111827)] px-8 py-10 md:px-10 md:py-12">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-400">
-              {isGeoFocus ? "GEO Audit" : "Free Audit"}
-            </p>
-            <h1 className="mt-3 text-4xl md:text-5xl font-bold text-white tracking-tight">
-              {isGeoFocus ? "Your AI Search Readiness Audit" : "Your Conversion Audit"}
-            </h1>
-            {audit.verdict && (
-              <p className="mt-4 text-lg text-slate-300 italic max-w-3xl">
-                "{audit.verdict}"
-              </p>
-            )}
-            {audit.url && (
-              <a
-                href={audit.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-block text-teal-400 text-sm hover:underline"
-              >
-                {audit.url} →
-              </a>
-            )}
-          </div>
-        </section>
-
-        {/* Score + summary */}
-        <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
-          <div className="grid gap-5 md:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
-              <p className="text-sm text-slate-500">
-                {isGeoFocus ? "GEO Readiness Score" : "Overall Score"}
-              </p>
-              <p className={`mt-3 text-5xl font-bold ${scoreColor(audit.overall_score)}`}>
-                {typeof audit.overall_score === "number" ? `${audit.overall_score}/100` : "N/A"}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-teal-100 bg-teal-50 p-6">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-700 mb-2">
-                {isGeoFocus ? "Biggest GEO Opportunity" : "Biggest Opportunity"}
-              </p>
-              <p className="text-slate-900 font-medium text-lg">
-                {summary.biggest_opportunity || audit.verdict || "Your page has clear opportunities to improve."}
-              </p>
-            </div>
-          </div>
-
-          {summary.executive_summary && (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 mt-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">
-                Diagnosis
-              </p>
-              <p className="text-slate-700 leading-8">{summary.executive_summary}</p>
-            </div>
-          )}
-        </section>
-
-        {/* Top 3 fixes */}
-        <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
-          <div className="mb-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">
-              Action Plan
-            </p>
-            <h2 className="mt-2 text-3xl font-bold text-slate-900">
-              {isGeoFocus
-                ? "Your 3 biggest AI visibility gaps"
-                : "Your 3 biggest conversion leaks"}
-            </h2>
-          </div>
-
-          <div className="space-y-4">
-            {topFixes.length > 0 ? (
-              topFixes.map((fix, idx) => {
-                const color = impactColor[fix.impact || "Medium"] || "#f59e0b";
-                const bg = impactBg[fix.impact || "Medium"] || impactBg["Medium"];
-
-                return (
-                  <div
-                    key={idx}
-                    className="flex gap-4 rounded-2xl border p-5"
-                    style={{
-                      borderColor: `${color}25`,
-                      borderLeftWidth: 4,
-                      borderLeftColor: color,
-                      background: bg,
-                    }}
-                  >
-                    <div
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white text-sm font-bold shadow-sm"
-                      style={{ background: color }}
-                    >
-                      {fix.priority ?? idx + 1}
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span
-                          className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border"
-                          style={{ color, background: `${color}15`, borderColor: `${color}30` }}
-                        >
-                          {fix.impact ?? "Medium"} Impact
-                        </span>
-                      </div>
-
-                      {fix.issue && (
-                        <p className="font-semibold text-slate-900 mb-1">{fix.issue}</p>
-                      )}
-
-                      {fix.fix && (
-                        <div className="flex items-start gap-1.5">
-                          <span className="text-teal-500 font-bold text-sm shrink-0">→</span>
-                          <p className="text-sm text-slate-700">{fix.fix}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-slate-600">
-                No priority fixes available for this audit.
+        {/* Clinical Header */}
+        <section className="rounded-lg overflow-hidden border border-surgical bg-[#0A0A0A] relative">
+          <div className={cn("absolute top-0 left-0 w-full h-1", isGeoFocus ? "bg-neon" : "bg-pulse")} />
+          <div className="px-8 py-10 md:px-12 md:py-14">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+              <div>
+                <p className={cn("font-mono text-xs font-bold uppercase tracking-[0.3em] mb-4", activeColor)}>
+                  {isGeoFocus ? "Machine Layer Analysis" : "Human Layer Analysis"}
+                </p>
+                <h1 className="text-4xl md:text-6xl font-black tracking-tighter">
+                  {isGeoFocus ? "GEO_READINESS_REPORT" : "CONVERSION_DIAGNOSIS"}
+                </h1>
+                {audit.url && (
+                  <p className="mt-6 font-mono text-sm text-data opacity-60 truncate max-w-xl">
+                    TARGET_URL: <span className="text-clinic">{audit.url}</span>
+                  </p>
+                )}
               </div>
-            )}
+              <div className="flex flex-col items-end">
+                <div className={cn("text-5xl font-black font-mono tracking-tighter", scoreColor(audit.overall_score))}>
+                  {audit.overall_score || "00"}<span className="text-xl text-data opacity-30">/100</span>
+                </div>
+                <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-data mt-2">Overall Score</p>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* Score preview */}
-        {orderedScores.length > 0 && (
-          <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
-            <div className="mb-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">
-                Preview
-              </p>
-              <h2 className="mt-2 text-3xl font-bold text-slate-900">
-                {isGeoFocus ? "AI Search Readiness Snapshot" : "Breakdown Snapshot"}
-              </h2>
-              <p className="mt-2 text-slate-600">
-                {isGeoFocus
-                  ? "Here's a preview of your AI search readiness across key GEO dimensions."
-                  : "Here's a preview of your performance across a few key conversion pillars."}
-              </p>
-            </div>
-
-            <div className="space-y-5">
-              {orderedScores.map(([pillar, value]) => (
-                <div key={pillar} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-xl font-semibold text-slate-900">{prettyLabel(pillar)}</h3>
-                    <span className={scoreColor(value?.score)}>
-                      {typeof value?.score === "number" ? `${value.score}/10` : "—"}
-                    </span>
-                  </div>
-                  {value?.issue && <p className="text-slate-700 text-sm">{value.issue}</p>}
-                </div>
-              ))}
-            </div>
+        {/* Executive Summary */}
+        <div className="grid md:grid-cols-3 gap-6">
+          <section className="md:col-span-2 rounded-lg border border-surgical bg-[#0A0A0A] p-8">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-data mb-6 opacity-60">Diagnostic Summary</p>
+            <h2 className="text-2xl font-bold mb-4">Biggest Opportunity</h2>
+            <p className="text-lg text-data leading-relaxed italic border-l-2 border-surgical pl-6 py-2">
+              "{summary.biggest_opportunity || audit.verdict || "Your page has significant visibility gaps that need immediate addressing."}"
+            </p>
           </section>
-        )}
+
+          <section className="rounded-lg border border-surgical bg-[#0A0A0A] p-8 flex flex-col justify-center text-center">
+             <div className={cn("w-3 h-3 rounded-full animate-pulse mx-auto mb-4", 
+               audit.overall_score && audit.overall_score >= 70 ? "bg-[#10b981]" : (audit.overall_score && audit.overall_score < 40 ? "bg-[#E11D48]" : "bg-[#f59e0b]")
+             )} />
+             <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-data mb-1">Status Verdict</p>
+             <h3 className={cn("text-xl font-black uppercase tracking-tight", scoreColor(audit.overall_score))}>
+               {audit.verdict?.replace(" ", "_") || "NEEDS_ATTENTION"}
+             </h3>
+          </section>
+        </div>
+
+        {/* Action Plan / Top 3 Fixes */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-4">
+            <h2 className="text-3xl font-black tracking-tight">Priority Fixes</h2>
+            <div className="h-px flex-1 bg-surgical" />
+          </div>
+          
+          <div className="grid gap-4">
+            {topFixes.map((fix, idx) => (
+              <div key={idx} className="group relative bg-[#0A0A0A] border border-surgical rounded-lg p-6 hover:bg-[#111111] transition-colors">
+                <div className="flex items-start gap-6">
+                  <div className={cn("w-10 h-10 rounded-md flex items-center justify-center font-mono font-bold text-black shrink-0", 
+                    fix.impact === "High" ? "bg-[#E11D48]" : (fix.impact === "Medium" ? "bg-[#f59e0b]" : "bg-data")
+                  )}>
+                    0{fix.priority ?? idx + 1}
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-data opacity-50 block mb-1">Detected Issue</span>
+                      <h4 className="text-xl font-bold text-clinic leading-tight">{fix.issue}</h4>
+                    </div>
+                    <div>
+                      <span className={cn("font-mono text-[10px] font-bold uppercase tracking-widest block mb-1", activeColor)}>Prescribed Fix</span>
+                      <p className="text-data leading-relaxed">{fix.fix}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Upgrade CTA */}
-        <section className="rounded-[28px] overflow-hidden border border-slate-900/10 shadow-[0_20px_60px_rgba(15,23,42,0.12)]">
-          <div className="bg-[linear-gradient(135deg,#020617,#0f172a_50%,#111827)] px-8 py-10 md:px-10 md:py-12">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-400">
-              {isGeoFocus ? "Want the full GEO diagnosis?" : "Want the full diagnosis?"}
+        <section className="rounded-lg overflow-hidden border border-surgical bg-[#0A0A0A] relative p-10 text-center">
+          <div className={cn("absolute inset-0 opacity-10", isGeoFocus ? "bg-neon" : "bg-pulse")} />
+          <div className="relative z-10 max-w-2xl mx-auto">
+            <Zap className={cn("w-10 h-10 mx-auto mb-6", activeColor)} />
+            <h2 className="text-3xl md:text-4xl font-black mb-4">Unlock the Full Lab Report</h2>
+            <p className="text-data text-lg mb-8 font-mono">
+              {isGeoFocus 
+                ? "Get the section-by-section content restructure, full entity markup code, and your ready-to-publish GEO prescription."
+                : "Get every specific psychological fix, rewritten copy for every section, and your brand-matched homepage mockup."}
             </p>
-            <h2 className="mt-3 text-3xl md:text-4xl font-bold text-white tracking-tight max-w-3xl">
-              {isGeoFocus
-                ? "Unlock every AI visibility issue, rewritten content, and your full GEO prescription."
-                : "Unlock every issue, rewritten copy, and your improved homepage mockup."}
-            </h2>
-            <p className="mt-4 text-slate-300 max-w-2xl leading-7">
-              {isGeoFocus
-                ? "The free GEO audit shows where AI search cannot find you. The Full Diagnosis shows exactly how to fix it."
-                : "The free audit shows where you're leaking conversions. The Full Diagnosis shows exactly how to fix it."}
-            </p>
-
-            <div className="mt-8 flex flex-wrap gap-4">
-              <a
-                href="/pricing"
-                className="inline-flex items-center rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-6 py-3 transition-colors text-sm shadow-sm"
-              >
-                Get Full Diagnosis — £149
-              </a>
-              <a
-                href={isGeoFocus ? "/geo-audit" : "/"}
-                className="inline-flex items-center rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white font-semibold px-6 py-3 transition-colors text-sm shadow-sm"
-              >
-                {isGeoFocus ? "Run another GEO audit" : "Run another audit"}
-              </a>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link to="/pricing" className={cn("px-10 py-4 font-black uppercase tracking-widest text-sm", activeBtn)}>
+                Upgrade to Full Diagnosis — £149
+              </Link>
+              <Link to={isGeoFocus ? "/geo-audit" : "/conversion-audit"} className="px-10 py-4 font-bold uppercase tracking-widest text-sm border border-surgical hover:bg-white/5 transition-colors">
+                Run Another Audit
+              </Link>
             </div>
           </div>
         </section>
+
       </div>
     </div>
   );
