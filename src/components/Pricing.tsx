@@ -10,6 +10,12 @@ const Pricing = () => {
 
   const isGeoMode = window.location.pathname.includes("geo-audit");
 
+  const activeColor = isGeoMode ? "text-neon" : "text-pulse";
+  const activeBg = isGeoMode ? "bg-neon" : "bg-pulse";
+  const activeBorder = isGeoMode ? "border-neon/50" : "border-pulse/50";
+  const activeBtn = isGeoMode ? "btn-neon" : "btn-pulse";
+  const activeOutline = isGeoMode ? "border border-neon text-neon hover:bg-neon/10" : "border border-pulse text-pulse hover:bg-pulse/10";
+
   const handleSubscriptionCheckout = async (plan: string) => {
     setCheckoutLoading(plan);
     setCheckoutError(null);
@@ -92,8 +98,8 @@ const Pricing = () => {
         "Everything in Full Diagnosis",
         "20 Full Audits Per Month",
         "Run Audits on Client Sites",
-        "White Label Reports (Your Logo + Branding)",
-        "AI Search Readiness on Every Audit",
+        "White Label Reports (Your Logo)",
+        "AI Search Readiness Included",
         "Priority Support",
       ],
       cta: "Start Starter Pro",
@@ -113,8 +119,8 @@ const Pricing = () => {
         "Everything in Starter Pro",
         "Unlimited Full Audits",
         "Audit All Client Sites",
-        "White Label Reports (Your Logo + Branding)",
-        "AI Search Readiness on Every Audit",
+        "White Label Reports (Your Logo)",
+        "AI Search Readiness Included",
         "Priority Support",
       ],
       cta: "Start Agency Pro",
@@ -132,8 +138,8 @@ const Pricing = () => {
       features: [
         "Everything in Agency Pro",
         "Unlimited GEO + Conversion Audits",
-        "Full GEO + AI Search Readiness Reports",
-        "White Label Reports (Your Logo + Branding)",
+        "Full GEO + AI Search Reports",
+        "White Label Reports (Your Logo)",
         "Multi-Tool Dashboard",
         "Priority Support",
       ],
@@ -169,7 +175,7 @@ const Pricing = () => {
         "Full GEO + Conversion Audit",
         "AI Search Readiness Score (Detailed)",
         "Every Visibility Gap Identified",
-        "Structured Content Fixes (Every Section)",
+        "Structured Content Fixes",
         "Conversion Alignment Assessment",
         "Brand-Matched Mockup (PNG)",
         "Ready-to-Use Code (Paste Straight In)",
@@ -183,13 +189,13 @@ const Pricing = () => {
       name: "GEO Starter Pro",
       price: 99,
       isMonthly: true,
-      description: "20 full GEO + conversion audits per month. Built for freelancers managing client visibility.",
+      description: "20 full GEO audits per month. Built for freelancers managing client visibility.",
       features: [
         "AI Search Readiness on Every Audit",
         "Full GEO + Conversion Reports",
         "20 Full Audits Per Month",
         "Audit Client Sites",
-        "White Label Reports (Your Logo + Branding)",
+        "White Label Reports (Your Logo)",
         "Priority Support",
       ],
       cta: "Start GEO Starter Pro",
@@ -204,13 +210,13 @@ const Pricing = () => {
       name: "GEO Agency Pro",
       price: 199,
       isMonthly: true,
-      description: "Unlimited GEO + conversion audits. Built for agencies managing AI visibility across multiple client sites.",
+      description: "Unlimited GEO audits. Built for agencies managing AI visibility across multiple sites.",
       features: [
         "Unlimited GEO + Conversion Audits",
         "AI Search Readiness on Every Audit",
         "Full Reports on Every Client Site",
         "Audit All Client Sites",
-        "White Label Reports (Your Logo + Branding)",
+        "White Label Reports (Your Logo)",
         "Priority Support",
       ],
       cta: "Start GEO Agency Pro",
@@ -228,8 +234,8 @@ const Pricing = () => {
       features: [
         "Everything in GEO Agency Pro",
         "Unlimited Conversion + GEO Audits",
-        "Full GEO + AI Search Readiness Reports",
-        "White Label Reports (Your Logo + Branding)",
+        "Full GEO + AI Search Reports",
+        "White Label Reports (Your Logo)",
         "Multi-Tool Dashboard",
         "Priority Support",
       ],
@@ -243,23 +249,25 @@ const Pricing = () => {
   const plans = isGeoMode ? geoPlans : conversionPlans;
 
   return (
-    <section id="pricing" className="py-24 px-6">
+    <section id="pricing" className="py-24 px-6 bg-obsidian border-t border-surgical">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-20">
-          <span className="section-label mb-4 block">Pricing</span>
-          <h2 className="section-heading mb-6">
-            Simple, transparent pricing.
+          <span className={`font-mono text-xs font-bold uppercase tracking-widest mb-4 block ${activeColor}`}>
+            Transparent Pricing
+          </span>
+          <h2 className="text-4xl md:text-5xl font-black mb-6 text-clinic">
+            Select your diagnostic depth.
           </h2>
-          <p className="body-text max-w-2xl mx-auto">
+          <p className="text-lg text-data max-w-2xl mx-auto">
             {isGeoMode
-              ? "No hidden fees. Every plan includes GEO diagnosis and AI search readiness. Choose the depth that fits your needs."
-              : "No hidden fees. Every plan includes conversion diagnosis and AI search readiness. Choose the depth that fits your needs."}
+              ? "No hidden fees. Every plan includes deep GEO diagnosis and AI search readiness metrics."
+              : "No hidden fees. Every plan includes psychological conversion analysis and AI search readiness."}
           </p>
         </div>
 
         {checkoutError && (
           <div className="text-center mb-8">
-            <p className="text-sm text-red-400">{checkoutError}</p>
+            <p className="text-sm text-warning font-mono">{checkoutError}</p>
           </div>
         )}
 
@@ -271,42 +279,42 @@ const Pricing = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className={`glass-card p-8 relative flex flex-col ${plan.popular ? "border-primary/50 scale-105" : ""}`}
+              className={`bg-[#0A0A0A] p-8 rounded-lg relative flex flex-col transition-colors duration-300 ${plan.popular ? `border-2 ${activeBorder} shadow-[0_0_30px_rgba(0,0,0,0.5)] scale-105 z-10` : "border border-surgical hover:bg-[#111111]"}`}
             >
               {plan.popular && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full flex items-center gap-1.5">
+                <div className={`absolute -top-4 left-1/2 -translate-x-1/2 ${activeBg} text-black text-xs font-mono font-bold uppercase tracking-widest px-4 py-1.5 rounded-full flex items-center gap-1.5`}>
                   <Star className="w-3 h-3" /> {plan.popularLabel}
                 </div>
               )}
 
               {/* Launch price badge */}
               {plan.isLaunchPrice && (
-                <div className="flex items-center gap-1.5 mb-3">
-                  <Lock className="w-3 h-3 text-primary" />
-                  <span className="text-xs font-semibold text-primary">
-                    Launch Price — Price increases in 30 days
+                <div className="flex items-center gap-1.5 mb-3 opacity-80">
+                  <Lock className={`w-3 h-3 ${activeColor}`} />
+                  <span className={`text-xs font-mono tracking-wider uppercase ${activeColor}`}>
+                    Launch Pricing Active
                   </span>
                 </div>
               )}
 
-              <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
+              <h3 className="text-xl font-bold mb-2 text-clinic">{plan.name}</h3>
               <div className="flex items-baseline gap-1 mb-4">
-                <span className="text-4xl font-bold">
+                <span className="text-4xl font-black text-clinic">
                   {plan.price === 0 ? "Free" : formatPrice(plan.price)}
                 </span>
                 {plan.isMonthly && (
-                  <span className="text-sm text-muted-foreground">/mo</span>
+                  <span className="text-sm text-data font-mono">/mo</span>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground mb-8">
+              <p className="text-sm text-data mb-8 min-h-[40px]">
                 {plan.description}
               </p>
 
               <ul className="space-y-3 mb-8 flex-1">
                 {plan.features.map((feature, i) => (
-                  <li key={i} className="flex items-center gap-3 text-sm">
-                    <Check className="w-4 h-4 text-primary shrink-0" />
-                    {feature}
+                  <li key={i} className="flex items-start gap-3 text-sm text-clinic">
+                    <Check className={`w-4 h-4 ${activeColor} shrink-0 mt-0.5`} />
+                    <span className="leading-snug opacity-90">{feature}</span>
                   </li>
                 ))}
               </ul>
@@ -315,11 +323,9 @@ const Pricing = () => {
               {plan.ctaAction === "free" ? (
                 <a
                   href="#hero-cta"
-                  className={
-                    plan.popular
-                      ? "btn-primary w-full block text-center"
-                      : "btn-outline-primary w-full block text-center"
-                  }
+                  className={`w-full block text-center font-bold px-6 py-3 rounded-md transition-all duration-200 ${
+                    plan.popular ? activeBtn : `${activeOutline} bg-transparent`
+                  }`}
                 >
                   {plan.cta}
                 </a>
@@ -328,8 +334,8 @@ const Pricing = () => {
                   type="button"
                   onClick={() => handleSubscriptionCheckout(plan.ctaAction)}
                   disabled={checkoutLoading === plan.ctaAction}
-                  className={`w-full flex items-center justify-center gap-2 ${
-                    plan.popular ? "btn-primary" : "btn-outline-primary"
+                  className={`w-full flex items-center justify-center gap-2 font-bold px-6 py-3 rounded-md transition-all duration-200 ${
+                    plan.popular ? activeBtn : `${activeOutline} bg-transparent`
                   } disabled:opacity-60 disabled:cursor-not-allowed`}
                 >
                   {checkoutLoading === plan.ctaAction
@@ -343,7 +349,7 @@ const Pricing = () => {
 
               {/* Refund text */}
               {plan.refundText && (
-                <p className="text-xs text-muted-foreground mt-4 text-center">
+                <p className="text-xs text-data font-mono uppercase tracking-widest mt-4 text-center opacity-60">
                   {plan.refundText}
                 </p>
               )}
@@ -354,7 +360,7 @@ const Pricing = () => {
                   type="button"
                   onClick={() => handleSubscriptionCheckout(plan.upsellTarget!)}
                   disabled={checkoutLoading === plan.upsellTarget}
-                  className="mt-4 text-xs text-primary hover:underline text-center w-full disabled:opacity-60"
+                  className={`mt-4 text-xs ${activeColor} hover:underline text-center w-full disabled:opacity-60 font-mono tracking-wide`}
                 >
                   {checkoutLoading === plan.upsellTarget
                     ? "Processing..."
@@ -371,20 +377,20 @@ const Pricing = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="mt-16 glass-card p-8 max-w-3xl mx-auto text-center"
+          className={`mt-16 bg-[#0A0A0A] border ${activeBorder} rounded-lg p-8 max-w-3xl mx-auto text-center`}
         >
-          <p className="text-xs font-bold uppercase tracking-widest text-primary mb-3">
-            {isGeoMode ? "GEO + Conversion" : "New — AI Search Readiness"}
+          <p className={`text-xs font-mono font-bold uppercase tracking-widest mb-3 ${activeColor}`}>
+            {isGeoMode ? "GEO + Conversion" : "AI Search Readiness Included"}
           </p>
-          <h3 className="text-xl font-bold mb-3">
+          <h3 className="text-xl font-bold mb-3 text-clinic">
             {isGeoMode
-              ? "AI visibility and conversion. Both covered."
+              ? "AI visibility and human conversion. Both covered."
               : "Built for humans. Ready for AI."}
           </h3>
-          <p className="text-sm text-body leading-relaxed">
+          <p className="text-sm text-data leading-relaxed">
             {isGeoMode
               ? "Every GEO audit includes a conversion alignment check — so you know your page can be found by AI search and converts when visitors arrive."
-              : "Every audit now includes an AI Search Readiness check — so you know whether your page is structured to be found, understood, and cited by AI search engines like ChatGPT, Perplexity, and Google AI Overviews."}
+              : "Every audit now includes an AI Search Readiness check — so you know whether your page is structured to be found, understood, and cited by AI search engines."}
           </p>
         </motion.div>
       </div>
