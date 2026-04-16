@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../integrations/supabase/client";
+import { cn } from "@/lib/utils";
+import { LayoutDashboard, LogOut, Zap, Clock, Globe, Palette, AlertCircle } from "lucide-react";
 
 type SubscriptionData = {
   plan: string;
@@ -40,8 +42,6 @@ export default function Dashboard() {
   const [history, setHistory] = useState<AuditHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  const abortRef = useRef<AbortController | null>(null);
-
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -62,21 +62,21 @@ export default function Dashboard() {
     try {
       const { data, error } = await supabase.functions.invoke("verify-subscription", {
         method: "POST",
-        body: { email, product: "conversion" }, // ✅ strict gating
+        body: { email, product: "conversion" },
       });
       if (error || !data?.subscribed) {
-        setSubError("No active subscription found for this email.");
+        setSubError("No active subscription found.");
         return;
       }
       setSubscription({
         plan: data.plan,
         audits_remaining: data.audits_remaining,
         limit_reached: data.limit_reached,
-        allowed: data.allowed !== false, // ✅ default true if not present
+        allowed: data.allowed !== false,
         upgrade: data.upgrade,
       });
     } catch (e: any) {
-      setSubError("Could not verify subscription.");
+      setSubError("Subscription verification offline.");
     }
   };
 
@@ -115,25 +115,21 @@ export default function Dashboard() {
     navigate("/login");
   };
 
-  // ✅ Upsell checkout handler
   const handleUpgradeCheckout = async (plan: string) => {
     setCheckoutLoading(true);
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-subscription-checkout`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({ userEmail, plan }),
-        }
-      );
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-subscription-checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ userEmail, plan }),
+      });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
     } catch (err) {
-      console.error("Upgrade checkout error:", err);
+      console.error(err);
     } finally {
       setCheckoutLoading(false);
     }
@@ -142,62 +138,41 @@ export default function Dashboard() {
   const handleRunAudit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url || auditLoading) return;
-
     const cleanUrl = url.startsWith("http") ? url : `https://${url}`;
-
     setAuditLoading(true);
     setAuditError("");
-    setAuditStep("Fetching page…");
+    setAuditStep("Initializing AI Diagnostics...");
 
     try {
-      setAuditStep("Analysing your page with AI…");
       const { data: auditResult, error: auditErr } = await supabase.functions.invoke("run-audit", {
         method: "POST",
         body: { url: cleanUrl },
       });
+      if (auditErr || !auditResult) throw new Error("Audit failed");
 
-      if (auditErr || !auditResult) {
-        throw new Error(auditErr?.message || "Audit failed");
-      }
-
-      setAuditStep("Generating full diagnosis…");
-
+      setAuditStep("Generating Full Diagnosis...");
       const { data: fullData, error: fullErr } = await supabase.functions.invoke("generate-full-diagnosis", {
         method: "POST",
         body: { auditData: auditResult, url: cleanUrl },
       });
-
       const finalAuditData = fullErr ? auditResult : { ...auditResult, ...fullData };
 
-      setAuditStep("Saving report…");
-
-      const { data: purchase, error: saveErr } = await supabase
-        .from("purchases")
-        .insert({
+      const { data: purchase, error: saveErr } = await supabase.from("purchases").insert({
           url: cleanUrl,
           email: userEmail,
           audit_data: finalAuditData,
           status: "paid",
           stripe_session_id: null,
-        })
-        .select("id")
-        .single();
+      }).select("id").single();
 
-      if (saveErr || !purchase) {
-        throw new Error("Could not save report");
-      }
-
+      if (saveErr || !purchase) throw new Error("Database sync failed");
       navigate(`/report/${purchase.id}`);
-
     } catch (err: any) {
-      console.error("Audit error:", err);
-      setAuditError(err?.message || "Something went wrong. Please try again.");
+      setAuditError(err?.message || "Audit failed.");
       setAuditLoading(false);
-      setAuditStep("");
     }
   };
 
-  // ✅ Full plan label map
   const planLabel: Record<string, string> = {
     starter_pro: "Starter Pro",
     agency_pro: "Agency Pro",
@@ -206,266 +181,171 @@ export default function Dashboard() {
     agency_max: "Agency Max",
   };
 
-  // ✅ Upsell CTA by plan
   const upsellByPlan: Record<string, { cta: string; target: string } | null> = {
-    starter_pro: { cta: "Need unlimited audits? Upgrade to Agency Pro →", target: "agency_pro" },
-    agency_pro: { cta: "Add GEO + AI Search Readiness — Upgrade to Agency Max →", target: "agency_max" },
-    geo_starter_pro: { cta: "Need unlimited GEO audits? Upgrade to GEO Agency Pro →", target: "geo_agency_pro" },
-    geo_agency_pro: { cta: "Add Conversion Audits — Upgrade to Agency Max →", target: "agency_max" },
+    starter_pro: { cta: "Unlock unlimited audits", target: "agency_pro" },
+    agency_pro: { cta: "Add Machine Layer (GEO) Access", target: "agency_max" },
+    geo_starter_pro: { cta: "Unlock unlimited GEO audits", target: "geo_agency_pro" },
+    geo_agency_pro: { cta: "Add Human Layer (Conversion) Access", target: "agency_max" },
     agency_max: null,
   };
 
-  const scoreColor = (score: number) => {
-    if (score >= 70) return "text-emerald-600";
-    if (score >= 50) return "text-amber-500";
-    return "text-red-500";
-  };
-
-  const formatDate = (iso: string) => {
-    return new Date(iso).toLocaleDateString("en-GB", {
-      day: "numeric", month: "short", year: "numeric",
-    });
-  };
+  const formatDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
   if (authLoading) {
-    return (
-      <div className="min-h-screen bg-[#f5f8fc] flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-slate-600 font-medium">Loading your dashboard…</p>
-        </div>
-      </div>
-    );
+    return <div className="min-h-screen bg-obsidian flex items-center justify-center font-mono text-[10px] uppercase tracking-[0.3em] text-data animate-pulse">Establishing Secure Session...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f8fc]">
-
+    <div className="min-h-screen bg-obsidian text-clinic">
+      
       {/* Nav */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2">
-            <span className="text-xl font-bold text-slate-900">ConversionDoc</span>
-            <span className="text-teal-500 text-xl">⚡</span>
-          </a>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-slate-500 hidden sm:block">{userEmail}</span>
-            {subscription && (
-              <span className="text-xs font-semibold bg-teal-50 text-teal-700 border border-teal-200 px-3 py-1 rounded-full">
-                {planLabel[subscription.plan] || subscription.plan}
-              </span>
-            )}
-            <button
-              onClick={handleSignOut}
-              className="text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors"
-            >
-              Sign out
+      <div className="bg-[#0A0A0A] border-b border-surgical px-6 py-4 sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2 group">
+            <span className="text-xl font-black tracking-tighter text-clinic">ConversionDoc</span>
+            <div className="w-2 h-2 rounded-full bg-pulse animate-pulse" />
+          </Link>
+          <div className="flex items-center gap-6">
+            <span className="text-[10px] font-mono text-data opacity-40 hidden md:block">USER_ID: {userEmail}</span>
+            <button onClick={handleSignOut} className="text-xs font-mono font-bold uppercase tracking-widest text-data hover:text-warning transition-colors flex items-center gap-2">
+              <LogOut className="w-3 h-3" /> Sign Out
             </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
+      <div className="max-w-6xl mx-auto px-6 py-12 space-y-10">
 
-        {/* ✅ Agency Max top banner */}
-        {subscription?.plan === "agency_max" && (
-          <div className="rounded-[20px] bg-teal-50 border border-teal-200 p-5 flex flex-wrap items-center justify-between gap-4">
-            <p className="text-teal-800 font-semibold text-sm">
-              🚀 You're on Agency Max — unlimited conversion + GEO audits.
-            </p>
-            <button
-              onClick={() => navigate("/referral")}
-              className="text-xs font-semibold text-teal-700 hover:underline"
-            >
-              Know another agency? Share ConversionDoc →
-            </button>
-          </div>
-        )}
-
-        {/* ✅ Upsell banner for all other plans */}
-        {subscription && subscription.plan !== "agency_max" && upsellByPlan[subscription.plan] && (
-          <div className="rounded-[20px] bg-slate-50 border border-slate-200 p-5 flex flex-wrap items-center justify-between gap-4">
-            <p className="text-slate-600 text-sm">
-              {upsellByPlan[subscription.plan]?.cta}
-            </p>
-            <button
-              onClick={() => handleUpgradeCheckout(upsellByPlan[subscription.plan]!.target)}
-              disabled={checkoutLoading}
-              className="text-xs font-semibold bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
-            >
-              {checkoutLoading ? "Loading…" : "Upgrade →"}
-            </button>
-          </div>
-        )}
-
-        {/* ✅ Wrong tool banner — GEO-only plan on Conversion dashboard */}
-        {subscription && subscription.allowed === false && (
-          <div className="rounded-[20px] bg-amber-50 border border-amber-200 p-6 text-center">
-            <p className="text-amber-800 font-semibold mb-2">
-              Your current plan doesn't include Conversion audits.
-            </p>
-            <p className="text-amber-700 text-sm mb-4">
-              You're on {planLabel[subscription.plan] || subscription.plan}. Upgrade to Agency Max to unlock both tools.
-            </p>
-            <button
-              onClick={() => handleUpgradeCheckout("agency_max")}
-              disabled={checkoutLoading}
-              className="bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-colors disabled:opacity-50"
-            >
-              {checkoutLoading ? "Loading…" : "Upgrade to Agency Max →"}
-            </button>
-          </div>
-        )}
-
-        {/* Subscription error */}
-        {subError && (
-          <div className="rounded-[20px] bg-red-50 border border-red-200 p-6 text-center">
-            <p className="text-red-600 font-medium mb-2">{subError}</p>
-            <a href="/#pricing" className="text-sm text-teal-600 hover:underline font-medium">
-              View subscription plans →
-            </a>
-          </div>
-        )}
-
-        {/* Subscription status bar */}
-        {subscription && subscription.allowed !== false && (
-          <div className="rounded-[20px] bg-white border border-slate-200 shadow-sm p-6 flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1">
-                Your Plan
-              </p>
-              <p className="text-lg font-bold text-slate-900">
-                {planLabel[subscription.plan] || subscription.plan}
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1">
-                Audits Remaining
-              </p>
-              <p className={`text-2xl font-bold ${subscription.limit_reached ? "text-red-500" : "text-teal-600"}`}>
-                {subscription.audits_remaining >= 999999 ? "Unlimited" : subscription.audits_remaining}
-              </p>
-            </div>
-            {subscription.limit_reached && (
-              <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-2">
-                <p className="text-amber-700 text-sm font-medium">Monthly limit reached</p>
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-surgical">
+           <div>
+              <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-pulse mb-2">Workspace Dashboard</p>
+              <h1 className="text-4xl font-black tracking-tight">Active_Environment</h1>
+           </div>
+           {subscription && (
+              <div className="bg-pulse/10 border border-pulse/30 px-4 py-2 rounded flex items-center gap-3">
+                 <Zap className="w-4 h-4 text-pulse" />
+                 <span className="text-xs font-mono font-bold uppercase tracking-widest text-pulse">{planLabel[subscription.plan] || "Active Plan"}</span>
               </div>
-            )}
-            <a
-              href="/account"
-              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 px-4 py-2.5 transition-colors"
-            >
-              <span className="text-base">🎨</span>
-              <div>
-                <p className="text-xs font-semibold text-slate-900 leading-tight">White Label</p>
-                <p className="text-xs text-slate-500 leading-tight">Logo & report theme</p>
-              </div>
-            </a>
-          </div>
-        )}
-
-        {/* Run audit — only shown if allowed and not limit reached */}
-        {subscription && subscription.allowed !== false && !subscription.limit_reached && (
-          <div className="rounded-[28px] bg-white border border-slate-200 shadow-sm p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600 mb-2">
-              New Audit
-            </p>
-            <h2 className="text-2xl font-bold text-slate-900 mb-6">
-              Run a full audit
-            </h2>
-            <form onSubmit={handleRunAudit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Website URL
-                </label>
-                <input
-                  type="text"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://example.com"
-                  required
-                  disabled={auditLoading}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50"
-                />
-              </div>
-              {auditError && (
-                <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3">
-                  <p className="text-red-600 text-sm">{auditError}</p>
-                </div>
-              )}
-              {auditLoading && (
-                <div className="rounded-xl bg-teal-50 border border-teal-100 px-4 py-3 flex items-center gap-3">
-                  <div className="w-4 h-4 border-2 border-teal-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
-                  <p className="text-teal-700 text-sm font-medium">{auditStep}</p>
-                </div>
-              )}
-              <button
-                type="submit"
-                disabled={auditLoading || !url}
-                className="w-full bg-teal-500 hover:bg-teal-600 disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm shadow-sm"
-              >
-                {auditLoading ? "Running audit…" : "Run Full Audit →"}
-              </button>
-            </form>
-          </div>
-        )}
-
-        {/* Audit history */}
-        <div className="rounded-[28px] bg-white border border-slate-200 shadow-sm p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600 mb-2">
-            History
-          </p>
-          <h2 className="text-2xl font-bold text-slate-900 mb-6">
-            Previous Audits
-          </h2>
-          {historyLoading ? (
-            <div className="flex items-center gap-3 text-slate-400">
-              <div className="w-4 h-4 border-2 border-slate-300 border-t-transparent rounded-full animate-spin" />
-              <span className="text-sm">Loading history…</span>
-            </div>
-          ) : history.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-4xl mb-3">📋</p>
-              <p className="text-slate-500 text-sm">No audits yet. Run your first one above.</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {history.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 hover:bg-slate-100 transition-colors"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-slate-900 text-sm truncate mb-1">
-                      {item.url}
-                    </p>
-                    <p className="text-xs text-slate-500">{formatDate(item.created_at)}</p>
-                    {item.verdict && (
-                      <p className="text-xs text-slate-500 mt-1 truncate">"{item.verdict}"</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4 flex-shrink-0">
-                    {item.overall_score && (
-                      <div className="text-center">
-                        <p className={`text-xl font-bold ${scoreColor(item.overall_score)}`}>
-                          {item.overall_score}
-                        </p>
-                        <p className="text-xs text-slate-400">/100</p>
-                      </div>
-                    )}
-                    <a
-                      href={`/report/${item.id}`}
-                      className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
-                    >
-                      View →
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+           )}
         </div>
 
+        {/* Action Grid */}
+        <div className="grid lg:grid-cols-3 gap-8">
+          
+          {/* Left Column: Sub & New Audit */}
+          <div className="lg:col-span-1 space-y-8">
+            
+            {/* New Audit Card */}
+            <div className="bg-[#0A0A0A] border border-surgical p-8 rounded-lg">
+              <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-data mb-6 opacity-40">New Diagnostic</p>
+              <form onSubmit={handleRunAudit} className="space-y-4">
+                <div className="space-y-2">
+                   <label className="text-[10px] font-mono font-bold uppercase tracking-widest text-clinic">Target URL</label>
+                   <input 
+                    type="text" 
+                    value={url} 
+                    onChange={(e) => setUrl(e.target.value)} 
+                    placeholder="domain.com"
+                    className="w-full bg-black border border-surgical rounded px-4 py-3 text-sm font-mono focus:border-pulse outline-none transition-colors"
+                   />
+                </div>
+                <button 
+                  disabled={auditLoading || !url || subscription?.limit_reached} 
+                  className={cn("w-full py-4 font-black uppercase tracking-widest text-xs transition-all", subscription?.limit_reached ? "bg-surgical text-data cursor-not-allowed" : "btn-pulse")}
+                >
+                  {auditLoading ? auditStep : "Initiate Audit"}
+                </button>
+                {auditError && <p className="text-[10px] font-mono text-warning uppercase mt-2">{auditError}</p>}
+                {subscription?.limit_reached && <p className="text-[10px] font-mono text-warning uppercase mt-2">Monthly Audit Limit Reached</p>}
+              </form>
+            </div>
+
+            {/* Quota Card */}
+            <div className="bg-[#0A0A0A] border border-surgical p-8 rounded-lg">
+              <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-data mb-6 opacity-40">System Resources</p>
+              <div className="space-y-6">
+                 <div>
+                    <div className="flex justify-between items-end mb-2">
+                       <span className="text-xs font-mono text-clinic">Audit Credits</span>
+                       <span className={cn("text-xl font-black font-mono", subscription?.limit_reached ? "text-warning" : "text-pulse")}>
+                        {subscription?.audits_remaining >= 99999 ? "∞" : subscription?.audits_remaining}
+                       </span>
+                    </div>
+                    <div className="h-1 w-full bg-surgical rounded-full overflow-hidden">
+                       <div className="h-full bg-pulse" style={{ width: subscription?.limit_reached ? '100%' : '20%' }} />
+                    </div>
+                 </div>
+
+                 <Link to="/account" className="flex items-center justify-between p-4 bg-black border border-surgical rounded hover:bg-surgical/20 transition-colors group">
+                    <div className="flex items-center gap-3">
+                       <Palette className="w-4 h-4 text-data" />
+                       <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-clinic">White Label Prefs</span>
+                    </div>
+                    <span className="text-data opacity-40 group-hover:translate-x-1 transition-transform">→</span>
+                 </Link>
+              </div>
+            </div>
+
+            {/* Upsell if needed */}
+            {subscription && subscription.plan !== "agency_max" && upsellByPlan[subscription.plan] && (
+               <button 
+                onClick={() => handleUpgradeCheckout(upsellByPlan[subscription.plan]!.target)}
+                className="w-full p-4 border border-pulse/20 bg-pulse/5 rounded-lg text-left group hover:border-pulse/40 transition-colors"
+               >
+                  <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-pulse mb-1">Upgrade Available</p>
+                  <p className="text-xs text-data leading-relaxed">{upsellByPlan[subscription.plan]?.cta}</p>
+               </button>
+            )}
+          </div>
+
+          {/* Right Column: History */}
+          <div className="lg:col-span-2">
+            <div className="bg-[#0A0A0A] border border-surgical rounded-lg overflow-hidden">
+              <div className="px-8 py-6 border-b border-surgical flex justify-between items-center bg-black/40">
+                 <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-data opacity-40">Diagnostic History</p>
+                 <Clock className="w-4 h-4 text-data opacity-20" />
+              </div>
+
+              {historyLoading ? (
+                <div className="p-12 text-center text-xs font-mono uppercase tracking-[0.2em] text-data animate-pulse">Reading Database...</div>
+              ) : history.length === 0 ? (
+                <div className="p-20 text-center space-y-4">
+                  <Globe className="w-8 h-8 text-surgical mx-auto opacity-20" />
+                  <p className="text-xs font-mono text-data opacity-40 uppercase tracking-widest">No case files recorded.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-surgical">
+                  {history.map((item) => (
+                    <Link 
+                      key={item.id} 
+                      to={`/report/${item.id}`}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-6 hover:bg-white/[0.02] transition-colors group"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-3 mb-1">
+                           <span className="text-sm font-bold text-clinic truncate">{item.url}</span>
+                           <span className="text-[9px] font-mono text-data opacity-30">{formatDate(item.created_at)}</span>
+                        </div>
+                        <p className="text-[10px] font-mono text-data opacity-50 uppercase tracking-tighter truncate italic">"{item.verdict}"</p>
+                      </div>
+                      
+                      <div className="flex items-center gap-8 mt-4 sm:mt-0">
+                        <div className="text-right">
+                           <div className={cn("text-xl font-black font-mono", item.overall_score >= 70 ? "text-[#10b981]" : "text-[#f59e0b]")}>
+                            {item.overall_score || "—"}
+                           </div>
+                           <p className="text-[8px] font-mono text-data opacity-30 uppercase tracking-widest">Score</p>
+                        </div>
+                        <span className="w-8 h-8 rounded-full border border-surgical flex items-center justify-center text-data group-hover:text-pulse group-hover:border-pulse transition-colors">→</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
