@@ -43,18 +43,13 @@ const captureScreenshotToStorage = async (pageUrl: string): Promise<string> => {
   try {
     const supabaseUrl = (supabase as any).supabaseUrl as string;
     const supabaseKey = (supabase as any).supabaseKey as string;
-
     if (!supabaseUrl || !supabaseKey) return "";
-
     const thumbUrl = `https://image.thum.io/get/width/1400/crop/900/noanimate/${pageUrl}`;
     const imgRes = await fetch(thumbUrl);
     if (!imgRes.ok) return "";
-
     const blob = await imgRes.blob();
     if (blob.size < 5000) return "";
-
     const fileName = `screenshot-${Date.now()}.jpg`;
-
     const uploadRes = await fetch(
       `${supabaseUrl}/storage/v1/object/screenshots/${fileName}`,
       {
@@ -67,17 +62,9 @@ const captureScreenshotToStorage = async (pageUrl: string): Promise<string> => {
         body: blob,
       }
     );
-
-    if (!uploadRes.ok) {
-      console.warn("Screenshot upload failed:", uploadRes.status);
-      return "";
-    }
-
-    const publicUrl = `${supabaseUrl}/storage/v1/object/public/screenshots/${fileName}`;
-    console.log("Screenshot stored:", publicUrl);
-    return publicUrl;
+    if (!uploadRes.ok) return "";
+    return `${supabaseUrl}/storage/v1/object/public/screenshots/${fileName}`;
   } catch (e) {
-    console.warn("Screenshot capture failed:", e);
     return "";
   }
 };
@@ -101,7 +88,6 @@ const HeroSection = () => {
     e.preventDefault();
     setUrlError(null);
     setError(null);
-
     if (!url.trim()) { setUrlError("Please enter your landing page URL"); return; }
     if (!isValidUrl(url)) { setUrlError("Please enter a valid URL (e.g. stripe.com)"); return; }
 
@@ -109,15 +95,12 @@ const HeroSection = () => {
     setUrl(normalizedUrl);
     setStage("capturing");
 
-    localStorage.removeItem("conversiondoc_screenshot_url");
-
     const timer1 = setTimeout(() => setStage("analysing"), 2000);
     const timer2 = setTimeout(() => setStage("generating"), 5000);
 
     try {
       const supabaseUrl = (supabase as any).supabaseUrl as string;
       const supabaseKey = (supabase as any).supabaseKey as string;
-
       const response = await fetch(`${supabaseUrl}/functions/v1/run-audit`, {
         method: "POST",
         headers: {
@@ -131,69 +114,54 @@ const HeroSection = () => {
       clearTimeout(timer2);
 
       if (response.status === 429) {
-        const retryAfter = response.headers.get("Retry-After");
-        const seconds = retryAfter ? parseInt(retryAfter, 10) : 30;
+        const seconds = response.headers.get("Retry-After") ? parseInt(response.headers.get("Retry-After")!, 10) : 30;
         setCountdown(seconds);
-        setUrlError(`We're busy right now. Try again in ${seconds} seconds.`);
         setStage("idle");
         return;
       }
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Error ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`Error ${response.status}`);
       const data = await response.json();
-      if (data?.error) throw new Error(data.error);
-
       setResult(data);
       setStage("email_capture");
 
-      captureScreenshotToStorage(normalizedUrl).then((screenshotUrl) => {
-        if (screenshotUrl) {
-          localStorage.setItem("conversiondoc_screenshot_url", screenshotUrl);
-          setResult({ ...data, screenshot_url: screenshotUrl });
-          console.log("Screenshot ready:", screenshotUrl);
+      captureScreenshotToStorage(normalizedUrl).then((sUrl) => {
+        if (sUrl) {
+          localStorage.setItem("conversiondoc_screenshot_url", sUrl);
+          setResult({ ...data, screenshot_url: sUrl });
         }
       });
-
-    } catch (err: unknown) {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      console.error("Audit error:", err);
+    } catch (err) {
+      clearTimeout(timer1); clearTimeout(timer2);
       const friendlyMsg = getFriendlyErrorMessage(err);
-      setUrlError(friendlyMsg);
-      setError(friendlyMsg);
-      setStage("idle");
+      setUrlError(friendlyMsg); setError(friendlyMsg); setStage("idle");
     }
   };
 
   return (
-    <section id="hero-cta" className="relative pt-32 pb-20 px-6 overflow-hidden">
+    <section id="hero-cta" className="relative pt-32 pb-20 px-6 overflow-hidden bg-obsidian">
       <div className="max-w-7xl mx-auto text-center relative z-10">
-
+        
         {/* Badge */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-1.5 mb-8"
+          className="inline-flex items-center gap-2 border border-pulse/30 rounded-md px-4 py-1.5 mb-8 bg-black/40"
         >
-          <span className="text-xs font-bold uppercase tracking-widest text-primary">
-            ⚡ AI Conversion Diagnostics
+          <span className="text-xs font-mono font-bold uppercase tracking-widest text-pulse">
+            Conversion Diagnostics
           </span>
         </motion.div>
 
-        {/* Headline — ✅ teal accent on "fix." */}
+        {/* Headline */}
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="text-5xl md:text-7xl font-bold tracking-tight mb-8 leading-[1.1]"
+          className="text-5xl md:text-7xl font-black tracking-tight mb-8 leading-[1.1] text-clinic"
         >
           Other tools diagnose.<br />
-          We <span className="text-teal-400">fix.</span>
+          We <span className="text-pulse">fix.</span>
         </motion.h1>
 
         {/* Subheadline */}
@@ -201,19 +169,19 @@ const HeroSection = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-xl text-body max-w-3xl mx-auto mb-6 leading-relaxed"
+          className="text-xl text-data max-w-3xl mx-auto mb-6 leading-relaxed"
         >
-          ConversionDoc audits your landing page across 7 conversion pillars, identifies
-          exactly what's blocking action, and prescribes the fixes — including a check
-          for AI search readiness.
+          Identify exactly what is blocking conversions on your page. Our AI analyzes 
+          the 7 psychological pillars of growth and generates the precise fixes needed 
+          to capture more revenue.
         </motion.p>
 
-        {/* Supporting proof line */}
+        {/* Supporting line */}
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.25 }}
-          className="text-sm text-caption max-w-2xl mx-auto mb-12"
+          className="text-sm font-mono text-surgical uppercase tracking-widest max-w-2xl mx-auto mb-12 opacity-60"
         >
           Built for humans. Ready for AI.
         </motion.p>
@@ -227,25 +195,25 @@ const HeroSection = () => {
         >
           <form onSubmit={runAudit} className="flex flex-col md:flex-row items-stretch gap-4 mb-2">
             <div className="relative flex-grow group">
-              <div className="absolute -inset-1 bg-primary/40 rounded-xl blur opacity-25 group-focus-within:opacity-50 transition duration-1000"></div>
+              <div className="absolute -inset-1 bg-pulse/20 rounded-xl blur opacity-25 group-focus-within:opacity-50 transition duration-1000"></div>
               <input
                 type="text"
                 value={url}
                 onChange={(e) => { setUrl(e.target.value); if (urlError) setUrlError(null); }}
-                placeholder="Enter your landing page URL (e.g. stripe.com)"
+                placeholder="Enter your landing page URL"
                 disabled={isLoading || countdown !== null}
-                className={`relative w-full bg-navy-dark border rounded-xl px-6 py-4 text-sm text-foreground placeholder:text-caption focus:outline-none focus:border-primary transition-colors disabled:opacity-50 ${
-                  urlError ? "border-destructive" : "border-white/10"
+                className={`relative w-full bg-black/50 border rounded-xl px-6 py-4 text-sm text-clinic placeholder:text-data focus:outline-none focus:border-pulse transition-colors disabled:opacity-50 ${
+                  urlError ? "border-warning" : "border-surgical"
                 }`}
               />
             </div>
             <button
               type="submit"
               disabled={isLoading || countdown !== null}
-              className="btn-primary text-lg px-8 py-4 flex items-center justify-center gap-3 shrink-0 disabled:opacity-70 min-w-[200px]"
+              className="btn-pulse text-lg px-8 py-4 flex items-center justify-center gap-3 shrink-0 disabled:opacity-70 min-w-[200px]"
             >
               {isLoading ? (
-                <><Loader2 className="w-5 h-5 animate-spin" />Analysing...</>
+                <><Loader2 className="w-5 h-5 animate-spin" />Analyzing...</>
               ) : countdown !== null ? (
                 <><Loader2 className="w-5 h-5 animate-spin" />Wait {countdown}s</>
               ) : (
@@ -256,11 +224,9 @@ const HeroSection = () => {
 
           {urlError && (
             <div className="flex items-center gap-2 mt-2 px-2">
-              <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
-              <p className="text-sm text-destructive text-left">
-                {countdown !== null
-                  ? `We're busy right now. Try again in ${countdown} seconds.`
-                  : urlError}
+              <AlertCircle className="w-4 h-4 text-warning shrink-0" />
+              <p className="text-sm text-warning text-left font-mono">
+                {urlError}
               </p>
             </div>
           )}
@@ -269,7 +235,7 @@ const HeroSection = () => {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="glass-card p-6 mb-6 mt-4"
+              className="border border-surgical bg-black/40 p-6 mb-6 mt-4 rounded-lg text-left"
             >
               <div className="space-y-3">
                 {loadingSteps.map((step) => {
@@ -280,14 +246,14 @@ const HeroSection = () => {
                   return (
                     <div key={step.key} className="flex items-center gap-3">
                       {isDone ? (
-                        <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
+                        <CheckCircle2 className="w-5 h-5 text-pulse shrink-0" />
                       ) : isCurrent ? (
-                        <Loader2 className="w-5 h-5 text-primary animate-spin shrink-0" />
+                        <Loader2 className="w-5 h-5 text-pulse animate-spin shrink-0" />
                       ) : (
-                        <div className="w-5 h-5 rounded-full border border-white/20 shrink-0" />
+                        <div className="w-5 h-5 rounded-full border border-surgical shrink-0" />
                       )}
-                      <span className={`text-sm font-medium ${
-                        isDone ? "text-primary" : isCurrent ? "text-foreground" : "text-caption"
+                      <span className={`text-sm font-mono uppercase tracking-widest ${
+                        isDone ? "text-pulse" : isCurrent ? "text-clinic" : "text-data"
                       }`}>
                         {step.label}
                       </span>
@@ -300,29 +266,13 @@ const HeroSection = () => {
 
           {!isLoading && stage === "idle" && (
             <div className="flex flex-col items-center gap-8 mt-4">
-              <div className="flex flex-wrap items-center justify-center gap-6 text-xs font-medium text-body">
+              <div className="flex flex-wrap items-center justify-center gap-6 text-xs font-mono uppercase tracking-widest text-data">
                 {["Free", "No credit card", "Results in 60 seconds"].map((text) => (
                   <div key={text} className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-primary" />
+                    <CheckCircle2 className="w-4 h-4 text-pulse" />
                     {text}
                   </div>
                 ))}
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex -space-x-3">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <img
-                      key={i}
-                      src={`https://i.pravatar.cc/100?u=${i}`}
-                      alt="User"
-                      className="w-10 h-10 rounded-full border-2 border-navy-dark"
-                      referrerPolicy="no-referrer"
-                    />
-                  ))}
-                </div>
-                <div className="text-sm font-bold text-foreground/80">
-                  ⭐⭐⭐⭐⭐ Trusted by 300+ founders
-                </div>
               </div>
             </div>
           )}
@@ -338,23 +288,20 @@ const HeroSection = () => {
           {[
             {
               label: "7-Pillar Diagnosis",
-              description: "Clarity, trust, desire, action, objections, hooks, and AI search readiness.",
+              description: "Deep audit of clarity, trust, desire, action, and psychological hooks.",
             },
             {
-              label: "Exact Fixes Included",
-              description: "Not vague advice. Rewritten copy, mockups, and ready-to-use code.",
+              label: "Actionable Fixes",
+              description: "Section-by-section rewritten copy and ready-to-deploy code bundles.",
             },
             {
-              label: "Built for Humans. Ready for AI.",
-              description: "We check how your page performs for visitors and AI search engines.",
+              label: "AI Readiness Check",
+              description: "Verification of how your content performs for modern AI search engines.",
             },
           ].map((item) => (
-            <div
-              key={item.label}
-              className="glass-card p-6 text-left"
-            >
-              <p className="text-sm font-bold text-primary mb-1">{item.label}</p>
-              <p className="text-xs text-body leading-relaxed">{item.description}</p>
+            <div key={item.label} className="border border-surgical bg-[#0A0A0A] p-6 rounded-lg text-left hover:border-pulse/40 transition-colors duration-300">
+              <p className="text-sm font-mono font-bold text-pulse mb-2 uppercase tracking-widest">{item.label}</p>
+              <p className="text-sm text-data leading-relaxed">{item.description}</p>
             </div>
           ))}
         </motion.div>
@@ -364,8 +311,8 @@ const HeroSection = () => {
 
       {/* Background glows */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full"></div>
-        <div className="absolute bottom-[10%] right-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full"></div>
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-pulse/10 blur-[120px] rounded-full"></div>
+        <div className="absolute bottom-[10%] right-[-10%] w-[40%] h-[40%] bg-pulse/5 blur-[120px] rounded-full"></div>
       </div>
     </section>
   );
