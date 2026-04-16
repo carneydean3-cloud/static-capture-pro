@@ -40,25 +40,29 @@ function AuthHandler() {
   return null;
 }
 
-// [INJECTED] Temporary Command Center Hub
+// [REVISED] Clean, Premium Diagnostic Hub
 const CommandCenterHub = () => (
-  <div className="flex flex-col items-center justify-center min-h-screen bg-obsidian text-clinic text-center p-6">
-    <h1 className="text-4xl md:text-6xl font-black mb-4 tracking-tight">SYSTEM INITIALIZING...</h1>
-    <p className="text-data tech-readout mb-12 opacity-80">[COMMAND_CENTER_AWAITING_DEPLOYMENT]</p>
+  <div className="flex flex-col items-center justify-center min-h-screen bg-obsidian text-clinic p-6">
+    <div className="text-center mb-12">
+      <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">Select Diagnostic Suite</h1>
+      <p className="text-data max-w-lg mx-auto text-lg">Choose the specialized analysis you need to run today. Both tools diagnose your page in under 60 seconds.</p>
+    </div>
     
-    <div className="flex flex-col md:flex-row gap-6 w-full max-w-3xl">
-      <div className="flex-1 border border-surgical bg-black/40 p-8 rounded-lg text-left">
-        <h2 className="text-pulse tech-readout mb-2 text-sm">[01_HUMAN_LAYER]</h2>
-        <h3 className="text-2xl font-bold mb-4 text-clinic">Conversion Diagnostics</h3>
-        <p className="text-data mb-6">Identify psychological friction and visual leaks causing high bounce rates.</p>
-        <Link to="/conversion-audit" className="btn-pulse inline-block w-full text-center">ENTER_CONVERSION_LAB</Link>
+    <div className="flex flex-col md:flex-row gap-6 w-full max-w-4xl">
+      {/* Conversion Suite */}
+      <div className="flex-1 border border-surgical bg-[#0A0A0A] p-8 rounded-lg text-left hover:border-pulse/40 transition-colors duration-300">
+        <div className="text-pulse font-mono text-xs tracking-widest uppercase mb-4">Human Layer</div>
+        <h3 className="text-2xl font-bold mb-3 text-clinic">Conversion Audit</h3>
+        <p className="text-data mb-8 leading-relaxed">Identify psychological friction, trust gaps, and visual leaks that are actively killing your conversion rate.</p>
+        <Link to="/conversion-audit" className="btn-pulse inline-block w-full text-center">Run Conversion Audit</Link>
       </div>
 
-      <div className="flex-1 border border-surgical bg-black/40 p-8 rounded-lg text-left">
-        <h2 className="text-neon tech-readout mb-2 text-sm">[02_MACHINE_LAYER]</h2>
-        <h3 className="text-2xl font-bold mb-4 text-clinic">GEO AI Visibility</h3>
-        <p className="text-data mb-6">Diagnose machine unreadability and prevent AI Search (LLM) exclusion.</p>
-        <Link to="/geo-audit" className="btn-neon inline-block w-full text-center">ENTER_GEO_LAB</Link>
+      {/* GEO Suite */}
+      <div className="flex-1 border border-surgical bg-[#0A0A0A] p-8 rounded-lg text-left hover:border-neon/40 transition-colors duration-300">
+        <div className="text-neon font-mono text-xs tracking-widest uppercase mb-4">Machine Layer</div>
+        <h3 className="text-2xl font-bold mb-3 text-clinic">GEO AI Audit</h3>
+        <p className="text-data mb-8 leading-relaxed">Diagnose structural unreadability and prevent your page from being excluded by ChatGPT, Perplexity, and AI Overviews.</p>
+        <Link to="/geo-audit" className="btn-neon inline-block w-full text-center">Run GEO Audit</Link>
       </div>
     </div>
   </div>
@@ -74,13 +78,13 @@ const App = () => (
           <BrowserRouter>
             <AuthHandler />
             <Routes>
-              {/* [NEW] The Command Center Hub */}
+              {/* The Command Center Hub */}
               <Route path="/" element={<CommandCenterHub />} />
               
-              {/* [MOVED] The Conversion Tool */}
+              {/* The Moved Conversion Tool */}
               <Route path="/conversion-audit" element={<Index />} />
               
-              {/* [EXISTING] Core Routes */}
+              {/* Existing Routes */}
               <Route path="/geo-audit" element={<GeoAudit />} />
               <Route path="/paid-report" element={<PaidReport />} />
               <Route path="/report/:id" element={<ReportById />} />
@@ -90,7 +94,6 @@ const App = () => (
               <Route path="/subscription-success" element={<SubscriptionSuccess />} />
               <Route path="/account" element={<AccountSettings />} />
               
-              {/* [EXISTING] Legal & Info */}
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/refund" element={<Refund />} />
