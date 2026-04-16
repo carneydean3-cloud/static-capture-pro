@@ -15,8 +15,20 @@ export default {
     extend: {
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
+        mono: ['"JetBrains Mono"', "monospace"], // [INJECTED] The Surgical Data Font
       },
       colors: {
+        // === [THE OBSIDIAN SYSTEM: CYBER-CLINICAL LAYER] ===
+        obsidian: "#050505",      // Main Background
+        pulse: "#06B6D4",         // Teal (Conversion Layer)
+        neon: "#D946EF",          // Magenta (GEO Layer)
+        clinic: "#FFFFFF",        // High Contrast Text
+        data: "#A1A1AA",          // Low Contrast Text / Metadata
+        surgical: "#1A1A1A",      // Borders & Dividers
+        warning: "#E11D48",       // Leaks / Errors
+        // ===================================================
+
+        // --- Lovable / Shadcn Legacy Variables (Preserved to prevent breaks) ---
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -76,6 +88,13 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      boxShadow: {
+        // === [OBSIDIAN GLOW FX] ===
+        'pulse-glow': '0 0 20px rgba(6, 182, 212, 0.15)',
+        'neon-glow': '0 0 20px rgba(217, 70, 239, 0.15)',
+        'pulse-heavy': '0 0 30px rgba(6, 182, 212, 0.4)',
+        'neon-heavy': '0 0 30px rgba(217, 70, 239, 0.4)',
       },
       keyframes: {
         "accordion-down": {
