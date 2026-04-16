@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import { Lock, Image as ImageIcon, CheckCircle2, ArrowLeft } from "lucide-react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -13,7 +16,7 @@ export default function AccountSettings() {
   const [isSubscriber, setIsSubscriber] = useState(false);
   const [plan, setPlan] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [settings, setSettings] = useState<WhiteLabelSettings>({ logo: null, theme: "light" });
+  const [settings, setSettings] = useState<WhiteLabelSettings>({ logo: null, theme: "dark" });
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -44,7 +47,7 @@ export default function AccountSettings() {
           setPlan(data.plan || null);
           setSettings({
             logo: data.white_label?.logo || null,
-            theme: (data.white_label?.theme as "light" | "dark") || "light",
+            theme: (data.white_label?.theme as "light" | "dark") || "dark",
           });
         }
       } catch (e) {
@@ -77,7 +80,6 @@ export default function AccountSettings() {
     try {
       setUploading(true);
 
-      // Send file to edge function which uploads using service role key
       const formData = new FormData();
       formData.append("email", email);
       formData.append("file", file);
@@ -99,7 +101,6 @@ export default function AccountSettings() {
         throw new Error(data.error || "Upload failed");
       }
 
-      // Cache-bust so new uploads always appear immediately
       const v = Date.now();
       const busted = data.url.includes("?") ? `${data.url}&v=${v}` : `${data.url}?v=${v}`;
 
@@ -146,26 +147,26 @@ export default function AccountSettings() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f5f8fc] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-obsidian flex items-center justify-center font-mono text-[10px] uppercase tracking-widest text-data animate-pulse">
+        ACCESSING_SETTINGS...
       </div>
     );
   }
 
   if (!email || !isSubscriber) {
     return (
-      <div className="min-h-screen bg-[#f5f8fc] flex items-center justify-center px-6">
-        <div className="max-w-md w-full bg-white rounded-[24px] border border-slate-200 shadow-sm p-8 text-center space-y-4">
-          <p className="text-4xl">🔒</p>
-          <h1 className="text-xl font-bold text-slate-900">Subscribers only</h1>
-          <p className="text-slate-600 text-sm">
-            White label settings are available on Starter Pro and Agency Pro plans.
+      <div className="min-h-screen bg-obsidian flex items-center justify-center px-6">
+        <div className="max-w-md w-full bg-[#111] border border-surgical rounded-lg shadow-sm p-8 text-center space-y-4">
+          <Lock className="w-10 h-10 text-pulse mx-auto mb-4" />
+          <h1 className="text-xl font-bold text-clinic">Restricted Zone</h1>
+          <p className="text-data text-sm font-mono">
+            White label configurations are restricted to Agency Pro tier and above.
           </p>
           <a
             href="/#pricing"
-            className="inline-block mt-4 rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-semibold px-5 py-3 transition-colors text-sm"
+            className="inline-block mt-4 rounded btn-pulse font-bold uppercase tracking-widest text-xs px-6 py-3 transition-colors shadow-sm"
           >
-            View Plans
+            Upgrade Plan
           </a>
         </div>
       </div>
@@ -175,57 +176,65 @@ export default function AccountSettings() {
   const planLabel = plan === "agency_pro" ? "Agency Pro" : "Starter Pro";
 
   return (
-    <div className="min-h-screen bg-[#f5f8fc] px-6 py-16">
-      <div className="mx-auto max-w-2xl space-y-8">
+    <div className="min-h-screen bg-obsidian px-6 py-16 text-clinic">
+      <div className="mx-auto max-w-3xl space-y-10">
+
+        <Link to="/dashboard" className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-data hover:text-clinic transition-colors font-bold">
+          <ArrowLeft className="w-3 h-3" /> Back to Workspace
+        </Link>
 
         {/* Header */}
-        <section className="rounded-[32px] overflow-hidden border border-slate-900/10 shadow-[0_20px_60px_rgba(15,23,42,0.12)]">
-          <div className="bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.18),_transparent_30%),linear-gradient(135deg,#020617,#0f172a_50%,#111827)] px-8 py-10">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-400">
-              Account Settings
+        <section className="rounded-lg overflow-hidden border border-surgical shadow-2xl relative">
+          <div className="absolute top-0 left-0 w-full h-1 bg-pulse" />
+          <div className="bg-[#0A0A0A] px-8 py-10 md:px-12 md:py-14">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-pulse mb-2">
+              System Configurations
             </p>
-            <h1 className="mt-3 text-3xl font-bold text-white tracking-tight">
-              White Label Reports
+            <h1 className="text-3xl md:text-5xl font-black text-clinic tracking-tighter">
+              White_Label_Prefs
             </h1>
-            <p className="mt-2 text-slate-400 text-sm">
-              {email} — {planLabel}
+            <p className="mt-4 font-mono text-data text-xs">
+              <span className="opacity-50">USER:</span> {email} <br />
+              <span className="opacity-50">PLAN:</span> <span className="text-clinic">{planLabel}</span>
             </p>
           </div>
         </section>
 
         {/* Logo Upload */}
-        <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
+        <section className="rounded-lg border border-surgical bg-[#0A0A0A] p-6 md:p-8 shadow-sm">
           <div className="mb-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">
-              Your Logo
+            <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-pulse mb-2">
+              Brand Identity
             </p>
-            <h2 className="mt-2 text-2xl font-bold text-slate-900">
-              Upload your logo
+            <h2 className="text-2xl font-bold text-clinic">
+              Agency Logo
             </h2>
-            <p className="text-slate-500 text-sm mt-2">
-              Your logo will appear in place of the ConversionDoc branding on paid reports. PNG, JPG, SVG or WebP. Max 2MB.
+            <p className="text-data text-sm mt-2 font-mono">
+              Replaces the ConversionDoc branding on your generated PDF and HTML reports. <br/>PNG, JPG, SVG, WebP (Max 2MB).
             </p>
           </div>
 
           {settings.logo ? (
             <div className="mb-6">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <img
-                    src={settings.logo}
-                    alt="Your logo"
-                    className="h-12 max-w-[180px] object-contain"
-                  />
+              <div className="rounded-lg border border-surgical bg-black p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex items-center gap-6">
+                  <div className="w-32 h-16 bg-white/5 rounded border border-surgical flex items-center justify-center p-2">
+                    <img
+                      src={settings.logo}
+                      alt="Your logo"
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  </div>
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">Logo uploaded</p>
-                    <p className="text-xs text-slate-500">This will appear on your reports</p>
+                    <p className="text-sm font-bold text-clinic font-mono uppercase tracking-widest">Asset_Loaded</p>
+                    <p className="text-xs text-data">This asset will be appended to your exports.</p>
                   </div>
                 </div>
                 <button
                   onClick={handleRemoveLogo}
-                  className="text-xs font-semibold text-red-500 hover:text-red-600 transition-colors"
+                  className="text-[10px] font-mono font-bold uppercase tracking-widest text-warning hover:text-red-400 transition-colors border border-warning/20 px-4 py-2 rounded"
                 >
-                  Remove
+                  Delete Asset
                 </button>
               </div>
             </div>
@@ -233,21 +242,21 @@ export default function AccountSettings() {
             <div className="mb-6">
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 hover:border-teal-300 hover:bg-teal-50 transition-colors cursor-pointer p-10 text-center"
+                className="rounded-lg border border-dashed border-surgical bg-black hover:border-pulse/50 transition-colors cursor-pointer p-10 text-center flex flex-col items-center justify-center group"
               >
                 {uploading ? (
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
-                    <p className="text-sm text-slate-500">Uploading…</p>
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-8 h-8 border-2 border-pulse border-t-transparent rounded-full animate-spin" />
+                    <p className="text-xs font-mono font-bold uppercase tracking-widest text-data">Transmitting...</p>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-2xl">
-                      🖼️
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 rounded bg-surgical flex items-center justify-center text-clinic group-hover:scale-110 transition-transform">
+                      <ImageIcon className="w-6 h-6" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">Click to upload your logo</p>
-                      <p className="text-xs text-slate-500 mt-1">PNG, JPG, SVG or WebP — max 2MB</p>
+                      <p className="text-sm font-bold text-clinic font-mono uppercase tracking-widest mb-1">Click to browse files</p>
+                      <p className="text-[10px] text-data font-mono uppercase tracking-widest">or drag and drop here</p>
                     </div>
                   </div>
                 )}
@@ -260,131 +269,115 @@ export default function AccountSettings() {
                 className="hidden"
               />
               {uploadError && (
-                <p className="mt-2 text-xs text-red-500 font-medium">{uploadError}</p>
+                <p className="mt-4 text-[10px] text-warning font-mono font-bold uppercase tracking-widest">{uploadError}</p>
               )}
             </div>
           )}
         </section>
 
         {/* Theme Toggle */}
-        <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
-          <div className="mb-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">
+        <section className="rounded-lg border border-surgical bg-[#0A0A0A] p-6 md:p-8 shadow-sm">
+          <div className="mb-8">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-pulse mb-2">
               Report Theme
             </p>
-            <h2 className="mt-2 text-2xl font-bold text-slate-900">
-              Choose your report style
+            <h2 className="text-2xl font-bold text-clinic">
+              Visual Protocol
             </h2>
-            <p className="text-slate-500 text-sm mt-2">
-              Select the theme that works best with your logo and brand.
+            <p className="text-data text-sm mt-2 font-mono">
+              Select the color palette used for your generated HTML reports and dashboards.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-2 gap-6">
+            
+            {/* LIGHT THEME OPTION */}
             <button
               type="button"
               onClick={() => setSettings((prev) => ({ ...prev, theme: "light" }))}
-              className={`rounded-2xl border-2 p-5 text-left transition-all ${
+              className={cn(
+                "rounded-lg border p-6 text-left transition-all relative overflow-hidden",
                 settings.theme === "light"
-                  ? "border-teal-500 bg-teal-50"
-                  : "border-slate-200 bg-slate-50 hover:border-slate-300"
-              }`}
+                  ? "border-pulse bg-pulse/5"
+                  : "border-surgical bg-black hover:border-surgical/80"
+              )}
             >
-              <div className="rounded-xl overflow-hidden border border-slate-200 mb-4">
-                <div className="bg-white p-3 border-b border-slate-100">
-                  <div className="h-2 w-16 bg-slate-200 rounded" />
+              <div className="rounded overflow-hidden border border-slate-200 mb-6 bg-slate-50">
+                <div className="bg-white p-3 border-b border-slate-200 flex justify-between">
+                  <div className="h-2 w-16 bg-slate-300 rounded" />
+                  <div className="h-2 w-8 bg-slate-200 rounded" />
                 </div>
-                <div className="bg-white p-3 space-y-2">
-                  <div className="h-2 w-full bg-slate-100 rounded" />
-                  <div className="h-2 w-3/4 bg-slate-100 rounded" />
-                  <div className="h-2 w-1/2 bg-teal-100 rounded" />
+                <div className="p-4 space-y-3">
+                  <div className="h-4 w-3/4 bg-slate-300 rounded" />
+                  <div className="h-2 w-full bg-slate-200 rounded" />
+                  <div className="h-2 w-5/6 bg-slate-200 rounded" />
+                  <div className="h-8 w-1/3 bg-slate-800 rounded mt-4" />
                 </div>
               </div>
-              <p className="font-semibold text-slate-900 text-sm">Light</p>
-              <p className="text-xs text-slate-500 mt-1">White background, dark text. Clean and professional.</p>
-              {settings.theme === "light" && (
-                <p className="text-xs font-bold text-teal-600 mt-2">✓ Selected</p>
-              )}
+              <div className="flex items-center justify-between">
+                 <div>
+                    <p className="font-bold text-clinic font-mono uppercase tracking-widest mb-1">Standard / Light</p>
+                    <p className="text-[10px] text-data font-mono uppercase tracking-widest">White BG • Dark Text</p>
+                 </div>
+                 {settings.theme === "light" && <CheckCircle2 className="w-5 h-5 text-pulse" />}
+              </div>
             </button>
 
+            {/* DARK THEME OPTION */}
             <button
               type="button"
               onClick={() => setSettings((prev) => ({ ...prev, theme: "dark" }))}
-              className={`rounded-2xl border-2 p-5 text-left transition-all ${
+              className={cn(
+                "rounded-lg border p-6 text-left transition-all relative overflow-hidden",
                 settings.theme === "dark"
-                  ? "border-teal-500 bg-teal-50"
-                  : "border-slate-200 bg-slate-50 hover:border-slate-300"
-              }`}
+                  ? "border-pulse bg-pulse/5"
+                  : "border-surgical bg-black hover:border-surgical/80"
+              )}
             >
-              <div className="rounded-xl overflow-hidden border border-slate-700 mb-4">
-                <div className="bg-slate-900 p-3 border-b border-slate-700">
-                  <div className="h-2 w-16 bg-teal-500/40 rounded" />
+              <div className="rounded overflow-hidden border border-[#27272a] mb-6 bg-[#0A0A0A]">
+                <div className="bg-black p-3 border-b border-[#27272a] flex justify-between">
+                  <div className="h-2 w-16 bg-[#06B6D4]/50 rounded" />
+                  <div className="h-2 w-8 bg-zinc-800 rounded" />
                 </div>
-                <div className="bg-slate-900 p-3 space-y-2">
-                  <div className="h-2 w-full bg-slate-700 rounded" />
-                  <div className="h-2 w-3/4 bg-slate-700 rounded" />
-                  <div className="h-2 w-1/2 bg-teal-500/30 rounded" />
+                <div className="p-4 space-y-3">
+                  <div className="h-4 w-3/4 bg-zinc-200 rounded" />
+                  <div className="h-2 w-full bg-zinc-700 rounded" />
+                  <div className="h-2 w-5/6 bg-zinc-700 rounded" />
+                  <div className="h-8 w-1/3 bg-[#06B6D4] rounded mt-4" />
                 </div>
               </div>
-              <p className="font-semibold text-slate-900 text-sm">Dark</p>
-              <p className="text-xs text-slate-500 mt-1">Navy background, light text. Bold and distinctive.</p>
-              {settings.theme === "dark" && (
-                <p className="text-xs font-bold text-teal-600 mt-2">✓ Selected</p>
-              )}
+              <div className="flex items-center justify-between">
+                 <div>
+                    <p className="font-bold text-clinic font-mono uppercase tracking-widest mb-1">Obsidian / Dark</p>
+                    <p className="text-[10px] text-data font-mono uppercase tracking-widest">Black BG • Cyan Accents</p>
+                 </div>
+                 {settings.theme === "dark" && <CheckCircle2 className="w-5 h-5 text-pulse" />}
+              </div>
+            </button>
+
+          </div>
+        </section>
+
+        {/* Save & Footer */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-6 border-t border-surgical">
+          <Link to="/dashboard" className="text-[10px] font-mono uppercase tracking-widest text-data hover:text-clinic transition-colors font-bold order-2 sm:order-1">
+            Cancel & Return
+          </Link>
+          
+          <div className="flex items-center gap-4 w-full sm:w-auto order-1 sm:order-2">
+            {saved && (
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#10b981] flex items-center gap-2">
+                <CheckCircle2 className="w-3 h-3" /> Saved
+              </span>
+            )}
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full sm:w-auto rounded btn-pulse font-bold uppercase tracking-widest text-[10px] px-10 py-4 transition-colors shadow-sm disabled:opacity-50"
+            >
+              {saving ? "SAVING..." : "COMMIT SETTINGS"}
             </button>
           </div>
-        </section>
-
-        {/* Preview */}
-        <section className="rounded-[28px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
-          <div className="mb-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-600">Preview</p>
-            <h2 className="mt-2 text-2xl font-bold text-slate-900">Report header preview</h2>
-          </div>
-          <div className={`rounded-2xl overflow-hidden border ${settings.theme === "dark" ? "border-slate-700" : "border-slate-200"}`}>
-            <div className={`px-6 py-8 ${settings.theme === "dark" ? "bg-[linear-gradient(135deg,#020617,#0f172a)]" : "bg-white border-b border-slate-100"}`}>
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className={`text-xs font-semibold uppercase tracking-[0.22em] mb-2 ${settings.theme === "dark" ? "text-teal-400" : "text-teal-600"}`}>
-                    Full Diagnosis
-                  </p>
-                  <h3 className={`text-2xl font-bold ${settings.theme === "dark" ? "text-white" : "text-slate-900"}`}>
-                    Conversion Report
-                  </h3>
-                  <p className={`text-sm mt-1 ${settings.theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>
-                    yoursite.com
-                  </p>
-                </div>
-                <div className="shrink-0">
-                  {settings.logo ? (
-                    <img
-                      src={settings.logo}
-                      alt="Your logo"
-                      className="h-10 max-w-[140px] object-contain"
-                    />
-                  ) : (
-                    <div className={`text-sm font-bold tracking-wide ${settings.theme === "dark" ? "text-teal-400" : "text-teal-600"}`}>
-                      Your Logo
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Save */}
-        <div className="flex items-center gap-4">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-bold px-8 py-3.5 transition-colors text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {saving ? "Saving…" : "Save Settings"}
-          </button>
-          {saved && (
-            <p className="text-sm font-semibold text-emerald-600">✓ Settings saved</p>
-          )}
         </div>
 
       </div>
