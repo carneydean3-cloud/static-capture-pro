@@ -2,8 +2,19 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace; /* [INJECTED] Data Font */
 
-  --color-background: hsl(215 40% 15%);
+  /* === [THE OBSIDIAN SYSTEM LAYER] === */
+  --color-obsidian: #050505;
+  --color-pulse: #06B6D4;
+  --color-neon: #D946EF;
+  --color-clinic: #FFFFFF;
+  --color-data: #A1A1AA;
+  --color-surgical: #1A1A1A;
+  --color-warning: #E11D48;
+
+  /* --- LOVABLE LEGACY VARIABLES (Preserved for component stability) --- */
+  --color-background: var(--color-obsidian); /* Overridden to Obsidian */
   --color-foreground: hsl(210 40% 96%);
 
   --color-card: hsl(215 40% 18%);
@@ -12,7 +23,7 @@
   --color-popover: hsl(215 40% 18%);
   --color-popover-foreground: hsl(210 40% 96%);
 
-  --color-primary: hsl(174 84% 32%);
+  --color-primary: var(--color-pulse); /* Overridden to Pulse Teal */
   --color-primary-foreground: hsl(0 0% 100%);
 
   --color-secondary: hsl(215 25% 27%);
@@ -21,15 +32,15 @@
   --color-muted: hsl(215 20% 25%);
   --color-muted-foreground: hsl(215 16% 57%);
 
-  --color-accent: hsl(174 84% 32%);
+  --color-accent: var(--color-pulse);
   --color-accent-foreground: hsl(0 0% 100%);
 
-  --color-destructive: hsl(0 84% 60%);
+  --color-destructive: var(--color-warning);
   --color-destructive-foreground: hsl(0 0% 100%);
 
-  --color-border: hsla(0 0% 100% / 0.2);
+  --color-border: var(--color-surgical);
   --color-input: hsla(0 0% 100% / 0.15);
-  --color-ring: hsl(174 84% 32%);
+  --color-ring: var(--color-pulse);
 
   --radius-lg: 0.75rem;
 
@@ -42,7 +53,7 @@
   --color-score-red: hsl(0 84% 60%);
 
   /* Typography contrast tokens */
-  --color-body: hsl(213 27% 78%);
+  --color-body: var(--color-data); /* Overridden to Data Grey */
   --color-caption: hsl(215 23% 62%);
   --color-card-text: hsl(214 32% 91%);
   --color-subheading: hsl(210 33% 95%);
@@ -74,40 +85,58 @@
     @apply border-border;
   }
 
+  /* THE SURGICAL VOID INJECTION */
   body {
-    @apply bg-background text-foreground antialiased;
-    font-family: "Inter", system-ui, sans-serif;
-    background: linear-gradient(180deg, var(--color-navy-deep) 0%, var(--color-navy-dark) 100%);
+    @apply text-clinic antialiased;
+    background-color: var(--color-obsidian) !important;
+    background-image: none !important; /* Kills the blue gradient */
+    font-family: var(--font-sans);
     min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-clinic font-black tracking-tight;
   }
 }
 
 @layer components {
+  /* Legacy Glass Card */
   .glass-card {
-    @apply bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl shadow-lg;
+    @apply bg-black/40 backdrop-blur-xl border border-surgical rounded-xl shadow-lg;
+  }
+
+  /* Diagnostic Readout Class */
+  .tech-readout {
+    font-family: var(--font-mono);
+    @apply tracking-widest uppercase;
   }
 
   .section-label {
-    @apply text-xs font-semibold uppercase tracking-[0.2em] text-primary;
+    @apply text-xs font-semibold uppercase tracking-[0.2em] text-pulse;
   }
 
   .section-heading {
-    @apply text-3xl md:text-4xl font-bold text-foreground;
+    @apply text-3xl md:text-4xl font-bold text-clinic;
   }
 
   .body-text {
-    @apply text-body leading-relaxed;
+    @apply text-data leading-relaxed;
   }
 
-  .btn-primary {
-    @apply bg-primary text-primary-foreground font-bold px-6 py-3 rounded-lg hover:brightness-110 transition-all duration-200;
+  /* New Surgical Buttons */
+  .btn-primary, .btn-pulse {
+    @apply bg-pulse text-black font-bold px-6 py-3 rounded-md transition-all duration-200 shadow-[0_0_20px_rgba(6,182,212,0.2)] hover:shadow-[0_0_30px_rgba(6,182,212,0.4)];
+  }
+
+  .btn-neon {
+    @apply bg-neon text-white font-bold px-6 py-3 rounded-md transition-all duration-200 shadow-[0_0_20px_rgba(217,70,239,0.2)] hover:shadow-[0_0_30px_rgba(217,70,239,0.4)];
   }
 
   .btn-ghost {
-    @apply bg-transparent text-foreground border border-white/20 font-medium px-5 py-2.5 rounded-lg hover:bg-white/10 transition-all duration-200;
+    @apply bg-transparent text-clinic border border-surgical font-medium px-5 py-2.5 rounded-md hover:bg-surgical/50 transition-all duration-200;
   }
 
   .btn-outline-primary {
-    @apply bg-transparent text-primary border border-primary font-bold px-6 py-3 rounded-lg hover:bg-primary/10 transition-all duration-200;
+    @apply bg-transparent text-pulse border border-pulse font-bold px-6 py-3 rounded-md hover:bg-pulse/10 transition-all duration-200;
   }
 }
