@@ -677,3 +677,181 @@ export default function ReportById() {
           {summary.biggest_opportunity && (
             <div className={`rounded border ${isDarkTheme ? "border-[#06B6D4]/30 bg-[#06B6D4]/10" : "border-teal-100 bg-teal-50"} p-5 mb-4`}>
               <p className={`text-[10px] font-mono font-bold uppercase tracking-widest ${isDarkTheme ? "text-[#06B6D4]" : "text-teal-700"} mb-2`}>Biggest Opportunity</p>
+              <p className={`font-medium text-lg ${headingColor}`}>{summary.biggest_opportunity}</p>
+            </div>
+          )}
+          {summary.executive_summary && (
+            <div className={`rounded border ${isDarkTheme ? "border-[#27272a] bg-black" : "border-slate-200 bg-slate-50"} p-5`}>
+              <p className={`text-[10px] font-mono font-bold uppercase tracking-widest ${isDarkTheme ? "text-zinc-500" : "text-slate-500"} mb-2`}>Diagnosis</p>
+              <p className={`leading-8 ${bodyColor}`}>{summary.executive_summary}</p>
+            </div>
+          )}
+        </section>
+
+        {/* Top Fixes */}
+        {topFixes && (
+          <section className={`rounded-lg border ${cardBg} p-6 md:p-8 shadow-sm`}>
+            <div className="mb-6">
+              <p className={cn("text-[10px] font-mono font-bold uppercase tracking-widest", activeColor)}>Action Plan</p>
+              <h2 className={`mt-2 text-3xl font-bold ${headingColor}`}>🔥 Top Priority Fixes</h2>
+            </div>
+            <div className="space-y-4">
+              {topFixes.map((x, idx) => {
+                const color = impactColor[x.impact || "Medium"] || "#f59e0b";
+                const bg = impactBg[x.impact || "Medium"] || impactBg["Medium"];
+                return (
+                  <div key={idx} className="flex gap-4 rounded border p-5" style={{ borderColor: `${color}25`, borderLeftWidth: 4, borderLeftColor: color, background: isDarkTheme ? 'black' : bg }}>
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded text-white text-sm font-bold shadow-sm font-mono" style={{ background: color }}>0{x.priority ?? idx + 1}</div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-2"><span className="text-[9px] font-bold font-mono uppercase tracking-widest px-2 py-0.5 rounded border" style={{ color, background: `${color}15`, borderColor: `${color}30` }}>{x.impact ?? "—"} Impact</span></div>
+                      {x.issue && <p className={`font-semibold mb-1 ${headingColor}`}>{x.issue}</p>}
+                      <div className="flex items-start gap-1.5"><span className={cn("font-bold text-sm shrink-0", activeColor)}>→</span><p className={`text-sm ${bodyColor}`}>{x.fix}</p></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Score Breakdown */}
+        {orderedScores.length > 0 && (
+          <section className={`rounded-lg border ${cardBg} p-6 md:p-8 shadow-sm`}>
+            <div className="mb-6">
+              <p className={cn("text-[10px] font-mono font-bold uppercase tracking-widest", activeColor)}>Full Analysis</p>
+              <h2 className={`mt-2 text-3xl font-bold ${headingColor}`}>📊 Score Breakdown</h2>
+            </div>
+            <div className="space-y-5">
+              {orderedScores.map(([pillar, value]) => (
+                <div key={pillar} className={`rounded border ${isDarkTheme ? "border-[#27272a] bg-black" : "border-slate-200 bg-slate-50"} p-5`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className={`text-lg font-bold font-mono uppercase tracking-widest ${headingColor}`}>{prettyLabel(pillar)}</h3>
+                    <span className={`text-xl font-bold font-mono ${scoreColor(value?.score)}`}>{typeof value?.score === "number" ? `${value.score}/10` : "—"}</span>
+                  </div>
+                  {value?.issue && <div className="mb-3"><p className={`text-[9px] font-semibold font-mono uppercase tracking-widest ${isDarkTheme ? "text-zinc-500" : "text-slate-400"} mb-1`}>Issue</p><p className={isDarkTheme ? "text-zinc-300" : "text-slate-800"}>{value.issue}</p></div>}
+                  {value?.fix && <div className="mb-3"><p className={`text-[9px] font-semibold font-mono uppercase tracking-widest ${isDarkTheme ? "text-zinc-500" : "text-slate-400"} mb-1`}>Recommended Fix</p><p className={isDarkTheme ? "text-zinc-300" : "text-slate-800"}>{value.fix}</p></div>}
+                  {value?.rewritten_copy && <div><p className={`text-[9px] font-semibold font-mono uppercase tracking-widest ${activeColor} mb-1`}>Rewritten Copy</p><p className={`italic border-l-2 pl-3 py-1 ${isDarkTheme ? "border-[#27272a] text-zinc-300" : "border-slate-200 text-slate-800"}`}>{value.rewritten_copy}</p></div>}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Copy Pack */}
+        {copyPack.headline && (
+          <section className={`rounded-lg border ${cardBg} p-6 md:p-8 shadow-sm`}>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+              <div>
+                <p className={cn("text-[10px] font-mono font-bold uppercase tracking-widest", activeColor)}>Deliverable</p>
+                <h2 className={`mt-2 text-3xl font-bold ${headingColor}`}>✍️ Copy Pack</h2>
+                <p className={`text-sm mt-2 ${isDarkTheme ? "text-zinc-400" : "text-slate-500"}`}>Homepage-ready copy written to improve clarity, trust, and action.</p>
+              </div>
+              <button onClick={handleDownloadDocx} disabled={downloadingDocx} className={`rounded border font-bold uppercase tracking-widest font-mono text-[10px] px-5 py-3 transition-colors shadow-sm disabled:opacity-50 ${isDarkTheme ? "border-[#27272a] bg-black hover:bg-zinc-900 text-white" : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"}`}>
+                {downloadingDocx ? "Generating…" : "Download Copy Pack (.docx)"}
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className={`rounded border p-5 ${isDarkTheme ? "border-[#06B6D4]/30 bg-[#06B6D4]/10" : "border-teal-100 bg-teal-50"}`}>
+                <p className={`text-[9px] font-semibold font-mono uppercase tracking-widest ${isDarkTheme ? "text-[#06B6D4]" : "text-teal-700"} mb-2`}>Headline</p>
+                <p className={`text-2xl font-bold ${headingColor}`}>{copyPack.headline}</p>
+              </div>
+              {copyPack.subheadline && <div className={`rounded border p-5 ${isDarkTheme ? "border-[#27272a] bg-black" : "border-slate-200 bg-slate-50"}`}><p className={`text-[9px] font-semibold font-mono uppercase tracking-widest ${isDarkTheme ? "text-zinc-500" : "text-slate-500"} mb-2`}>Subheadline</p><p className={isDarkTheme ? "text-zinc-300" : "text-slate-800"}>{copyPack.subheadline}</p></div>}
+              <div className="grid gap-4 md:grid-cols-2">
+                {copyPack.primary_cta && <div className={`rounded border p-5 ${isDarkTheme ? "border-[#27272a] bg-black" : "border-slate-200 bg-slate-50"}`}><p className={`text-[9px] font-semibold font-mono uppercase tracking-widest ${isDarkTheme ? "text-zinc-500" : "text-slate-500"} mb-2`}>Primary CTA</p><p className={`font-bold ${headingColor}`}>{copyPack.primary_cta}</p></div>}
+                {copyPack.trust_line && <div className={`rounded border p-5 ${isDarkTheme ? "border-[#27272a] bg-black" : "border-slate-200 bg-slate-50"}`}><p className={`text-[9px] font-semibold font-mono uppercase tracking-widest ${isDarkTheme ? "text-zinc-500" : "text-slate-500"} mb-2`}>Trust Line</p><p className={`font-bold ${headingColor}`}>{copyPack.trust_line}</p></div>}
+              </div>
+              {copyPack.benefit_bullets && copyPack.benefit_bullets.length > 0 && (
+                <div className={`rounded border p-5 ${isDarkTheme ? "border-[#27272a] bg-black" : "border-slate-200 bg-slate-50"}`}>
+                  <p className={`text-[9px] font-semibold font-mono uppercase tracking-widest ${isDarkTheme ? "text-zinc-500" : "text-slate-500"} mb-3`}>Benefit Bullets</p>
+                  <ul className="space-y-3">{copyPack.benefit_bullets.map((bullet, i) => (<li key={i} className="flex gap-3"><span className={cn("font-bold", activeColor)}>✓</span><span className={isDarkTheme ? "text-zinc-300" : "text-slate-800"}>{bullet}</span></li>))}</ul>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Visual Deliverable */}
+        {mockupHtml && (
+          <section className={`rounded-lg border ${isDarkTheme ? "border-[#27272a]" : "border-slate-200"} shadow-sm overflow-hidden`}>
+            <div className={cn("px-6 py-5", isDarkTheme ? "bg-black" : "bg-[linear-gradient(135deg,#020617,#0f172a)]")}>
+              <p className={cn("text-[10px] font-mono font-bold uppercase tracking-widest", activeColor)}>Visual Deliverable</p>
+              <h2 className="mt-2 text-2xl font-bold text-white">🎨 Your Homepage Mockup</h2>
+              <p className="text-zinc-400 text-sm mt-2 font-mono">Compare your current site with a more conversion-focused direction.</p>
+            </div>
+
+            <div className={`flex border-b ${isDarkTheme ? "border-[#27272a] bg-black" : "border-slate-200"}`}>
+              <button onClick={() => setActiveTab("before")} className={`flex-1 py-4 text-[10px] font-mono uppercase tracking-widest font-bold transition-colors ${activeTab === "before" ? `${isDarkTheme ? "bg-[#111]" : "bg-white"} text-red-500 border-b-2 border-red-500` : `${isDarkTheme ? "bg-black text-zinc-500" : "bg-slate-50 text-slate-500"} hover:text-zinc-400`}`}>❌ Before (Current Site)</button>
+              <button onClick={() => setActiveTab("after")} className={`flex-1 py-4 text-[10px] font-mono uppercase tracking-widest font-bold transition-colors ${activeTab === "after" ? `${isDarkTheme ? "bg-[#111]" : "bg-white"} ${activeColor} border-b-2 ${isGeoMode ? "border-[#D946EF]" : "border-[#06B6D4]"}` : `${isDarkTheme ? "bg-black text-zinc-500" : "bg-slate-50 text-slate-500"} hover:text-zinc-400`}`}>✅ After (ConversionDoc Fix)</button>
+            </div>
+
+            <div style={{ display: activeTab === "before" ? "block" : "none" }}>
+              {displayScreenshotUrl && (
+                <div style={{ background: isDarkTheme ? "#000" : "#0f172a", position: "relative" }}>
+                  {!screenshotLoaded && !screenshotErrored && (<div style={{ minHeight: 400, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 }}><div className={cn("w-9 h-9 rounded-full border-4 border-t-transparent animate-spin", isGeoMode ? "border-[#D946EF]" : "border-[#06B6D4]")} /><p style={{ color: "#94a3b8", fontSize: 14, fontWeight: 500, margin: 0 }}>Loading screenshot…</p></div>)}
+                  {screenshotLoaded && (<div style={{ position: "relative", width: "100%" }}><img src={displayScreenshotUrl} alt="Current site" style={{ width: "100%", display: "block", maxHeight: 600, objectFit: "cover", objectPosition: "top" }} />{purchase.url && <a href={purchase.url} target="_blank" rel="noopener noreferrer" style={{ position: "absolute", bottom: 12, right: 12, background: "rgba(0,0,0,0.7)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "6px 12px", borderRadius: 8, textDecoration: "none", border: "1px solid rgba(255,255,255,0.15)" }}>View Live Site →</a>}</div>)}
+                </div>
+              )}
+              {topFixes && topFixes.length > 0 && (
+                <div className={`p-6 space-y-3 ${isDarkTheme ? "bg-[#111]" : "bg-slate-50"}`}>
+                  <p className={`text-[10px] font-mono font-bold uppercase tracking-widest mb-4 ${isDarkTheme ? "text-zinc-500" : "text-slate-500"}`}>Issues Identified on Current Site</p>
+                  {topFixes.map((fix, i) => {
+                    const color = impactColor[fix.impact || "Medium"] || "#f59e0b";
+                    const bg = impactBg[fix.impact || "Medium"] || impactBg["Medium"];
+                    return (<div key={i} className={`rounded border p-5 flex gap-4 ${isDarkTheme ? "bg-black" : "bg-white"}`} style={{ borderColor: `${color}30`, borderLeftWidth: 4, borderLeftColor: color }}><div className="w-9 h-9 rounded flex items-center justify-center text-white font-mono text-sm font-bold shrink-0" style={{ background: color }}>0{fix.priority ?? i + 1}</div><div className="min-w-0"><div className="flex items-center gap-2 mb-2"><span className="text-[9px] font-bold font-mono uppercase tracking-widest px-2 py-0.5 rounded border" style={{ color, background: isDarkTheme ? 'transparent' : bg, borderColor: `${color}30` }}>{fix.impact} Impact</span></div><p className={`font-semibold text-sm mb-1 leading-snug ${headingColor}`}>{fix.issue}</p><div className="flex items-start gap-1.5"><span className={cn("text-xs font-bold shrink-0 mt-0.5", activeColor)}>→</span><p className={`text-xs leading-relaxed ${bodyColor}`}>{fix.fix}</p></div></div></div>);
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: activeTab === "after" ? "block" : "none" }}>
+              <div className={isDarkTheme ? "bg-[#111]" : "bg-white"}>
+                <div className={`flex items-center gap-2 px-6 pt-4 pb-0 border-b ${isDarkTheme ? "bg-black border-[#27272a]" : "bg-slate-50 border-slate-100"}`}>
+                  <button onClick={() => setMockupVersion("a")} className={`px-4 py-2 rounded-t text-[10px] font-mono uppercase tracking-widest font-bold transition-colors border-b-2 -mb-px ${mockupVersion === "a" ? `${isDarkTheme ? "bg-[#111]" : "bg-white"} ${activeColor} ${isGeoMode ? "border-[#D946EF]" : "border-[#06B6D4]"} shadow-sm` : "bg-transparent text-zinc-500 border-transparent hover:text-zinc-400"}`}>Version A</button>
+                  {mockupHtmlB && <button onClick={() => setMockupVersion("b")} className={`px-4 py-2 rounded-t text-[10px] font-mono uppercase tracking-widest font-bold transition-colors border-b-2 -mb-px ${mockupVersion === "b" ? `${isDarkTheme ? "bg-[#111]" : "bg-white"} ${activeColor} ${isGeoMode ? "border-[#D946EF]" : "border-[#06B6D4]"} shadow-sm` : "bg-transparent text-zinc-500 border-transparent hover:text-zinc-400"}`}>Version B</button>}
+                  <span className={`ml-auto text-[9px] font-mono uppercase tracking-widest pb-2 ${isDarkTheme ? "text-zinc-600" : "text-slate-400"}`}>{mockupVersion === "a" ? "Recommended layout" : "Alternative layout"}</span>
+                </div>
+                <div className="relative">
+                  <div ref={mockupRef} className="w-full overflow-hidden" dangerouslySetInnerHTML={{ __html: activeMockupHtml || "" }} />
+                  <button onClick={() => setFullscreen(true)} className="absolute bottom-4 right-4 bg-black/80 border border-[#27272a] hover:bg-black text-white font-mono uppercase tracking-widest text-[10px] font-bold px-4 py-3 rounded transition-colors">⛶ Fullscreen</button>
+                </div>
+              </div>
+
+              <div className={`px-6 py-4 border-t flex flex-wrap gap-3 ${isDarkTheme ? "bg-black border-[#27272a]" : "bg-slate-50 border-slate-200"}`}>
+                <button onClick={handleCopyCode} className={cn("rounded font-mono text-[10px] uppercase tracking-widest font-bold px-5 py-3 transition-colors shadow-sm", activeBtn)}>{copySuccess ? "✓ Copied!" : "Copy HTML"}</button>
+                <button onClick={handleDownloadPng} disabled={downloading} className={`rounded border font-mono text-[10px] uppercase tracking-widest font-bold px-5 py-3 transition-colors shadow-sm disabled:opacity-50 ${isDarkTheme ? "border-[#27272a] bg-[#111] hover:bg-zinc-900 text-zinc-200" : "border-slate-200 bg-white hover:bg-slate-100 text-slate-700"}`}>{downloading ? "Generating…" : "Download PNG"}</button>
+                <button onClick={handleDownloadPdf} disabled={downloadingPdf} className={`rounded border font-mono text-[10px] uppercase tracking-widest font-bold px-5 py-3 transition-colors shadow-sm disabled:opacity-50 ${isDarkTheme ? "border-[#27272a] bg-[#111] hover:bg-zinc-900 text-zinc-200" : "border-slate-200 bg-white hover:bg-slate-100 text-slate-700"}`}>{downloadingPdf ? "Generating PDF…" : "Download Report PDF"}</button>
+                <button onClick={handleDownloadKit} disabled={downloadingKit} className={`rounded border font-mono text-[10px] uppercase tracking-widest font-bold px-5 py-3 transition-colors shadow-sm disabled:opacity-50 ${isDarkTheme ? "border-[#27272a] bg-[#111] hover:bg-zinc-900 text-zinc-200" : "bg-slate-900 hover:bg-black text-white"}`}>{downloadingKit ? "Building Kit…" : "Download Homepage Kit (.zip)"}</button>
+                {purchase.url && <a href={purchase.url} target="_blank" rel="noopener noreferrer" className={`rounded border font-mono text-[10px] uppercase tracking-widest font-bold px-5 py-3 transition-colors shadow-sm ${isDarkTheme ? "border-[#27272a] bg-[#111] hover:bg-zinc-900 text-zinc-200" : "border-slate-200 bg-white hover:bg-slate-100 text-slate-700"}`}>View Current Site →</a>}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Next Step (Hidden for White Label Subs) */}
+        {!isWhiteLabel && (
+          <section className={`rounded-lg border ${cardBg} p-6 md:p-8 shadow-sm`}>
+            <p className={cn("text-[10px] font-mono font-bold uppercase tracking-widest mb-2", activeColor)}>Next Step</p>
+            <h2 className={`text-3xl font-bold ${headingColor} mb-3`}>Need help implementing these recommendations?</h2>
+            <p className={`mb-6 max-w-3xl leading-7 ${bodyColor}`}>If you'd like expert help putting these fixes into action — from copy rewrites to full page redesigns — tell us what you need and we'll come back to you within 1–2 business days.</p>
+            <button onClick={() => setEnquiryOpen(true)} className={cn("rounded font-mono text-[10px] font-bold uppercase tracking-widest px-6 py-4 transition-colors shadow-sm", activeBtn)}>Get Implementation Help →</button>
+          </section>
+        )}
+
+      </div>
+
+      {fullscreen && activeMockupHtml && (
+        <div className="fixed inset-0 z-[100] bg-black flex flex-col">
+          <div className="flex items-center justify-between px-6 py-4 bg-[#0A0A0A] border-b border-surgical shrink-0">
+            <p className={cn("font-mono text-xs font-bold uppercase tracking-widest", activeColor)}>
+               Mockup_View: {mockupVersion === "a" ? "Recommended" : "Alternative"}
+            </p>
+            <button onClick={() => setFullscreen(false)} className="text-data hover:text-white font-mono text-xs uppercase tracking-widest flex items-center gap-2">Close <LogOut className="w-3 h-3"/></button>
+          </div>
+          <div className="flex-1 overflow-auto bg-white relative">
+             <div dangerouslySetInnerHTML={{ __html: activeMockupHtml }} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
