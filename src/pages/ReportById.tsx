@@ -31,10 +31,18 @@ type WhiteLabel = { logo: string | null; theme: "light" | "dark"; is_subscriber:
 
 const prettyLabel = (key: string) => key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-const scoreColor = (score?: number) => {
+// FIXED SCORE COLOR LOGIC
+const scoreColor = (score?: number, isOutOf100 = false) => {
   if (typeof score !== "number") return "text-data";
-  if (score >= 70) return "text-[#10b981]";
-  if (score >= 40) return "text-[#f59e0b]";
+  
+  if (isOutOf100) {
+    if (score >= 70) return "text-[#10b981]";
+    if (score >= 40) return "text-[#f59e0b]";
+    return "text-[#E11D48]";
+  }
+  
+  if (score >= 7) return "text-[#10b981]";
+  if (score >= 4) return "text-[#f59e0b]";
   return "text-[#E11D48]";
 };
 
@@ -224,7 +232,7 @@ const buildPdf = ({ overallScore, auditData, topFixes, orderedScores, summary, p
 };
 
 // --- DOCX BUILDER ---
-const buildDocx = async ({ copyPack, overallScore, summary, purchaseUrl, whiteLabel }: any): Promise<Blob> => {
+const buildDocx = async ({ copyPack, overallScore, summary, topFixes, purchaseUrl, whiteLabel }: any): Promise<Blob> => {
   const bullets = Array.isArray(copyPack.benefit_bullets) ? copyPack.benefit_bullets.filter(Boolean) : [];
   const tealColor = "0D9488", navyColor = "1E3A5F", slateColor = "475569", darkColor = "1E293B";
 
@@ -375,7 +383,8 @@ function EnquiryModal({ open, onClose, prefillUrl, prefillEmail, purchaseId }: a
   );
 }
 
-// ─── MAIN COMPONENT ────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────
+// --- MAIN COMPONENT ---
 export default function ReportById() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -454,7 +463,7 @@ export default function ReportById() {
   const mockupHtmlB = auditData?.mockup_html_b ?? null;
   const activeMockupHtml = mockupVersion === "a" ? mockupHtml : (mockupHtmlB || mockupHtml);
 
-  // Missing UI variables added back!
+  // Dynamic colors for UI
   const isGeoMode = purchase?.focus === "geo";
   const isWhiteLabel = whiteLabel?.is_subscriber;
   const isDarkTheme = whiteLabel?.theme === "dark" || !isWhiteLabel;
