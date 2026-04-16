@@ -160,7 +160,7 @@ const GeoHeroSection = () => {
   };
 
   return (
-    <section id="hero-cta" className="relative pt-32 pb-20 px-6 overflow-hidden">
+    <section id="hero-cta" className="relative pt-32 pb-20 px-6 overflow-hidden bg-obsidian">
       <div className="max-w-7xl mx-auto text-center relative z-10">
 
         {/* Badge */}
@@ -168,21 +168,21 @@ const GeoHeroSection = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-1.5 mb-8"
+          className="inline-flex items-center gap-2 border border-neon/30 rounded-md px-4 py-1.5 mb-8 bg-black/40"
         >
-          <span className="text-xs font-bold uppercase tracking-widest text-primary">
-            ⚡ AI Search Readiness Audit
+          <span className="text-xs font-mono font-bold uppercase tracking-widest text-neon">
+            AI Search Readiness Audit
           </span>
         </motion.div>
 
-        {/* Headline — ✅ teal accent on "invisible" */}
+        {/* Headline */}
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="text-5xl md:text-7xl font-bold tracking-tight mb-8 leading-[1.1]"
+          className="text-5xl md:text-7xl font-black tracking-tight mb-8 leading-[1.1] text-clinic"
         >
-          Is your page <span className="text-teal-400">invisible</span><br />
+          Is your page <span className="text-neon">invisible</span><br />
           to AI search?
         </motion.h1>
 
@@ -191,7 +191,7 @@ const GeoHeroSection = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-xl text-body max-w-3xl mx-auto mb-6 leading-relaxed"
+          className="text-xl text-data max-w-3xl mx-auto mb-6 leading-relaxed"
         >
           ChatGPT, Perplexity, and Google AI Overviews are changing how people
           find businesses. Most pages are structured for Google — not for AI.
@@ -203,7 +203,7 @@ const GeoHeroSection = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.25 }}
-          className="text-sm text-caption max-w-2xl mx-auto mb-12"
+          className="text-sm font-mono text-surgical uppercase tracking-widest max-w-2xl mx-auto mb-12 opacity-60"
         >
           Built for humans. Ready for AI.
         </motion.p>
@@ -217,37 +217,37 @@ const GeoHeroSection = () => {
         >
           <form onSubmit={runAudit} className="flex flex-col md:flex-row items-stretch gap-4 mb-2">
             <div className="relative flex-grow group">
-              <div className="absolute -inset-1 bg-primary/40 rounded-xl blur opacity-25 group-focus-within:opacity-50 transition duration-1000"></div>
+              <div className="absolute -inset-1 bg-neon/20 rounded-xl blur opacity-25 group-focus-within:opacity-50 transition duration-1000"></div>
               <input
                 type="text"
                 value={url}
                 onChange={(e) => { setUrl(e.target.value); if (urlError) setUrlError(null); }}
                 placeholder="Enter your page URL (e.g. yourbusiness.com)"
                 disabled={isLoading || countdown !== null}
-                className={`relative w-full bg-navy-dark border rounded-xl px-6 py-4 text-sm text-foreground placeholder:text-caption focus:outline-none focus:border-primary transition-colors disabled:opacity-50 ${
-                  urlError ? "border-destructive" : "border-white/10"
+                className={`relative w-full bg-black/50 border rounded-xl px-6 py-4 text-sm text-clinic placeholder:text-data focus:outline-none focus:border-neon transition-colors disabled:opacity-50 ${
+                  urlError ? "border-warning" : "border-surgical"
                 }`}
               />
             </div>
             <button
               type="submit"
               disabled={isLoading || countdown !== null}
-              className="btn-primary text-lg px-8 py-4 flex items-center justify-center gap-3 shrink-0 disabled:opacity-70 min-w-[200px]"
+              className="btn-neon text-lg px-8 py-4 flex items-center justify-center gap-3 shrink-0 disabled:opacity-70 min-w-[200px]"
             >
               {isLoading ? (
                 <><Loader2 className="w-5 h-5 animate-spin" />Analysing...</>
               ) : countdown !== null ? (
                 <><Loader2 className="w-5 h-5 animate-spin" />Wait {countdown}s</>
               ) : (
-                <>Run Free GEO Audit<ArrowRight className="w-5 h-5" /></>
+                <>Analyze Visibility<ArrowRight className="w-5 h-5" /></>
               )}
             </button>
           </form>
 
           {urlError && (
             <div className="flex items-center gap-2 mt-2 px-2">
-              <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
-              <p className="text-sm text-destructive text-left">
+              <AlertCircle className="w-4 h-4 text-warning shrink-0" />
+              <p className="text-sm text-warning text-left">
                 {countdown !== null
                   ? `We're busy right now. Try again in ${countdown} seconds.`
                   : urlError}
@@ -259,7 +259,7 @@ const GeoHeroSection = () => {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="glass-card p-6 mb-6 mt-4"
+              className="border border-surgical bg-black/40 p-6 mb-6 mt-4 rounded-lg text-left"
             >
               <div className="space-y-3">
                 {loadingSteps.map((step) => {
@@ -270,14 +270,14 @@ const GeoHeroSection = () => {
                   return (
                     <div key={step.key} className="flex items-center gap-3">
                       {isDone ? (
-                        <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
+                        <CheckCircle2 className="w-5 h-5 text-neon shrink-0" />
                       ) : isCurrent ? (
-                        <Loader2 className="w-5 h-5 text-primary animate-spin shrink-0" />
+                        <Loader2 className="w-5 h-5 text-neon animate-spin shrink-0" />
                       ) : (
-                        <div className="w-5 h-5 rounded-full border border-white/20 shrink-0" />
+                        <div className="w-5 h-5 rounded-full border border-surgical shrink-0" />
                       )}
-                      <span className={`text-sm font-medium ${
-                        isDone ? "text-primary" : isCurrent ? "text-foreground" : "text-caption"
+                      <span className={`text-sm font-mono uppercase tracking-widest ${
+                        isDone ? "text-neon" : isCurrent ? "text-clinic" : "text-data"
                       }`}>
                         {step.label}
                       </span>
@@ -290,29 +290,13 @@ const GeoHeroSection = () => {
 
           {!isLoading && stage === "idle" && (
             <div className="flex flex-col items-center gap-8 mt-4">
-              <div className="flex flex-wrap items-center justify-center gap-6 text-xs font-medium text-body">
+              <div className="flex flex-wrap items-center justify-center gap-6 text-xs font-mono uppercase tracking-widest text-data">
                 {["Free", "No credit card", "Results in 60 seconds"].map((text) => (
                   <div key={text} className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-primary" />
+                    <CheckCircle2 className="w-4 h-4 text-neon" />
                     {text}
                   </div>
                 ))}
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex -space-x-3">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <img
-                      key={i}
-                      src={`https://i.pravatar.cc/100?u=${i}`}
-                      alt="User"
-                      className="w-10 h-10 rounded-full border-2 border-navy-dark"
-                      referrerPolicy="no-referrer"
-                    />
-                  ))}
-                </div>
-                <div className="text-sm font-bold text-foreground/80">
-                  ⭐⭐⭐⭐⭐ Trusted by 300+ founders
-                </div>
               </div>
             </div>
           )}
@@ -339,9 +323,9 @@ const GeoHeroSection = () => {
               description: "We check how your page performs for visitors and AI search engines like ChatGPT and Perplexity.",
             },
           ].map((item) => (
-            <div key={item.label} className="glass-card p-6 text-left">
-              <p className="text-sm font-bold text-primary mb-1">{item.label}</p>
-              <p className="text-xs text-body leading-relaxed">{item.description}</p>
+            <div key={item.label} className="border border-surgical bg-[#0A0A0A] p-6 rounded-lg text-left hover:border-neon/40 transition-colors duration-300">
+              <p className="text-sm font-mono font-bold text-neon mb-2 uppercase tracking-widest">{item.label}</p>
+              <p className="text-sm text-data leading-relaxed">{item.description}</p>
             </div>
           ))}
         </motion.div>
@@ -349,10 +333,10 @@ const GeoHeroSection = () => {
 
       <EmailModal />
 
-      {/* Background glows */}
+      {/* Background glows - Shifted to Neon Magenta */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full"></div>
-        <div className="absolute bottom-[10%] right-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full"></div>
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-neon/10 blur-[120px] rounded-full"></div>
+        <div className="absolute bottom-[10%] right-[-10%] w-[40%] h-[40%] bg-neon/5 blur-[120px] rounded-full"></div>
       </div>
     </section>
   );
