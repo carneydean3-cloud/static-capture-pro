@@ -10,7 +10,7 @@ import FinalCTA from "@/components/FinalCTA";
 import Footer from "@/components/Footer";
 
 const GeoAudit = () => (
-  <div className="min-h-screen">
+  <div className="min-h-screen bg-obsidian text-clinic selection:bg-neon/30">
     <Navbar />
     <GeoHeroSection />
     <HowItWorks />
