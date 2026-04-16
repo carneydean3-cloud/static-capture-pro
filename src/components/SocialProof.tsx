@@ -66,12 +66,14 @@ const geoStats = [
 
 const SocialProof = () => {
   const isGeoMode = window.location.pathname.includes("geo-audit");
+  
+  const activeColor = isGeoMode ? "text-neon" : "text-pulse";
 
   const testimonials = isGeoMode ? geoTestimonials : conversionTestimonials;
   const stats = isGeoMode ? geoStats : conversionStats;
 
   return (
-    <section className="py-24 px-6 bg-navy-dark/30">
+    <section className="py-24 px-6 bg-obsidian border-t border-surgical">
       <div className="max-w-7xl mx-auto">
 
         {/* Stats strip */}
@@ -85,12 +87,12 @@ const SocialProof = () => {
           {stats.map((stat) => (
             <div
               key={stat.label}
-              className="glass-card p-6 text-center"
+              className="bg-[#0A0A0A] border border-surgical rounded-lg p-6 text-center"
             >
-              <div className="text-3xl font-bold text-primary mb-1">
+              <div className={`text-4xl font-black mb-2 ${activeColor}`}>
                 {stat.value}
               </div>
-              <div className="text-xs font-medium text-caption uppercase tracking-widest">
+              <div className="text-xs font-mono font-bold text-data uppercase tracking-widest opacity-80">
                 {stat.label}
               </div>
             </div>
@@ -99,16 +101,18 @@ const SocialProof = () => {
 
         {/* Heading */}
         <div className="text-center mb-20">
-          <span className="section-label mb-4 block">Testimonials</span>
-          <h2 className="section-heading mb-6">
+          <span className={`font-mono text-xs font-bold uppercase tracking-widest mb-4 block ${activeColor}`}>
+            Performance Evidence
+          </span>
+          <h2 className="text-4xl md:text-5xl font-black mb-6 text-clinic">
             {isGeoMode
-              ? "Loved by founders who want to be found."
-              : "Loved by founders who ship."}
+              ? "Trusted by teams adapting to AI search."
+              : "Trusted by founders who demand conversions."}
           </h2>
-          <p className="body-text max-w-2xl mx-auto">
+          <p className="text-lg text-data max-w-2xl mx-auto">
             {isGeoMode
-              ? "From indie makers to agency teams — ConversionDoc helps businesses understand and improve how AI search engines read, retrieve, and cite their content."
-              : "From indie makers to agency teams — ConversionDoc helps people find and fix the problems stopping their pages from performing."}
+              ? "From indie makers to agency teams — ConversionDoc helps businesses understand and improve how AI engines read, retrieve, and cite their content."
+              : "From indie makers to agency teams — ConversionDoc helps people find and fix the psychological friction stopping their pages from performing."}
           </p>
         </div>
 
@@ -121,34 +125,34 @@ const SocialProof = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="glass-card p-8"
+              className="bg-[#0A0A0A] border border-surgical rounded-lg p-8"
             >
-              <div className="flex gap-1 mb-4">
+              <div className="flex gap-1 mb-6">
                 {Array.from({ length: t.rating }).map((_, i) => (
                   <Star
                     key={i}
-                    className="w-4 h-4 fill-score-amber text-score-amber"
+                    className={`w-4 h-4 fill-current ${activeColor}`}
                   />
                 ))}
               </div>
-              <p className="text-sm text-body leading-relaxed mb-6">
+              <p className="text-sm text-data leading-relaxed mb-8">
                 "{t.text}"
               </p>
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-10 w-10 ring-1 ring-surgical">
                   <AvatarImage
                     src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
                       t.name
-                    )}&background=0f766e&color=fff&bold=true&size=80`}
+                    )}&background=1A1A1A&color=fff&bold=true&size=80`}
                     alt={t.name}
                   />
-                  <AvatarFallback className="bg-primary/30 text-white text-sm font-bold">
+                  <AvatarFallback className="bg-[#1A1A1A] text-white text-sm font-bold">
                     {t.initials}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <div className="font-bold text-sm">{t.name}</div>
-                  <div className="text-xs text-caption">{t.role}</div>
+                  <div className="font-bold text-sm text-clinic">{t.name}</div>
+                  <div className="text-xs text-data font-mono mt-0.5">{t.role}</div>
                 </div>
               </div>
             </motion.div>
