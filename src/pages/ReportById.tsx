@@ -41,32 +41,40 @@ const scoreColor = (score?: number) => {
 const impactColor: Record<string, string> = { High: "#E11D48", Medium: "#f59e0b", Low: "#A1A1AA" };
 const impactBg: Record<string, string> = { High: "rgba(225,29,72,0.1)", Medium: "rgba(245,158,11,0.1)", Low: "rgba(161,161,170,0.1)" };
 
-// --- PDF BUILDER (FULLY RESTORED & THEMED) ---
-const buildPdf = ({ overallScore, auditData, topFixes, orderedScores, summary, purchaseUrl, hasMockupB, whiteLabel, isGeoMode }: any): jsPDF => {
+// --- PDF BUILDER (Fully Restored & Mapped to Obsidian) ---
+const buildPdf = ({ overallScore, auditData, topFixes, orderedScores, summary, purchaseUrl, hasMockupB, whiteLabel }: any): jsPDF => {
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const W = 210, H = 297, ML = 16, MR = 16, CW = W - ML - MR, BOTTOM_MARGIN = 20;
 
-  const BG: [number, number, number] = [10, 10, 10]; // Obsidian
-  const CARD_BG: [number, number, number] = [15, 15, 15]; // Slightly lighter black
-  const CARD_BORDER: [number, number, number] = [39, 39, 42]; // Surgical
-  const ACCENT: [number, number, number] = isGeoMode ? [217, 70, 239] : [6, 182, 212]; // Neon or Pulse
-  const ACCENT_MUTED: [number, number, number] = isGeoMode ? [40, 10, 45] : [2, 35, 40]; // For headers
-  
-  const WHITE: [number, number, number] = [255, 255, 255]; // Clinic
-  const BODY_TEXT: [number, number, number] = [161, 161, 170]; // Data
+  // Obsidian Color Mapping for PDF
+  const NAVY: [number, number, number] = [10, 10, 10]; // Background
+  const TEAL: [number, number, number] = [6, 182, 212]; // Pulse Accent
+  const TEAL_LIGHT: [number, number, number] = [15, 25, 30]; // Dark tint
+  const TEAL_BORDER: [number, number, number] = [6, 182, 212];
+  const SLATE_900: [number, number, number] = [255, 255, 255]; // Headings (White)
+  const SLATE_700: [number, number, number] = [161, 161, 170]; // Body Text (Zinc 400)
+  const SLATE_500: [number, number, number] = [113, 113, 122]; // Muted Text
+  const SLATE_200: [number, number, number] = [39, 39, 42]; // Borders
+  const SLATE_50: [number, number, number] = [15, 15, 15]; // Card BG
+  const WHITE: [number, number, number] = [255, 255, 255];
   const EMERALD: [number, number, number] = [16, 185, 129];
   const AMBER: [number, number, number] = [245, 158, 11];
-  const RED: [number, number, number] = [239, 68, 68];
+  const RED: [number, number, number] = [225, 29, 72];
+
+  const BG: [number, number, number] = NAVY;
+  const BODY_TEXT: [number, number, number] = SLATE_700;
+  const CARD_BG: [number, number, number] = SLATE_50;
+  const CARD_BORDER: [number, number, number] = SLATE_200;
+  const HEADING_COLOR: [number, number, number] = SLATE_900;
 
   const scoreRgb = (s: number | null): [number, number, number] =>
-    s === null ? BODY_TEXT : s >= 70 ? EMERALD : s >= 50 ? AMBER : RED;
+    s === null ? SLATE_500 : s >= 70 ? EMERALD : s >= 50 ? AMBER : RED;
   const pillarScoreRgb = (s: number | undefined): [number, number, number] =>
-    typeof s !== "number" ? BODY_TEXT : s >= 8 ? EMERALD : s >= 5 ? AMBER : RED;
+    typeof s !== "number" ? SLATE_500 : s >= 8 ? EMERALD : s >= 5 ? AMBER : RED;
   const impactRgb = (impact: string): [number, number, number] =>
-    impact === "High" ? RED : impact === "Medium" ? AMBER : BODY_TEXT;
+    impact === "High" ? RED : impact === "Medium" ? AMBER : [107, 114, 128];
 
   let y = 0;
-
   const checkPageBreak = (neededMm: number) => {
     if (y + neededMm > H - BOTTOM_MARGIN) {
       pdf.addPage();
@@ -75,7 +83,6 @@ const buildPdf = ({ overallScore, auditData, topFixes, orderedScores, summary, p
     }
   };
 
-  // Base background
   pdf.setFillColor(...BG); pdf.rect(0, 0, W, H, "F");
 
   const setFont = (style: "normal" | "bold" | "italic" = "normal", size = 10, color: [number, number, number] = BODY_TEXT) => {
@@ -89,7 +96,7 @@ const buildPdf = ({ overallScore, auditData, topFixes, orderedScores, summary, p
   };
 
   const sectionDivider = () => { checkPageBreak(8); pdf.setDrawColor(...CARD_BORDER); pdf.setLineWidth(0.3); pdf.line(ML, y, W - MR, y); y += 8; };
-  const microLabel = (text: string, color: [number, number, number] = ACCENT) => { checkPageBreak(6); setFont("bold", 7, color); pdf.text(text.toUpperCase(), ML, y); y += 5; };
+  const microLabel = (text: string, color: [number, number, number] = TEAL) => { checkPageBreak(6); setFont("bold", 7, color); pdf.text(text.toUpperCase(), ML, y); y += 5; };
   const roundedRect = (x: number, rectY: number, w: number, h: number, fill: [number, number, number], stroke?: [number, number, number], radius = 3) => {
     pdf.setFillColor(...fill);
     if (stroke) { pdf.setDrawColor(...stroke); pdf.setLineWidth(0.3); pdf.roundedRect(x, rectY, w, h, radius, radius, "FD"); }
@@ -97,60 +104,60 @@ const buildPdf = ({ overallScore, auditData, topFixes, orderedScores, summary, p
   };
 
   // Header
-  roundedRect(ML, 12, CW, 44, CARD_BG, CARD_BORDER, 2);
-  pdf.setFillColor(...ACCENT); pdf.rect(ML, 12, CW, 1.2, "F");
-  setFont("bold", 7, ACCENT); pdf.text("FULL DIAGNOSIS", ML + 6, 20);
-  if (!whiteLabel?.is_subscriber) { setFont("bold", 8, ACCENT); pdf.text("ConversionDoc", W - MR - 6, 20, { align: "right" }); }
-  setFont("bold", 18, WHITE); pdf.text(isGeoMode ? "GEO Strategy Report" : "Conversion Report", ML + 6, 30);
-  if (auditData?.verdict) { setFont("italic", 8, BODY_TEXT); const vl = pdf.splitTextToSize(`"${auditData.verdict}"`, CW - 12); vl.slice(0, 2).forEach((line: string, i: number) => pdf.text(line, ML + 6, 38 + i * 5)); }
-  if (purchaseUrl) { setFont("normal", 7, BODY_TEXT); pdf.text(purchaseUrl, ML + 6, 51); }
+  roundedRect(ML, 12, CW, 44, CARD_BG, CARD_BORDER, 4);
+  pdf.setFillColor(...TEAL); pdf.rect(ML, 12, CW, 1.2, "F");
+  setFont("bold", 7, TEAL); pdf.text("FULL DIAGNOSIS", ML + 6, 20);
+  if (!whiteLabel?.is_subscriber) { setFont("bold", 8, TEAL); pdf.text("ConversionDoc", W - MR - 6, 20, { align: "right" }); }
+  setFont("bold", 18, WHITE); pdf.text("Conversion Report", ML + 6, 30);
+  if (auditData?.verdict) { setFont("italic", 8, SLATE_700); const vl = pdf.splitTextToSize(`"${auditData.verdict}"`, CW - 12); vl.slice(0, 2).forEach((line: string, i: number) => pdf.text(line, ML + 6, 38 + i * 5)); }
+  if (purchaseUrl) { setFont("normal", 7, TEAL); pdf.text(purchaseUrl, ML + 6, 51); }
   y = 64;
 
   // Executive Summary
-  microLabel("01_Executive_Summary", ACCENT);
-  wrappedText("Your strongest opportunity", ML, CW, 7, "bold", 14, WHITE);
+  microLabel("Executive Summary", TEAL);
+  wrappedText("Your strongest opportunity to improve conversions", ML, CW, 7, "bold", 14, HEADING_COLOR);
   y += 2;
   checkPageBreak(24);
   const cardW = (CW - 8) / 3;
   roundedRect(ML, y, cardW, 22, CARD_BG, CARD_BORDER);
-  setFont("normal", 7, BODY_TEXT); pdf.text("Health Index", ML + 4, y + 6);
+  setFont("normal", 7, SLATE_500); pdf.text("Overall Score", ML + 4, y + 6);
   setFont("bold", 16, scoreRgb(overallScore)); pdf.text(overallScore !== null ? `${overallScore}/100` : "N/A", ML + 4, y + 17);
   
   roundedRect(ML + cardW + 4, y, cardW, 22, CARD_BG, CARD_BORDER);
-  setFont("normal", 7, BODY_TEXT); pdf.text("Strongest Pillar", ML + cardW + 8, y + 6);
-  setFont("bold", 10, WHITE);
-  const strongLines = pdf.splitTextToSize(summary?.strongest_pillar ? prettyLabel(summary.strongest_pillar) : "N/A", cardW - 8);
+  setFont("normal", 7, SLATE_500); pdf.text("Strongest Pillar", ML + cardW + 8, y + 6);
+  setFont("bold", 10, HEADING_COLOR);
+  const strongLines = pdf.splitTextToSize(summary.strongest_pillar ? prettyLabel(summary.strongest_pillar) : "N/A", cardW - 8);
   strongLines.slice(0, 2).forEach((line: string, i: number) => pdf.text(line, ML + cardW + 8, y + 13 + i * 5));
   
   roundedRect(ML + (cardW + 4) * 2, y, cardW, 22, CARD_BG, CARD_BORDER);
-  setFont("normal", 7, BODY_TEXT); pdf.text("Weakest Pillar", ML + (cardW + 4) * 2 + 4, y + 6);
-  setFont("bold", 10, WHITE);
-  const weakLines = pdf.splitTextToSize(summary?.weakest_pillar ? prettyLabel(summary.weakest_pillar) : "N/A", cardW - 8);
+  setFont("normal", 7, SLATE_500); pdf.text("Weakest Pillar", ML + (cardW + 4) * 2 + 4, y + 6);
+  setFont("bold", 10, HEADING_COLOR);
+  const weakLines = pdf.splitTextToSize(summary.weakest_pillar ? prettyLabel(summary.weakest_pillar) : "N/A", cardW - 8);
   weakLines.slice(0, 2).forEach((line: string, i: number) => pdf.text(line, ML + (cardW + 4) * 2 + 4, y + 13 + i * 5));
   y += 26;
 
-  const oppText = summary?.biggest_opportunity || "N/A";
+  const oppText = summary.biggest_opportunity || "N/A";
   const oppLines = pdf.splitTextToSize(oppText, CW - 10);
   const oppH = 10 + oppLines.length * 5.5;
   checkPageBreak(oppH + 4);
-  roundedRect(ML, y, CW, oppH, ACCENT_MUTED, CARD_BORDER);
-  setFont("bold", 7, ACCENT); pdf.text("BIGGEST OPPORTUNITY", ML + 5, y + 6);
-  setFont("bold", 9.5, WHITE); oppLines.forEach((line: string, i: number) => pdf.text(line, ML + 5, y + 12 + i * 5.5));
+  roundedRect(ML, y, CW, oppH, TEAL_LIGHT, TEAL_BORDER);
+  setFont("bold", 7, TEAL); pdf.text("BIGGEST OPPORTUNITY", ML + 5, y + 6);
+  setFont("bold", 9.5, HEADING_COLOR); oppLines.forEach((line: string, i: number) => pdf.text(line, ML + 5, y + 12 + i * 5.5));
   y += oppH + 4;
 
-  const diagText = summary?.executive_summary || "N/A";
+  const diagText = summary.executive_summary || "N/A";
   const diagLines = pdf.splitTextToSize(diagText, CW - 10);
   const diagH = 10 + diagLines.length * 5;
   checkPageBreak(diagH + 4);
   roundedRect(ML, y, CW, diagH, CARD_BG, CARD_BORDER);
-  setFont("bold", 7, BODY_TEXT); pdf.text("DIAGNOSIS", ML + 5, y + 6);
+  setFont("bold", 7, SLATE_500); pdf.text("DIAGNOSIS", ML + 5, y + 6);
   setFont("normal", 9, BODY_TEXT); diagLines.forEach((line: string, i: number) => pdf.text(line, ML + 5, y + 12 + i * 5));
   y += diagH + 6;
   sectionDivider();
 
   // Top Fixes
-  microLabel("02_Priority_Fixes", ACCENT);
-  wrappedText("Action Plan", ML, CW, 7, "bold", 14, WHITE);
+  microLabel("Action Plan", TEAL);
+  wrappedText("Top Priority Fixes", ML, CW, 7, "bold", 14, HEADING_COLOR);
   y += 2;
   (topFixes || []).forEach((fix: any) => {
     const impact = fix.impact || "Medium";
@@ -167,7 +174,7 @@ const buildPdf = ({ overallScore, auditData, topFixes, orderedScores, summary, p
     const cardH = V_PAD_TOP + PILL_H + PILL_GAP + issueLines.length * ISSUE_LH + ISSUE_GAP + fixLines.length * FIX_LH + V_PAD_BOT;
     
     checkPageBreak(cardH + 4);
-    roundedRect(ML, y, CW, cardH, iRgbDark, CARD_BORDER, 2);
+    roundedRect(ML, y, CW, cardH, iRgbDark, undefined, 3);
     pdf.setFillColor(...iRgb); pdf.rect(ML, y, LEFT_BAR, cardH, "F");
     pdf.setFillColor(...iRgb); pdf.circle(CIRCLE_CENTER_X, y + V_PAD_TOP + CIRCLE_RADIUS, CIRCLE_RADIUS, "F");
     pdf.setFont("helvetica", "bold"); pdf.setFontSize(8); pdf.setTextColor(...WHITE);
@@ -181,7 +188,7 @@ const buildPdf = ({ overallScore, auditData, topFixes, orderedScores, summary, p
     pdf.text(pillLabel, TEXT_X + 3, y + V_PAD_TOP + 3.8);
     
     let innerY = y + V_PAD_TOP + PILL_H + PILL_GAP;
-    pdf.setFont("helvetica", "bold"); pdf.setFontSize(9); pdf.setTextColor(...WHITE);
+    pdf.setFont("helvetica", "bold"); pdf.setFontSize(9); pdf.setTextColor(...HEADING_COLOR);
     issueLines.forEach((line: string) => { innerY += ISSUE_LH; pdf.text(line, TEXT_X, innerY); });
     innerY += ISSUE_GAP;
     pdf.setFont("helvetica", "normal"); pdf.setFontSize(8.5); pdf.setTextColor(...BODY_TEXT);
@@ -191,8 +198,8 @@ const buildPdf = ({ overallScore, auditData, topFixes, orderedScores, summary, p
   sectionDivider();
 
   // Score Breakdown
-  microLabel("03_Diagnostic_Breakdown", ACCENT);
-  wrappedText("Full Analysis", ML, CW, 7, "bold", 14, WHITE);
+  microLabel("Full Analysis", TEAL);
+  wrappedText("Score Breakdown", ML, CW, 7, "bold", 14, HEADING_COLOR);
   y += 2;
   orderedScores.forEach(([pillar, value]: any) => {
     const s = value?.score;
@@ -207,32 +214,32 @@ const buildPdf = ({ overallScore, auditData, topFixes, orderedScores, summary, p
     
     checkPageBreak(contentH + 4);
     roundedRect(ML, y, CW, contentH, CARD_BG, CARD_BORDER);
-    setFont("bold", 11, WHITE); pdf.text(prettyLabel(pillar), ML + 5, y + 8);
+    setFont("bold", 11, HEADING_COLOR); pdf.text(prettyLabel(pillar), ML + 5, y + 8);
     setFont("bold", 11, sRgb); pdf.text(typeof s === "number" ? `${s}/10` : "—", W - MR - 5, y + 8, { align: "right" });
     pdf.setDrawColor(...CARD_BORDER); pdf.setLineWidth(0.2); pdf.line(ML + 5, y + 10, W - MR - 5, y + 10);
     
     let innerY = y + 16;
-    if (issueLines.length > 0) { setFont("bold", 7, BODY_TEXT); pdf.text("ISSUE", ML + 5, innerY); innerY += 5; setFont("normal", 8.5, BODY_TEXT); issueLines.forEach((line: string) => { pdf.text(line, ML + 5, innerY); innerY += 4.5; }); innerY += 2; }
-    if (fixLines.length > 0) { setFont("bold", 7, BODY_TEXT); pdf.text("RECOMMENDED FIX", ML + 5, innerY); innerY += 5; setFont("normal", 8.5, BODY_TEXT); fixLines.forEach((line: string) => { pdf.text(line, ML + 5, innerY); innerY += 4.5; }); innerY += 2; }
-    if (rewriteLines.length > 0) { setFont("bold", 7, ACCENT); pdf.text("OPTIMIZED CONTENT", ML + 5, innerY); innerY += 5; setFont("italic", 8.5, WHITE); rewriteLines.forEach((line: string) => { pdf.text(line, ML + 5, innerY); innerY += 4.5; }); }
+    if (issueLines.length > 0) { setFont("bold", 7, SLATE_500); pdf.text("ISSUE", ML + 5, innerY); innerY += 5; setFont("normal", 8.5, BODY_TEXT); issueLines.forEach((line: string) => { pdf.text(line, ML + 5, innerY); innerY += 4.5; }); innerY += 2; }
+    if (fixLines.length > 0) { setFont("bold", 7, SLATE_500); pdf.text("RECOMMENDED FIX", ML + 5, innerY); innerY += 5; setFont("normal", 8.5, BODY_TEXT); fixLines.forEach((line: string) => { pdf.text(line, ML + 5, innerY); innerY += 4.5; }); innerY += 2; }
+    if (rewriteLines.length > 0) { setFont("bold", 7, TEAL); pdf.text("REWRITTEN COPY", ML + 5, innerY); innerY += 5; setFont("italic", 8.5, BODY_TEXT); rewriteLines.forEach((line: string) => { pdf.text(line, ML + 5, innerY); innerY += 4.5; }); }
     y += contentH + 4;
   });
 
-  // Footer on all pages
+  // Footer
   const totalPages = pdf.getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     pdf.setPage(p);
     pdf.setFillColor(...BG); pdf.rect(0, H - 18, W, 18, "F");
     pdf.setDrawColor(...CARD_BORDER); pdf.setLineWidth(0.3); pdf.line(ML, H - 12, W - MR, H - 12);
-    if (!whiteLabel?.is_subscriber) { setFont("bold", 7.5, ACCENT); pdf.text("ConversionDoc — conversiondoc.co.uk", ML, H - 7); }
-    setFont("normal", 7, BODY_TEXT); pdf.text(`${p} / ${totalPages}`, W / 2, H - 7, { align: "center" });
-    if (purchaseUrl) { setFont("normal", 7, BODY_TEXT); pdf.text(purchaseUrl, W - MR, H - 7, { align: "right" }); }
+    if (!whiteLabel?.is_subscriber) { setFont("bold", 7.5, TEAL); pdf.text("ConversionDoc — conversiondoc.co.uk", ML, H - 7); }
+    setFont("normal", 7, SLATE_500); pdf.text(`${p} / ${totalPages}`, W / 2, H - 7, { align: "center" });
+    if (purchaseUrl) { setFont("normal", 7, SLATE_500); pdf.text(purchaseUrl, W - MR, H - 7, { align: "right" }); }
   }
 
   return pdf;
 };
 
-// --- DOCX BUILDER (FULLY RESTORED) ---
+// --- DOCX BUILDER (Fully Restored) ---
 const buildDocx = async ({ copyPack, overallScore, summary, topFixes, purchaseUrl, whiteLabel }: any): Promise<Blob> => {
   const bullets = Array.isArray(copyPack.benefit_bullets) ? copyPack.benefit_bullets.filter(Boolean) : [];
   const tealColor = "0D9488", navyColor = "1E3A5F", slateColor = "475569", darkColor = "1E293B";
@@ -252,7 +259,7 @@ const buildDocx = async ({ copyPack, overallScore, summary, topFixes, purchaseUr
     ...(purchaseUrl ? [new Paragraph({ children: [new TextRun({ text: purchaseUrl, color: tealColor, size: 20, font: "Inter" })], spacing: { after: 80 } })] : []),
     divider(),
     sectionLabel("Executive Summary"),
-    heading("Health Index"),
+    heading("Overall Score"),
     new Paragraph({ children: [new TextRun({ text: overallScore !== null ? `${overallScore}/100` : "N/A", color: overallScore !== null && overallScore >= 70 ? "10B981" : overallScore !== null && overallScore >= 50 ? "F59E0B" : "EF4444", size: 48, font: "Inter", bold: true })], spacing: { after: 160 } }),
     subLabel("Strongest Pillar"), boldText(summary.strongest_pillar ? prettyLabel(summary.strongest_pillar) : "N/A"),
     subLabel("Weakest Pillar"), boldText(summary.weakest_pillar ? prettyLabel(summary.weakest_pillar) : "N/A"),
@@ -277,44 +284,57 @@ const buildDocx = async ({ copyPack, overallScore, summary, topFixes, purchaseUr
   return await Packer.toBlob(doc);
 };
 
-// --- INSTRUCTIONS DOCX (FULLY RESTORED) ---
+// --- INSTRUCTIONS DOCX (Fully Restored) ---
 const buildInstructionsDocx = async ({ hasMockupB, purchaseUrl, whiteLabel }: any): Promise<Blob> => {
-  const tealColor = "0D9488", navyColor = "1E3A5F", slateColor = "475569", darkColor = "1E293B", mutedColor = "94A3B8";
+  const tealColor = "0D9488";
+  const navyColor = "1E3A5F";
+  const slateColor = "475569";
+  const darkColor = "1E293B";
+  const mutedColor = "94A3B8";
 
   const heading1 = (text: string) => new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text, color: navyColor, size: 48, font: "Inter", bold: true })], spacing: { after: 120 } });
   const sectionLabel = (text: string) => new Paragraph({ children: [new TextRun({ text: text.toUpperCase(), color: tealColor, size: 18, font: "Inter", bold: true, characterSpacing: 80 })], spacing: { before: 400, after: 80 } });
   const bodyText = (text: string) => new Paragraph({ children: [new TextRun({ text, color: slateColor, size: 22, font: "Inter" })], spacing: { after: 100 } });
   const mutedText = (text: string) => new Paragraph({ children: [new TextRun({ text, color: mutedColor, size: 20, font: "Inter", italics: true })], spacing: { after: 80 } });
-  const fileRow = (filename: string, description: string) => new Paragraph({ children: [new TextRun({ text: filename, color: tealColor, size: 22, font: "Inter", bold: true }), new TextRun({ text: `  —  ${description}`, color: slateColor, size: 22, font: "Inter" })], spacing: { after: 100 } });
+  const fileRow = (filename: string, description: string) => new Paragraph({ children: [ new TextRun({ text: filename, color: tealColor, size: 22, font: "Inter", bold: true }), new TextRun({ text: `  —  ${description}`, color: slateColor, size: 22, font: "Inter" }) ], spacing: { after: 100 } });
   const divider = () => new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: "E2E8F0" } }, spacing: { before: 200, after: 200 }, children: [] });
-  const stepNumber = (n: string, title: string) => new Paragraph({ children: [new TextRun({ text: `${n}.  `, color: tealColor, size: 24, font: "Inter", bold: true }), new TextRun({ text: title, color: darkColor, size: 24, font: "Inter", bold: true })], spacing: { before: 280, after: 80 } });
+  const stepNumber = (n: string, title: string) => new Paragraph({ children: [ new TextRun({ text: `${n}.  `, color: tealColor, size: 24, font: "Inter", bold: true }), new TextRun({ text: title, color: darkColor, size: 24, font: "Inter", bold: true }) ], spacing: { before: 280, after: 80 } });
 
   const isSubscriber = whiteLabel?.is_subscriber ?? false;
   const brandLine = isSubscriber ? [] : [new Paragraph({ children: [new TextRun({ text: "ConversionDoc", color: tealColor, size: 20, font: "Inter", bold: true, characterSpacing: 60 })], spacing: { after: 60 } })];
-  const footerLine = isSubscriber ? [] : [divider(), new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Generated by ConversionDoc — conversiondoc.co.uk", color: tealColor, size: 18, font: "Inter", bold: true })], spacing: { before: 200 } })];
+  const footerLine = isSubscriber ? [] : [ divider(), new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Generated by ConversionDoc — conversiondoc.co.uk", color: tealColor, size: 18, font: "Inter", bold: true })], spacing: { before: 200 } }) ];
 
   const children = [
     ...brandLine,
-    heading1("How to use your Kit"),
+    heading1("How to use your Conversion Kit"),
     ...(purchaseUrl ? [new Paragraph({ children: [new TextRun({ text: `Audited: ${purchaseUrl}`, color: tealColor, size: 20, font: "Inter" })], spacing: { after: 80 } })] : []),
     divider(),
     sectionLabel("What's in this kit"),
-    fileRow("audit-report.pdf", "Full audit report — scores, diagnosis, and all recommended fixes"),
-    fileRow("copy-pack.docx", "Ready to deploy text copy"),
-    fileRow("mockup-a.html", "Improved page direction (Version A)"),
-    ...(hasMockupB ? [fileRow("mockup-b.html", "Alternative page direction (Version B)")] : []),
+    fileRow("homepage-audit-report.pdf", "Full conversion audit report — scores, diagnosis, and all recommended fixes"),
+    fileRow("copy-pack.docx", "Homepage-ready copy rewritten to improve clarity, trust, and action"),
+    fileRow("homepage-mockup-a.html / .png", "Improved page direction (Version A) — open the HTML in any browser or share the PNG"),
+    ...(hasMockupB ? [fileRow("homepage-mockup-b.html / .png", "Alternative page direction (Version B)")] : []),
     fileRow("INSTRUCTIONS.docx", "This document"),
     divider(),
     sectionLabel("Step-by-step"),
-    stepNumber("1", "Read the full report"), bodyText("Open audit-report.pdf. It contains the overall score, diagnosis, and every recommended fix in priority order."),
-    stepNumber("2", "Use the copy pack"), bodyText("Open copy-pack.docx in Word or Google Docs. It contains rewritten elements ready to paste directly into the page."),
-    stepNumber("3", "Preview the mockup"), bodyText(`Open mockup-a.html in any browser to see a visual direction.`),
-    stepNumber("4", "Apply highest-impact changes first"), bodyText("Focus on Priority 1 and 2 fixes before anything else."),
-    ...(isSubscriber ? [] : [stepNumber("5", "Need help implementing?"), bodyText("Get in touch at hello@conversiondoc.co.uk.")]),
+    stepNumber("1", "Read the full report"),
+    bodyText("Open homepage-audit-report.pdf. It contains the overall score, diagnosis, and every recommended fix in priority order. Start here before making any changes."),
+    stepNumber("2", "Use the copy pack"),
+    bodyText("Open copy-pack.docx in Word or Google Docs. It contains rewritten headline, subheadline, CTA, trust line, and benefit bullets — ready to paste directly into the page."),
+    stepNumber("3", "Preview the mockup"),
+    bodyText(`Open homepage-mockup-a.html in any browser to see a visual direction for the improved page.${hasMockupB ? " A second direction is available in homepage-mockup-b.html." : ""} Share the PNG with a developer or designer if needed.`),
+    stepNumber("4", "Apply highest-impact changes first"),
+    bodyText("Focus on Priority 1 and 2 fixes before anything else. Small, targeted changes to the headline and CTA typically deliver the fastest results."),
+    ...(isSubscriber ? [] : [
+      stepNumber("5", "Need help implementing?"),
+      bodyText("Get in touch at hello@conversiondoc.co.uk — we offer implementation support, copy rewrites, and full page redesigns."),
+    ]),
     divider(),
     sectionLabel("Tips"),
-    bodyText("✓  Make one change at a time so you can measure impact."),
-    bodyText("✓  Prioritise mobile check for every change."),
+    bodyText("✓  Make one change at a time so you can measure the impact of each fix."),
+    bodyText("✓  Prioritise mobile — check every change on a phone before publishing."),
+    bodyText("✓  Re-run your audit in 30 days to track your score improvement."),
+    bodyText("✓  If in doubt, follow the Priority order in the report — it's ranked by impact."),
     ...(purchaseUrl ? [divider(), mutedText(`Audited: ${purchaseUrl}`)] : []),
     ...footerLine,
   ];
@@ -323,11 +343,13 @@ const buildInstructionsDocx = async ({ hasMockupB, purchaseUrl, whiteLabel }: an
   return await Packer.toBlob(doc);
 };
 
-// --- ENQUIRY MODAL (FULLY RESTORED) ---
+// --- ENQUIRY MODAL (Fully Restored Submission) ---
 function EnquiryModal({ open, onClose, prefillUrl, prefillEmail, purchaseId }: any) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState(prefillEmail || "");
   const [url, setUrl] = useState(prefillUrl || "");
+  const [platform, setPlatform] = useState("");
+  const [helpNeeded, setHelpNeeded] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -342,18 +364,18 @@ function EnquiryModal({ open, onClose, prefillUrl, prefillEmail, purchaseId }: a
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-enquiry`, { 
         method: "POST", 
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` }, 
-        body: JSON.stringify({ name, email, url, notes, focus: "conversion", purchase_id: purchaseId }) 
+        body: JSON.stringify({ name, email, url, platform, help_needed: helpNeeded, notes, focus: "conversion", purchase_id: purchaseId }) 
       });
-      if (!res.ok) throw new Error("Submission failed");
+      if (!res.ok) { const body = await res.json().catch(() => null); throw new Error(body?.error || "Submission failed"); }
       setSubmitted(true);
-    } catch (err: any) { setSubmitError(err.message || "Something went wrong."); }
+    } catch (err: any) { setSubmitError(err.message || "Something went wrong. Please try again."); }
     finally { setSubmitting(false); }
   };
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm px-4" onClick={onClose}>
-      <div className="w-full max-w-lg bg-obsidian border border-surgical rounded-lg overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-4" onClick={onClose}>
+      <div className="w-full max-w-lg bg-[#0A0A0A] border border-surgical rounded-lg overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="bg-black border-b border-surgical px-8 py-6 flex justify-between items-center">
            <h2 className="text-lg font-black text-clinic uppercase tracking-tighter">Implementation_Support</h2>
            <button onClick={onClose} className="text-data hover:text-white text-xl leading-none">✕</button>
@@ -393,7 +415,7 @@ function EnquiryModal({ open, onClose, prefillUrl, prefillEmail, purchaseId }: a
   );
 }
 
-// --- MAIN COMPONENT (FULLY RESTORED) ---
+// --- MAIN COMPONENT ---
 export default function ReportById() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -401,12 +423,24 @@ export default function ReportById() {
   const [loading, setLoading] = useState(true);
   const [purchase, setPurchase] = useState<PurchaseRow | null>(null);
   const [whiteLabel, setWhiteLabel] = useState<WhiteLabel | undefined>(undefined);
-  const [activeTab, setActiveTab] = useState<"before" | "after">("after");
+  
+  // Fully Restored UI State
+  const [activeTab, setActiveTab] = useState<"before" | "after">("before");
   const [mockupVersion, setMockupVersion] = useState<"a" | "b">("a");
+  const [fullscreen, setFullscreen] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadingDocx, setDownloadingDocx] = useState(false);
   const [downloadingKit, setDownloadingKit] = useState(false);
   const [enquiryOpen, setEnquiryOpen] = useState(false);
+  
+  // Screenshot logic restored
+  const [screenshotLoaded, setScreenshotLoaded] = useState(false);
+  const [screenshotErrored, setScreenshotErrored] = useState(false);
+  const [screenshotDataUrl, setScreenshotDataUrl] = useState<string | null>(null);
+
+  const mockupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -417,7 +451,6 @@ export default function ReportById() {
         if (error || !data) throw new Error("Report not found");
         setPurchase(data as PurchaseRow);
         
-        // Fetch white label
         const { data: subData } = await supabase.from("subscriptions").select("white_label_logo, white_label_theme, status").eq("email", session.user.email.toLowerCase().trim()).eq("status", "active").single();
         if (subData) {
           setWhiteLabel({ logo: subData.white_label_logo || null, theme: (subData.white_label_theme as "light" | "dark") || "light", is_subscriber: true });
@@ -428,17 +461,23 @@ export default function ReportById() {
     load();
   }, [id, navigate]);
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") { setFullscreen(false); setEnquiryOpen(false); } };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   const auditData = purchase?.audit_data ?? null;
+  const isGeoMode = purchase?.focus === "geo";
+  const activeColor = isGeoMode ? "text-neon" : "text-pulse";
+  const activeBtn = isGeoMode ? "btn-neon" : "btn-pulse";
+
   const scores = auditData?.scores ?? {};
   const summary = auditData?.summary ?? {};
   const copyPack = auditData?.homepage_copy_pack ?? {};
   const mockupHtml = auditData?.mockup_html ?? null;
   const mockupHtmlB = auditData?.mockup_html_b ?? null;
   const activeMockupHtml = mockupVersion === "a" ? mockupHtml : (mockupHtmlB || mockupHtml);
-
-  const isGeoMode = purchase?.focus === "geo";
-  const activeColor = isGeoMode ? "text-neon" : "text-pulse";
-  const activeBtn = isGeoMode ? "btn-neon" : "btn-pulse";
 
   const orderedScores = useMemo(() => Object.entries(scores), [scores]);
   const topFixes = useMemo(() => {
@@ -454,7 +493,62 @@ export default function ReportById() {
     return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) <= 10 ? Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) : Math.round(nums.reduce((a, b) => a + b, 0) / nums.length);
   }, [auditData, scores]);
 
-  // --- RESTORED HANDLERS ---
+  // RESTORED SCREENSHOT LOGIC
+  const screenshotUrl = (auditData?.screenshot_url || "").length > 0
+    ? auditData!.screenshot_url!
+    : purchase?.url ? `https://image.thum.io/get/width/1400/crop/900/noanimate/${purchase.url}` : null;
+
+  useEffect(() => {
+    if (!screenshotUrl || screenshotLoaded || screenshotErrored) return;
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        if (ctx) { ctx.drawImage(img, 0, 0); setScreenshotDataUrl(canvas.toDataURL("image/jpeg", 0.85)); }
+      } catch { setScreenshotDataUrl(screenshotUrl); }
+      setScreenshotLoaded(true);
+    };
+    img.onerror = () => setScreenshotErrored(true);
+    img.src = screenshotUrl;
+  }, [screenshotUrl]);
+
+  const displayScreenshotUrl = screenshotDataUrl || screenshotUrl;
+
+  const handleCopyCode = async () => {
+    if (!activeMockupHtml) return;
+    try { await navigator.clipboard.writeText(activeMockupHtml); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 2500); }
+    catch { setCopySuccess(false); }
+  };
+
+  const generateMockupPng = async (html: string | null): Promise<string> => {
+    if (!html) throw new Error("Mockup HTML not available");
+    return new Promise((resolve, reject) => {
+      const iframe = document.createElement("iframe");
+      iframe.style.cssText = "position:fixed;left:-9999px;top:-9999px;width:1200px;height:800px;border:none;visibility:hidden;";
+      document.body.appendChild(iframe);
+      iframe.onload = async () => {
+        try {
+          const doc = iframe.contentDocument;
+          if (!doc) throw new Error("iframe not accessible");
+          doc.open(); doc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/></head><body style="margin:0;padding:0;background:#f8fafc;">${html}</body></html>`); doc.close();
+          await new Promise((r) => setTimeout(r, 800));
+          const canvas = await html2canvas(doc.body, { scale: 2, useCORS: true, allowTaint: false, backgroundColor: "#f8fafc", width: 1200, height: Math.max(doc.body.scrollHeight, 800) });
+          resolve(canvas.toDataURL("image/png"));
+        } catch (err) { reject(err); }
+        finally { document.body.removeChild(iframe); }
+      };
+      iframe.src = "about:blank";
+    });
+  };
+
+  const handleDownloadPng = async () => {
+    try { setDownloading(true); const dataUrl = await generateMockupPng(activeMockupHtml); saveAs(dataUrl, "homepage-mockup.png"); }
+    catch (e) { console.error(e); } finally { setDownloading(false); }
+  };
+
   const handleDownloadPdf = async () => {
     try {
       setDownloadingPdf(true);
@@ -477,23 +571,24 @@ export default function ReportById() {
     try {
       setDownloadingKit(true);
       const zip = new JSZip();
-
-      // PDF
+      
       const pdf = buildPdf({ overallScore, auditData, topFixes, orderedScores, summary, purchaseUrl: purchase?.url, hasMockupB: !!mockupHtmlB, whiteLabel, isGeoMode });
       zip.file("audit-report.pdf", await pdf.output("blob").arrayBuffer());
-
-      // Docx
+      
       const docxBlob = await buildDocx({ copyPack, overallScore, summary, topFixes, purchaseUrl: purchase?.url, whiteLabel });
       zip.file("copy-pack.docx", await docxBlob.arrayBuffer());
-
-      // Instructions
+      
       const instBlob = await buildInstructionsDocx({ hasMockupB: !!mockupHtmlB, purchaseUrl: purchase?.url, whiteLabel });
       zip.file("INSTRUCTIONS.docx", await instBlob.arrayBuffer());
-
-      // Mockups
-      if (mockupHtml) zip.file("mockup-a.html", buildMockupHtmlFile(mockupHtml));
-      if (mockupHtmlB) zip.file("mockup-b.html", buildMockupHtmlFile(mockupHtmlB));
-
+      
+      if (mockupHtml) {
+        zip.file("mockup-a.html", buildMockupHtmlFile(mockupHtml));
+        try { const png = await generateMockupPng(mockupHtml); zip.file("mockup-a.png", png.split(",")[1], { base64: true }); } catch (e) {}
+      }
+      if (mockupHtmlB) {
+        zip.file("mockup-b.html", buildMockupHtmlFile(mockupHtmlB));
+        try { const png = await generateMockupPng(mockupHtmlB); zip.file("mockup-b.png", png.split(",")[1], { base64: true }); } catch (e) {}
+      }
       saveAs(await zip.generateAsync({ type: "blob" }), "diagnostic-kit.zip");
     } catch (e) { console.error(e); } finally { setDownloadingKit(false); }
   };
@@ -503,6 +598,14 @@ export default function ReportById() {
   return (
     <div className="min-h-screen bg-obsidian text-clinic px-6 py-16">
       <EnquiryModal open={enquiryOpen} onClose={() => setEnquiryOpen(false)} prefillUrl={purchase?.url} prefillEmail={purchase?.email} purchaseId={purchase?.id} />
+
+      {/* Screenshot Loader UI */}
+      {screenshotUrl && !screenshotLoaded && !screenshotErrored && (
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-black/80 backdrop-blur text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 border border-surgical">
+          <div className={cn("w-3 h-3 rounded-full border-2 border-t-transparent animate-spin", isGeoMode ? "border-neon" : "border-pulse")} />
+          Preparing visual data...
+        </div>
+      )}
 
       <div className="mx-auto max-w-6xl space-y-12">
         <Link to="/dashboard" className="text-xs font-mono font-bold uppercase tracking-widest text-data hover:text-clinic transition-colors">← Back to Dashboard</Link>
@@ -610,20 +713,66 @@ export default function ReportById() {
               </section>
             )}
 
-            {/* 05 Visual Mockup */}
+            {/* 05 Visual Mockup - FULLY RESTORED TABS & FULLSCREEN MODAL */}
             {mockupHtml && (
               <section className="bg-[#0A0A0A] border border-surgical rounded-lg overflow-hidden">
                 <div className="p-8 border-b border-surgical bg-black">
                   <h2 className="text-xs font-mono font-bold text-data uppercase tracking-[0.2em] opacity-40 mb-4">05_Visual_Direction</h2>
-                  <div className="flex gap-2 p-1 bg-obsidian rounded border border-surgical w-fit">
-                    <button onClick={() => setMockupVersion('a')} className={cn("px-6 py-1.5 text-[10px] font-mono uppercase font-bold rounded", mockupVersion === 'a' ? "bg-surgical text-clinic" : "text-data")}>Recommended</button>
-                    {mockupHtmlB && <button onClick={() => setMockupVersion('b')} className={cn("px-6 py-1.5 text-[10px] font-mono uppercase font-bold rounded", mockupVersion === 'b' ? "bg-surgical text-clinic" : "text-data")}>Alternative</button>}
+                  
+                  {/* Restored Before/After Tabs */}
+                  <div className="flex border-b border-surgical">
+                     <button onClick={() => setActiveTab('before')} className={cn("flex-1 py-4 text-xs font-mono font-bold uppercase tracking-widest transition-colors", activeTab === 'before' ? `border-b-2 bg-white/5 ${isGeoMode ? "border-neon text-neon" : "border-pulse text-pulse"}` : "text-data hover:text-clinic")}>Before (Current)</button>
+                     <button onClick={() => setActiveTab('after')} className={cn("flex-1 py-4 text-xs font-mono font-bold uppercase tracking-widest transition-colors", activeTab === 'after' ? `border-b-2 bg-white/5 ${isGeoMode ? "border-neon text-neon" : "border-pulse text-pulse"}` : "text-data hover:text-clinic")}>After (Fixed)</button>
                   </div>
                 </div>
-                <div className="aspect-video bg-white relative group">
-                  <div className="absolute inset-0 pointer-events-none" dangerouslySetInnerHTML={{ __html: activeMockupHtml || "" }} />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/20 transition-colors">
-                    <button onClick={() => navigate(`/mockup-preview/${id}`)} className="bg-black text-clinic border border-surgical px-8 py-3 font-mono text-xs uppercase font-black tracking-widest shadow-2xl">Launch Fullscreen Preview</button>
+
+                {/* Tab Content: Before */}
+                <div style={{ display: activeTab === 'before' ? 'block' : 'none' }}>
+                   {displayScreenshotUrl && (
+                     <div className="relative bg-black">
+                        {screenshotLoaded ? (
+                          <>
+                             <img src={displayScreenshotUrl} alt="Current site" className="w-full max-h-[600px] object-cover object-top opacity-50 grayscale" />
+                             {purchase?.url && <a href={purchase.url} target="_blank" rel="noopener noreferrer" className="absolute bottom-4 right-4 bg-black/80 border border-surgical text-clinic text-[10px] font-mono uppercase font-bold px-4 py-2 rounded">View Live Site →</a>}
+                          </>
+                        ) : (
+                          <div className="h-[400px] flex items-center justify-center font-mono text-xs text-data uppercase tracking-widest">Awaiting Image Data...</div>
+                        )}
+                     </div>
+                   )}
+                   {topFixes && topFixes.length > 0 && (
+                     <div className="p-8 bg-[#0A0A0A] space-y-4">
+                        <p className="font-mono text-[10px] font-bold text-data uppercase tracking-widest mb-4">Issues Detected in View</p>
+                        {topFixes.map((fix, i) => (
+                           <div key={i} className="p-4 bg-black border border-surgical rounded-md flex gap-4">
+                              <div className={cn("w-6 h-6 rounded flex items-center justify-center font-mono text-[10px] font-bold text-black shrink-0", fix.impact === "High" ? "bg-[#E11D48]" : "bg-[#f59e0b]")}>0{i+1}</div>
+                              <div>
+                                 <p className="text-sm font-bold text-clinic">{fix.issue}</p>
+                              </div>
+                           </div>
+                        ))}
+                     </div>
+                   )}
+                </div>
+
+                {/* Tab Content: After */}
+                <div style={{ display: activeTab === 'after' ? 'block' : 'none' }}>
+                  <div className="bg-black p-4 border-b border-surgical flex gap-2">
+                    <button onClick={() => setMockupVersion('a')} className={cn("px-6 py-2 text-[10px] font-mono uppercase font-bold rounded", mockupVersion === 'a' ? "bg-surgical text-clinic" : "text-data hover:bg-white/5")}>Version A</button>
+                    {mockupHtmlB && <button onClick={() => setMockupVersion('b')} className={cn("px-6 py-2 text-[10px] font-mono uppercase font-bold rounded", mockupVersion === 'b' ? "bg-surgical text-clinic" : "text-data hover:bg-white/5")}>Version B</button>}
+                  </div>
+                  <div className="aspect-video bg-white relative group">
+                    <div className="absolute inset-0 pointer-events-none" dangerouslySetInnerHTML={{ __html: activeMockupHtml || "" }} />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {/* RESTORED FULLSCREEN STATE TOGGLE */}
+                      <button onClick={() => setFullscreen(true)} className="bg-black text-clinic border border-surgical px-8 py-3 font-mono text-xs uppercase font-black tracking-widest shadow-2xl">Launch Fullscreen</button>
+                    </div>
+                  </div>
+                  
+                  {/* Action Bar for Mockup */}
+                  <div className="p-4 bg-black border-t border-surgical flex flex-wrap gap-4">
+                     <button onClick={handleCopyCode} className="btn-pulse px-6 py-2 text-[10px] font-bold uppercase tracking-widest">{copySuccess ? "COPIED!" : "COPY HTML"}</button>
+                     <button onClick={handleDownloadPng} disabled={downloading} className="border border-surgical text-clinic px-6 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-white/5">{downloading ? "GENERATING..." : "DOWNLOAD PNG"}</button>
                   </div>
                 </div>
               </section>
@@ -667,6 +816,21 @@ export default function ReportById() {
            </div>
         </section>
       </div>
+
+      {/* RESTORED FULLSCREEN MODAL */}
+      {fullscreen && activeMockupHtml && (
+        <div className="fixed inset-0 z-[100] bg-black flex flex-col">
+          <div className="flex items-center justify-between px-6 py-4 bg-[#0A0A0A] border-b border-surgical shrink-0">
+            <p className={cn("font-mono text-xs font-bold uppercase tracking-widest", activeColor)}>
+               Mockup_View: {mockupVersion === "a" ? "Version A (Recommended)" : "Version B (Alternative)"}
+            </p>
+            <button onClick={() => setFullscreen(false)} className="text-data hover:text-white font-mono text-xs uppercase tracking-widest flex items-center gap-2">Close <LogOut className="w-3 h-3"/></button>
+          </div>
+          <div className="flex-1 overflow-auto bg-white relative">
+             <div dangerouslySetInnerHTML={{ __html: activeMockupHtml }} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
