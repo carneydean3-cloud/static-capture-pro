@@ -26,6 +26,68 @@ const SectionTitle = ({
   </div>
 );
 
+const Logo = () => (
+  <Link to="/" className="flex items-center gap-2" style={{ textDecoration: "none" }}>
+    <svg
+      width="36"
+      height="22"
+      viewBox="0 0 72 44"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ flexShrink: 0 }}
+    >
+      <defs>
+        <linearGradient id="lg-home" x1="0" y1="0" x2="72" y2="0" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#06B6D4" />
+          <stop offset="52%" stopColor="#06B6D4" />
+          <stop offset="100%" stopColor="#D946EF" />
+        </linearGradient>
+        <filter id="gw-home">
+          <feGaussianBlur stdDeviation="1.5" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <path
+        d="M2 22 L10 22 L13 16 L17 30 L21 10 L25 34 L29 18 L33 22 L38 22"
+        stroke="url(#lg-home)"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        filter="url(#gw-home)"
+      />
+      <path
+        d="M38 22 L45 18 L50 22 L56 14 L62 18 L68 8"
+        stroke="#D946EF"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        filter="url(#gw-home)"
+      />
+      <path
+        d="M63 6 L68 8 L66 13"
+        stroke="#D946EF"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        filter="url(#gw-home)"
+      />
+    </svg>
+    <span
+      style={{
+        fontWeight: 800,
+        fontSize: "17px",
+        letterSpacing: "-0.4px",
+        color: "#ffffff",
+      }}
+    >
+      ConversionDoc
+    </span>
+  </Link>
+);
+
 const Home = () => {
   const [mode, setMode] = useState<PricingMode>("conversion");
 
@@ -69,18 +131,16 @@ const Home = () => {
         }}
       />
 
-      {/* NAV (simple, homepage-specific) */}
+      {/* NAV */}
       <header className="sticky top-0 z-50 border-b border-white/10 bg-obsidian/80 backdrop-blur">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 font-bold tracking-tight">
-            <span className="text-clinic">ConversionDoc</span>
-          </Link>
+          <Logo />
 
           <nav className="hidden md:flex items-center gap-7 text-sm text-data">
             <a href="#tools" className="hover:text-clinic">Tools</a>
             <a href="#output" className="hover:text-clinic">Output</a>
             <a href="#pricing" className="hover:text-clinic">Pricing</a>
-            <Link to="/tools" className="hover:text-clinic">Tool selector</Link>
+            <Link to="/blog" className="hover:text-clinic">Blog</Link>
           </nav>
 
           <div className="flex items-center gap-2">
@@ -99,19 +159,22 @@ const Home = () => {
         <div className="mx-auto max-w-6xl px-6 pt-16 md:pt-24 pb-12 md:pb-16">
           <div className="inline-flex items-center gap-2 rounded border border-white/10 bg-white/5 px-3 py-2 text-xs font-mono tracking-widest uppercase text-data">
             Precision diagnostic platform
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#06B6D4" }} />
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ background: "#06B6D4" }}
+            />
           </div>
 
           <h1 className="mt-6 text-4xl md:text-7xl font-bold tracking-tight leading-[1.0]">
             Your page is{" "}
             <span style={{ color: "#06B6D4" }}>leaking conversions</span>.
             <br />
-            AI can’t{" "}
+            AI can't{" "}
             <span style={{ color: "#D946EF" }}>retrieve or cite it</span>.
           </h1>
 
           <p className="mt-5 max-w-2xl text-data text-base md:text-lg">
-            Run a 60-second scan. Get a scored breakdown and a prioritised list of what’s
+            Run a 60-second scan. Get a scored breakdown and a prioritised list of what's
             broken — with the exact changes to make.
           </p>
 
@@ -145,14 +208,16 @@ const Home = () => {
       <section className="border-y border-white/10 bg-[#070707]">
         <div className="mx-auto max-w-6xl px-6 py-14 md:py-16 grid md:grid-cols-2 gap-10 items-start">
           <div>
-            <div className="text-data/70 font-mono text-xs tracking-widest uppercase">The problem</div>
+            <div className="text-data/70 font-mono text-xs tracking-widest uppercase">
+              The problem
+            </div>
             <h2 className="mt-3 text-3xl md:text-4xl font-bold tracking-tight">
               Two failures. One page.
             </h2>
             <p className="mt-4 text-data">
-              People don’t click when the offer is unclear or untrusted.
+              People don't click when the offer is unclear or untrusted.
               <br />
-              AI doesn’t cite you when it can’t extract answers and entities.
+              AI doesn't cite you when it can't extract answers and entities.
               <br />
               Most tools only see one layer. ConversionDoc scans both.
             </p>
@@ -160,26 +225,32 @@ const Home = () => {
 
           <div className="grid gap-3">
             <div className="rounded-lg border border-white/10 bg-[#0A0A0A] p-5">
-              <div className="text-xs font-mono tracking-widest uppercase text-data/70">Finding</div>
+              <div className="text-xs font-mono tracking-widest uppercase text-data/70">
+                Finding
+              </div>
               <p className="mt-2 text-data">
-                Your headline explains what you do. Not what they get. That’s why they bounce.
-                <span className="text-clinic"> Rewrite it to lead with the outcome.</span>
+                Your headline explains what you do. Not what they get. That's why they bounce.{" "}
+                <span className="text-clinic">Rewrite it to lead with the outcome.</span>
               </p>
             </div>
 
             <div className="rounded-lg border border-white/10 bg-[#0A0A0A] p-5">
-              <div className="text-xs font-mono tracking-widest uppercase text-data/70">Finding</div>
+              <div className="text-xs font-mono tracking-widest uppercase text-data/70">
+                Finding
+              </div>
               <p className="mt-2 text-data">
-                AI engines retrieve pages that answer questions directly.
-                <span className="text-clinic"> No Q&A structure means no citations.</span>
+                AI engines retrieve pages that answer questions directly.{" "}
+                <span className="text-clinic">No Q&A structure means no citations.</span>
               </p>
             </div>
 
             <div className="rounded-lg border border-white/10 bg-[#0A0A0A] p-5">
-              <div className="text-xs font-mono tracking-widest uppercase text-data/70">Finding</div>
+              <div className="text-xs font-mono tracking-widest uppercase text-data/70">
+                Finding
+              </div>
               <p className="mt-2 text-data">
-                Your CTA exists. It isn’t earning the click.
-                <span className="text-clinic"> The page doesn’t build enough proof.</span>
+                Your CTA exists. It isn't earning the click.{" "}
+                <span className="text-clinic">The page doesn't build enough proof.</span>
               </p>
             </div>
           </div>
@@ -197,7 +268,10 @@ const Home = () => {
         <div className="mt-10 grid md:grid-cols-2 gap-5">
           {/* Conversion */}
           <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-7 hover:border-white/20 transition-colors">
-            <div className="text-pulse font-mono text-xs tracking-widest uppercase mb-3">
+            <div
+              className="font-mono text-xs tracking-widest uppercase mb-3"
+              style={{ color: "#06B6D4" }}
+            >
               Human layer — conversion
             </div>
             <h3 className="text-2xl font-bold tracking-tight">Conversion Scan</h3>
@@ -205,15 +279,16 @@ const Home = () => {
               Finds exactly what stops real people from taking action. Scores the 7 conversion
               pillars and tells you what to change, where, and why.
             </p>
-
             <ul className="mt-5 space-y-2 text-sm text-data">
               <li>→ Overall conversion score</li>
               <li>→ Top 3 critical fixes</li>
               <li>→ Clarity, trust, objections, action, and AI alignment</li>
             </ul>
-
             <div className="mt-6">
-              <Link to="/conversion-audit" className="btn-pulse inline-block w-full text-center">
+              <Link
+                to="/conversion-audit"
+                className="btn-pulse inline-block w-full text-center"
+              >
                 Run Conversion Scan — Free →
               </Link>
               <div className="mt-2 text-xs text-data/70">
@@ -224,23 +299,27 @@ const Home = () => {
 
           {/* GEO */}
           <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-7 hover:border-white/20 transition-colors">
-            <div className="text-neon font-mono text-xs tracking-widest uppercase mb-3">
+            <div
+              className="font-mono text-xs tracking-widest uppercase mb-3"
+              style={{ color: "#D946EF" }}
+            >
               Machine layer — GEO AI search
             </div>
             <h3 className="text-2xl font-bold tracking-tight">GEO AI Scan</h3>
             <p className="mt-3 text-data">
-              Finds why AI search engines aren’t retrieving or citing your page. Scores 7 GEO
+              Finds why AI search engines aren't retrieving or citing your page. Scores 7 GEO
               dimensions and gives structural fixes AI can extract.
             </p>
-
             <ul className="mt-5 space-y-2 text-sm text-data">
               <li>→ AI search readiness score</li>
               <li>→ Top 3 visibility fixes</li>
               <li>→ Topic clarity, answerability, structure, authority, entities</li>
             </ul>
-
             <div className="mt-6">
-              <Link to="/geo-audit" className="btn-neon inline-block w-full text-center">
+              <Link
+                to="/geo-audit"
+                className="btn-neon inline-block w-full text-center"
+              >
                 Run GEO AI Scan — Free →
               </Link>
               <div className="mt-2 text-xs text-data/70">
@@ -260,14 +339,19 @@ const Home = () => {
         />
 
         <div className="mt-10 grid md:grid-cols-2 gap-5">
-          {/* Conversion card */}
+          {/* Conversion demo card */}
           <div className="rounded-xl border border-white/10 bg-[#0A0A0A] overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-              <div className="text-xs font-mono tracking-widest uppercase" style={{ color: "#06B6D4" }}>
+              <div
+                className="text-xs font-mono tracking-widest uppercase"
+                style={{ color: "#06B6D4" }}
+              >
                 Conversion scan — example.com
               </div>
-              <div className="rounded-md px-3 py-1 text-sm font-bold"
-                   style={{ background: "rgba(245,158,11,0.15)", color: "#F59E0B" }}>
+              <div
+                className="rounded-md px-3 py-1 text-sm font-bold"
+                style={{ background: "rgba(245,158,11,0.15)", color: "#F59E0B" }}
+              >
                 62/100
               </div>
             </div>
@@ -288,25 +372,33 @@ const Home = () => {
             </div>
 
             <div className="px-6 py-5 bg-white/5">
-              <div className="text-xs font-mono tracking-widest uppercase" style={{ color: "#06B6D4" }}>
+              <div
+                className="text-xs font-mono tracking-widest uppercase"
+                style={{ color: "#06B6D4" }}
+              >
                 Top finding
               </div>
               <p className="mt-2 text-sm text-data leading-relaxed">
-                <span className="text-clinic font-semibold">No proof above the fold.</span> Visitors
-                don’t believe the claim because nothing confirms it.
-                <span className="text-clinic"> Add 3 customer outcomes above the fold.</span>
+                <span className="text-clinic font-semibold">No proof above the fold.</span>{" "}
+                Visitors don't believe the claim because nothing confirms it.{" "}
+                <span className="text-clinic">Add 3 customer outcomes above the fold.</span>
               </p>
             </div>
           </div>
 
-          {/* GEO card */}
+          {/* GEO demo card */}
           <div className="rounded-xl border border-white/10 bg-[#0A0A0A] overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-              <div className="text-xs font-mono tracking-widest uppercase" style={{ color: "#D946EF" }}>
+              <div
+                className="text-xs font-mono tracking-widest uppercase"
+                style={{ color: "#D946EF" }}
+              >
                 GEO AI scan — example.com
               </div>
-              <div className="rounded-md px-3 py-1 text-sm font-bold"
-                   style={{ background: "rgba(225,29,72,0.15)", color: "#E11D48" }}>
+              <div
+                className="rounded-md px-3 py-1 text-sm font-bold"
+                style={{ background: "rgba(225,29,72,0.15)", color: "#E11D48" }}
+              >
                 34/100
               </div>
             </div>
@@ -327,13 +419,16 @@ const Home = () => {
             </div>
 
             <div className="px-6 py-5 bg-white/5">
-              <div className="text-xs font-mono tracking-widest uppercase" style={{ color: "#D946EF" }}>
+              <div
+                className="text-xs font-mono tracking-widest uppercase"
+                style={{ color: "#D946EF" }}
+              >
                 Top finding
               </div>
               <p className="mt-2 text-sm text-data leading-relaxed">
-                <span className="text-clinic font-semibold">The page answers no questions.</span> AI
-                engines can’t extract a quotable answer.
-                <span className="text-clinic"> Add a 5-question FAQ.</span>
+                <span className="text-clinic font-semibold">The page answers no questions.</span>{" "}
+                AI engines can't extract a quotable answer.{" "}
+                <span className="text-clinic">Add a 5-question FAQ.</span>
               </p>
             </div>
           </div>
@@ -372,11 +467,13 @@ const Home = () => {
             </button>
           </div>
 
-          {/* Cards */}
           {mode === "conversion" && (
             <div className="mt-10 grid md:grid-cols-4 gap-4">
               <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6">
-                <div className="text-xs font-mono tracking-widest uppercase" style={{ color: "#06B6D4" }}>
+                <div
+                  className="text-xs font-mono tracking-widest uppercase"
+                  style={{ color: "#06B6D4" }}
+                >
                   Free
                 </div>
                 <div className="mt-2 text-xl font-bold">Free scan</div>
@@ -387,16 +484,25 @@ const Home = () => {
                   <li>→ Top 3 fixes</li>
                   <li>→ AI readiness signals</li>
                 </ul>
-                <Link to="/conversion-audit" className="mt-5 inline-block w-full text-center rounded-md border border-white/15 px-4 py-2 text-sm text-data hover:text-clinic hover:border-white/25 transition-colors">
+                <Link
+                  to="/conversion-audit"
+                  className="mt-5 inline-block w-full text-center rounded-md border border-white/15 px-4 py-2 text-sm text-data hover:text-clinic hover:border-white/25 transition-colors"
+                >
                   Start free
                 </Link>
               </div>
 
               <div
-                className="rounded-xl border border-white/10 p-6"
-                style={{ borderColor: "rgba(6,182,212,0.35)", background: "rgba(6,182,212,0.05)" }}
+                className="rounded-xl p-6"
+                style={{
+                  border: "1px solid rgba(6,182,212,0.35)",
+                  background: "rgba(6,182,212,0.05)",
+                }}
               >
-                <div className="text-xs font-mono tracking-widest uppercase" style={{ color: "#06B6D4" }}>
+                <div
+                  className="text-xs font-mono tracking-widest uppercase"
+                  style={{ color: "#06B6D4" }}
+                >
                   One-time
                 </div>
                 <div className="mt-2 text-xl font-bold">Full diagnosis</div>
@@ -406,43 +512,62 @@ const Home = () => {
                   <li>→ Rewritten copy (every section)</li>
                   <li>→ Brand-matched mockup (PNG)</li>
                   <li>→ Ready-to-use code</li>
-                  <li>→ Money-back if fewer than 5 issues found</li>
+                  <li>→ Money-back if fewer than 5 issues</li>
                 </ul>
-                <Link to="/conversion-audit" className="btn-pulse mt-5 inline-block w-full text-center">
+                <Link
+                  to="/conversion-audit"
+                  className="btn-pulse mt-5 inline-block w-full text-center"
+                >
                   Get full diagnosis
                 </Link>
               </div>
 
               <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6">
-                <div className="text-xs font-mono tracking-widest uppercase" style={{ color: "#06B6D4" }}>
+                <div
+                  className="text-xs font-mono tracking-widest uppercase"
+                  style={{ color: "#06B6D4" }}
+                >
                   Monthly
                 </div>
                 <div className="mt-2 text-xl font-bold">Starter Pro</div>
-                <div className="mt-3 text-3xl font-bold">£99<span className="text-base text-data">/mo</span></div>
+                <div className="mt-3 text-3xl font-bold">
+                  £99<span className="text-base text-data">/mo</span>
+                </div>
                 <ul className="mt-4 space-y-2 text-sm text-data">
                   <li>→ 20 full scans/month</li>
                   <li>→ Run scans on client sites</li>
                   <li>→ White label data maps</li>
                   <li>→ Priority support</li>
                 </ul>
-                <Link to="/conversion-audit" className="mt-5 inline-block w-full text-center rounded-md border border-white/15 px-4 py-2 text-sm text-data hover:text-clinic hover:border-white/25 transition-colors">
+                <Link
+                  to="/conversion-audit"
+                  className="mt-5 inline-block w-full text-center rounded-md border border-white/15 px-4 py-2 text-sm text-data hover:text-clinic hover:border-white/25 transition-colors"
+                >
                   Start Starter Pro
                 </Link>
               </div>
 
               <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6">
-                <div className="text-xs font-mono tracking-widest uppercase" style={{ color: "#06B6D4" }}>
+                <div
+                  className="text-xs font-mono tracking-widest uppercase"
+                  style={{ color: "#06B6D4" }}
+                >
                   Agency
                 </div>
                 <div className="mt-2 text-xl font-bold">Agency Pro</div>
-                <div className="mt-3 text-3xl font-bold">£199<span className="text-base text-data">/mo</span></div>
+                <div className="mt-3 text-3xl font-bold">
+                  £199<span className="text-base text-data">/mo</span>
+                </div>
                 <ul className="mt-4 space-y-2 text-sm text-data">
                   <li>→ Unlimited scans</li>
                   <li>→ Scan all client sites</li>
                   <li>→ White label data maps</li>
                   <li>→ Priority support</li>
                 </ul>
-                <Link to="/conversion-audit" className="mt-5 inline-block w-full text-center rounded-md border border-white/15 px-4 py-2 text-sm text-data hover:text-clinic hover:border-white/25 transition-colors">
+                <Link
+                  to="/conversion-audit"
+                  className="mt-5 inline-block w-full text-center rounded-md border border-white/15 px-4 py-2 text-sm text-data hover:text-clinic hover:border-white/25 transition-colors"
+                >
                   Start Agency Pro
                 </Link>
               </div>
@@ -452,7 +577,10 @@ const Home = () => {
           {mode === "geo" && (
             <div className="mt-10 grid md:grid-cols-4 gap-4">
               <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6">
-                <div className="text-xs font-mono tracking-widest uppercase" style={{ color: "#D946EF" }}>
+                <div
+                  className="text-xs font-mono tracking-widest uppercase"
+                  style={{ color: "#D946EF" }}
+                >
                   Free
                 </div>
                 <div className="mt-2 text-xl font-bold">Free GEO scan</div>
@@ -463,16 +591,25 @@ const Home = () => {
                   <li>→ Top 3 visibility fixes</li>
                   <li>→ Conversion health check</li>
                 </ul>
-                <Link to="/geo-audit" className="mt-5 inline-block w-full text-center rounded-md border border-white/15 px-4 py-2 text-sm text-data hover:text-clinic hover:border-white/25 transition-colors">
+                <Link
+                  to="/geo-audit"
+                  className="mt-5 inline-block w-full text-center rounded-md border border-white/15 px-4 py-2 text-sm text-data hover:text-clinic hover:border-white/25 transition-colors"
+                >
                   Start free
                 </Link>
               </div>
 
               <div
-                className="rounded-xl border border-white/10 p-6"
-                style={{ borderColor: "rgba(217,70,239,0.40)", background: "rgba(217,70,239,0.05)" }}
+                className="rounded-xl p-6"
+                style={{
+                  border: "1px solid rgba(217,70,239,0.40)",
+                  background: "rgba(217,70,239,0.05)",
+                }}
               >
-                <div className="text-xs font-mono tracking-widest uppercase" style={{ color: "#D946EF" }}>
+                <div
+                  className="text-xs font-mono tracking-widest uppercase"
+                  style={{ color: "#D946EF" }}
+                >
                   One-time
                 </div>
                 <div className="mt-2 text-xl font-bold">Full GEO audit</div>
@@ -482,43 +619,62 @@ const Home = () => {
                   <li>→ Structured content fixes</li>
                   <li>→ Brand-matched mockup (PNG)</li>
                   <li>→ Ready-to-use code</li>
-                  <li>→ Money-back if fewer than 5 issues found</li>
+                  <li>→ Money-back if fewer than 5 issues</li>
                 </ul>
-                <Link to="/geo-audit" className="btn-neon mt-5 inline-block w-full text-center">
+                <Link
+                  to="/geo-audit"
+                  className="btn-neon mt-5 inline-block w-full text-center"
+                >
                   Get full GEO audit
                 </Link>
               </div>
 
               <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6">
-                <div className="text-xs font-mono tracking-widest uppercase" style={{ color: "#D946EF" }}>
+                <div
+                  className="text-xs font-mono tracking-widest uppercase"
+                  style={{ color: "#D946EF" }}
+                >
                   Monthly
                 </div>
                 <div className="mt-2 text-xl font-bold">GEO Starter Pro</div>
-                <div className="mt-3 text-3xl font-bold">£99<span className="text-base text-data">/mo</span></div>
+                <div className="mt-3 text-3xl font-bold">
+                  £99<span className="text-base text-data">/mo</span>
+                </div>
                 <ul className="mt-4 space-y-2 text-sm text-data">
                   <li>→ 20 full scans/month</li>
                   <li>→ Scan client sites</li>
                   <li>→ White label data maps</li>
                   <li>→ Priority support</li>
                 </ul>
-                <Link to="/geo-audit" className="mt-5 inline-block w-full text-center rounded-md border border-white/15 px-4 py-2 text-sm text-data hover:text-clinic hover:border-white/25 transition-colors">
+                <Link
+                  to="/geo-audit"
+                  className="mt-5 inline-block w-full text-center rounded-md border border-white/15 px-4 py-2 text-sm text-data hover:text-clinic hover:border-white/25 transition-colors"
+                >
                   Start GEO Starter Pro
                 </Link>
               </div>
 
               <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6">
-                <div className="text-xs font-mono tracking-widest uppercase" style={{ color: "#D946EF" }}>
+                <div
+                  className="text-xs font-mono tracking-widest uppercase"
+                  style={{ color: "#D946EF" }}
+                >
                   Agency
                 </div>
                 <div className="mt-2 text-xl font-bold">GEO Agency Pro</div>
-                <div className="mt-3 text-3xl font-bold">£199<span className="text-base text-data">/mo</span></div>
+                <div className="mt-3 text-3xl font-bold">
+                  £199<span className="text-base text-data">/mo</span>
+                </div>
                 <ul className="mt-4 space-y-2 text-sm text-data">
                   <li>→ Unlimited scans</li>
                   <li>→ Full maps on every client</li>
                   <li>→ White label data maps</li>
                   <li>→ Priority support</li>
                 </ul>
-                <Link to="/geo-audit" className="mt-5 inline-block w-full text-center rounded-md border border-white/15 px-4 py-2 text-sm text-data hover:text-clinic hover:border-white/25 transition-colors">
+                <Link
+                  to="/geo-audit"
+                  className="mt-5 inline-block w-full text-center rounded-md border border-white/15 px-4 py-2 text-sm text-data hover:text-clinic hover:border-white/25 transition-colors"
+                >
                   Start GEO Agency Pro
                 </Link>
               </div>
@@ -528,54 +684,76 @@ const Home = () => {
           {mode === "both" && (
             <div className="mt-10 grid md:grid-cols-3 gap-4">
               <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6">
-                <div className="text-xs font-mono tracking-widest uppercase text-data/70">Starter</div>
+                <div className="text-xs font-mono tracking-widest uppercase text-data/70">
+                  Starter
+                </div>
                 <div className="mt-2 text-xl font-bold">Starter Pro</div>
-                <div className="mt-3 text-3xl font-bold">£99<span className="text-base text-data">/mo</span></div>
+                <div className="mt-3 text-3xl font-bold">
+                  £99<span className="text-base text-data">/mo</span>
+                </div>
                 <ul className="mt-4 space-y-2 text-sm text-data">
                   <li>→ 20 scans per tool / month (40 total)</li>
                   <li>→ Full conversion + GEO scans</li>
                   <li>→ White label data maps</li>
                   <li>→ Priority support</li>
                 </ul>
-                <Link to="/conversion-audit" className="mt-5 inline-block w-full text-center rounded-md border border-white/15 px-4 py-2 text-sm text-data hover:text-clinic hover:border-white/25 transition-colors">
+                <Link
+                  to="/conversion-audit"
+                  className="mt-5 inline-block w-full text-center rounded-md border border-white/15 px-4 py-2 text-sm text-data hover:text-clinic hover:border-white/25 transition-colors"
+                >
                   Get started
                 </Link>
               </div>
 
               <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6">
-                <div className="text-xs font-mono tracking-widest uppercase text-data/70">Agency</div>
+                <div className="text-xs font-mono tracking-widest uppercase text-data/70">
+                  Agency
+                </div>
                 <div className="mt-2 text-xl font-bold">Agency Pro</div>
-                <div className="mt-3 text-3xl font-bold">£199<span className="text-base text-data">/mo</span></div>
+                <div className="mt-3 text-3xl font-bold">
+                  £199<span className="text-base text-data">/mo</span>
+                </div>
                 <ul className="mt-4 space-y-2 text-sm text-data">
                   <li>→ Unlimited scans per tool</li>
                   <li>→ Scan all client sites</li>
                   <li>→ White label data maps</li>
                   <li>→ Priority support</li>
                 </ul>
-                <Link to="/conversion-audit" className="mt-5 inline-block w-full text-center rounded-md border border-white/15 px-4 py-2 text-sm text-data hover:text-clinic hover:border-white/25 transition-colors">
+                <Link
+                  to="/conversion-audit"
+                  className="mt-5 inline-block w-full text-center rounded-md border border-white/15 px-4 py-2 text-sm text-data hover:text-clinic hover:border-white/25 transition-colors"
+                >
                   Start Agency Pro
                 </Link>
               </div>
 
               <div
-                className="rounded-xl border border-white/10 p-6"
+                className="rounded-xl p-6"
                 style={{
-                  borderColor: "rgba(255,255,255,0.16)",
-                  background: "linear-gradient(135deg, rgba(6,182,212,0.06), rgba(217,70,239,0.06))",
+                  border: "1px solid rgba(255,255,255,0.16)",
+                  background:
+                    "linear-gradient(135deg, rgba(6,182,212,0.06), rgba(217,70,239,0.06))",
                 }}
               >
-                <div className="text-xs font-mono tracking-widest uppercase">Full stack</div>
+                <div className="text-xs font-mono tracking-widest uppercase text-data/70">
+                  Full stack
+                </div>
                 <div className="mt-2 text-xl font-bold">Agency Max</div>
-                <div className="mt-3 text-3xl font-bold">£279<span className="text-base text-data">/mo</span></div>
+                <div className="mt-3 text-3xl font-bold">
+                  £279<span className="text-base text-data">/mo</span>
+                </div>
                 <ul className="mt-4 space-y-2 text-sm text-data">
                   <li>→ Both tools. No limits.</li>
                   <li>→ Unlimited GEO + conversion scans</li>
-                  <li>→ Multi-tool workflow</li>
+                  <li>→ Multi-tool dashboard</li>
                   <li>→ White label data maps</li>
                   <li>→ Priority support</li>
                 </ul>
-                <Link to="/conversion-audit" className="mt-5 inline-block w-full text-center rounded-md px-4 py-2 text-sm font-semibold text-white"
-                      style={{ background: "linear-gradient(90deg, #06B6D4, #D946EF)" }}>
+                <Link
+                  to="/conversion-audit"
+                  className="mt-5 inline-block w-full text-center rounded-md px-4 py-2 text-sm font-semibold text-white"
+                  style={{ background: "linear-gradient(90deg, #06B6D4, #D946EF)" }}
+                >
                   Get Agency Max
                 </Link>
               </div>
@@ -584,11 +762,11 @@ const Home = () => {
         </div>
       </section>
 
-      {/* TRUST (no generic fluff) */}
+      {/* TRUST */}
       <section className="mx-auto max-w-6xl px-6 py-16 md:py-20">
         <SectionTitle
           kicker="Guarantee + fit"
-          title="Specific output, or you don’t pay."
+          title="Specific output, or you don't pay."
           sub="Paid scans are covered. If the scan finds fewer than 5 issues, you get a full refund."
         />
 
@@ -599,15 +777,21 @@ const Home = () => {
           </div>
           <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6">
             <div className="text-sm font-semibold text-clinic">No generic advice</div>
-            <p className="mt-2 text-sm text-data">Findings name the problem and the exact change.</p>
+            <p className="mt-2 text-sm text-data">
+              Findings name the problem and the exact change.
+            </p>
           </div>
           <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6">
             <div className="text-sm font-semibold text-clinic">Agency-ready</div>
-            <p className="mt-2 text-sm text-data">White label data maps and client scanning.</p>
+            <p className="mt-2 text-sm text-data">
+              White label data maps and client scanning.
+            </p>
           </div>
           <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6">
             <div className="text-sm font-semibold text-clinic">Built for AI retrieval</div>
-            <p className="mt-2 text-sm text-data">Structure that gets extracted, summarised, and cited.</p>
+            <p className="mt-2 text-sm text-data">
+              Structure that gets extracted, summarised, and cited.
+            </p>
           </div>
         </div>
       </section>
@@ -616,7 +800,7 @@ const Home = () => {
       <section className="border-t border-white/10 bg-[#070707]">
         <div className="mx-auto max-w-6xl px-6 py-16 md:py-20 text-center">
           <h2 className="text-3xl md:text-6xl font-bold tracking-tight leading-[1.05]">
-            See what’s wrong.
+            See what's wrong.
             <br />
             <span style={{ color: "#06B6D4" }}>Fix it.</span>{" "}
             <span style={{ color: "#D946EF" }}>Convert.</span>
@@ -631,24 +815,22 @@ const Home = () => {
               Run GEO AI Scan — Free
             </Link>
           </div>
-
-          <div className="mt-8 text-xs text-data/70">
-            Or use the <Link className="underline hover:text-clinic" to="/tools">tool selector</Link>.
-          </div>
         </div>
       </section>
 
-      {/* Footer (simple) */}
-      <footer className="mx-auto max-w-6xl px-6 py-10 text-sm text-data flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-        <div>© {new Date().getFullYear()} ConversionDoc</div>
+      {/* FOOTER */}
+      <footer className="border-t border-white/10 mx-auto max-w-6xl px-6 py-10 text-sm text-data flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+        <Logo />
         <div className="flex flex-wrap gap-4">
           <Link to="/conversion-audit" className="hover:text-clinic">Conversion</Link>
           <Link to="/geo-audit" className="hover:text-clinic">GEO AI</Link>
+          <Link to="/blog" className="hover:text-clinic">Blog</Link>
           <Link to="/privacy" className="hover:text-clinic">Privacy</Link>
           <Link to="/terms" className="hover:text-clinic">Terms</Link>
           <Link to="/refund" className="hover:text-clinic">Refund</Link>
           <Link to="/contact" className="hover:text-clinic">Contact</Link>
         </div>
+        <div>© {new Date().getFullYear()} ConversionDoc</div>
       </footer>
     </div>
   );
