@@ -27,64 +27,41 @@ const SectionTitle = ({
 );
 
 const Logo = () => (
-  <Link to="/" className="flex items-center gap-2" style={{ textDecoration: "none" }}>
-    <svg
-      width="36"
-      height="22"
-      viewBox="0 0 72 44"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{ flexShrink: 0 }}
-    >
-      <defs>
-        <linearGradient id="lg-home" x1="0" y1="0" x2="72" y2="0" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#06B6D4" />
-          <stop offset="52%" stopColor="#06B6D4" />
-          <stop offset="100%" stopColor="#D946EF" />
-        </linearGradient>
-        <filter id="gw-home">
-          <feGaussianBlur stdDeviation="1.5" result="b" />
-          <feMerge>
-            <feMergeNode in="b" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-      <path
-        d="M2 22 L10 22 L13 16 L17 30 L21 10 L25 34 L29 18 L33 22 L38 22"
-        stroke="url(#lg-home)"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        filter="url(#gw-home)"
-      />
-      <path
-        d="M38 22 L45 18 L50 22 L56 14 L62 18 L68 8"
-        stroke="#D946EF"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        filter="url(#gw-home)"
-      />
-      <path
-        d="M63 6 L68 8 L66 13"
-        stroke="#D946EF"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        filter="url(#gw-home)"
-      />
-    </svg>
-    <span
-      style={{
-        fontWeight: 800,
-        fontSize: "17px",
-        letterSpacing: "-0.4px",
-        color: "#ffffff",
-      }}
-    >
+  <Link to="/" className="flex items-center gap-2 group" style={{ textDecoration: "none" }}>
+    <span className="text-xl font-black tracking-tighter text-clinic group-hover:opacity-80 transition-opacity">
       ConversionDoc
     </span>
+    <svg
+      width="40"
+      height="24"
+      viewBox="0 0 40 24"
+      fill="none"
+    >
+      {/* Teal pulse/heartbeat section */}
+      <path
+        d="M2 12H10L13 4L18 20L22 10L25 14H30"
+        stroke="#06B6D4"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Magenta arrow/trend section */}
+      <path
+        d="M30 14L34 8L38 4"
+        stroke="#D946EF"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Magenta arrow head */}
+      <path
+        d="M34 4H38V8"
+        stroke="#D946EF"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   </Link>
 );
 
@@ -137,17 +114,17 @@ const Home = () => {
           <Logo />
 
           <nav className="hidden md:flex items-center gap-7 text-sm text-data">
-            <a href="#tools" className="hover:text-clinic">Tools</a>
-            <a href="#output" className="hover:text-clinic">Output</a>
-            <a href="#pricing" className="hover:text-clinic">Pricing</a>
-            <Link to="/blog" className="hover:text-clinic">Blog</Link>
+            <a href="#tools" className="text-xs font-mono font-bold uppercase tracking-widest text-data hover:text-clinic transition-colors">Tools</a>
+            <a href="#output" className="text-xs font-mono font-bold uppercase tracking-widest text-data hover:text-clinic transition-colors">Output</a>
+            <a href="#pricing" className="text-xs font-mono font-bold uppercase tracking-widest text-data hover:text-clinic transition-colors">Pricing</a>
+            <a href="https://conversiondoc.co.uk/blog" className="text-xs font-mono font-bold uppercase tracking-widest text-data hover:text-clinic transition-colors">Blog</a>
           </nav>
 
           <div className="flex items-center gap-2">
-            <Link to="/conversion-audit" className="btn-pulse hidden sm:inline-block">
+            <Link to="/conversion-audit" className="btn-pulse hidden sm:inline-block text-[11px] font-mono font-bold uppercase tracking-widest py-2 px-5">
               Run Conversion Scan
             </Link>
-            <Link to="/geo-audit" className="btn-neon hidden sm:inline-block">
+            <Link to="/geo-audit" className="btn-neon hidden sm:inline-block text-[11px] font-mono font-bold uppercase tracking-widest py-2 px-5">
               Run GEO AI Scan
             </Link>
           </div>
@@ -470,10 +447,7 @@ const Home = () => {
           {mode === "conversion" && (
             <div className="mt-10 grid md:grid-cols-4 gap-4">
               <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6">
-                <div
-                  className="text-xs font-mono tracking-widest uppercase"
-                  style={{ color: "#06B6D4" }}
-                >
+                <div className="text-xs font-mono tracking-widest uppercase" style={{ color: "#06B6D4" }}>
                   Free
                 </div>
                 <div className="mt-2 text-xl font-bold">Free scan</div>
@@ -499,10 +473,7 @@ const Home = () => {
                   background: "rgba(6,182,212,0.05)",
                 }}
               >
-                <div
-                  className="text-xs font-mono tracking-widest uppercase"
-                  style={{ color: "#06B6D4" }}
-                >
+                <div className="text-xs font-mono tracking-widest uppercase" style={{ color: "#06B6D4" }}>
                   One-time
                 </div>
                 <div className="mt-2 text-xl font-bold">Full diagnosis</div>
@@ -514,19 +485,13 @@ const Home = () => {
                   <li>→ Ready-to-use code</li>
                   <li>→ Money-back if fewer than 5 issues</li>
                 </ul>
-                <Link
-                  to="/conversion-audit"
-                  className="btn-pulse mt-5 inline-block w-full text-center"
-                >
+                <Link to="/conversion-audit" className="btn-pulse mt-5 inline-block w-full text-center">
                   Get full diagnosis
                 </Link>
               </div>
 
               <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6">
-                <div
-                  className="text-xs font-mono tracking-widest uppercase"
-                  style={{ color: "#06B6D4" }}
-                >
+                <div className="text-xs font-mono tracking-widest uppercase" style={{ color: "#06B6D4" }}>
                   Monthly
                 </div>
                 <div className="mt-2 text-xl font-bold">Starter Pro</div>
@@ -548,10 +513,7 @@ const Home = () => {
               </div>
 
               <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6">
-                <div
-                  className="text-xs font-mono tracking-widest uppercase"
-                  style={{ color: "#06B6D4" }}
-                >
+                <div className="text-xs font-mono tracking-widest uppercase" style={{ color: "#06B6D4" }}>
                   Agency
                 </div>
                 <div className="mt-2 text-xl font-bold">Agency Pro</div>
@@ -577,10 +539,7 @@ const Home = () => {
           {mode === "geo" && (
             <div className="mt-10 grid md:grid-cols-4 gap-4">
               <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6">
-                <div
-                  className="text-xs font-mono tracking-widest uppercase"
-                  style={{ color: "#D946EF" }}
-                >
+                <div className="text-xs font-mono tracking-widest uppercase" style={{ color: "#D946EF" }}>
                   Free
                 </div>
                 <div className="mt-2 text-xl font-bold">Free GEO scan</div>
@@ -606,10 +565,7 @@ const Home = () => {
                   background: "rgba(217,70,239,0.05)",
                 }}
               >
-                <div
-                  className="text-xs font-mono tracking-widest uppercase"
-                  style={{ color: "#D946EF" }}
-                >
+                <div className="text-xs font-mono tracking-widest uppercase" style={{ color: "#D946EF" }}>
                   One-time
                 </div>
                 <div className="mt-2 text-xl font-bold">Full GEO audit</div>
@@ -621,19 +577,13 @@ const Home = () => {
                   <li>→ Ready-to-use code</li>
                   <li>→ Money-back if fewer than 5 issues</li>
                 </ul>
-                <Link
-                  to="/geo-audit"
-                  className="btn-neon mt-5 inline-block w-full text-center"
-                >
+                <Link to="/geo-audit" className="btn-neon mt-5 inline-block w-full text-center">
                   Get full GEO audit
                 </Link>
               </div>
 
               <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6">
-                <div
-                  className="text-xs font-mono tracking-widest uppercase"
-                  style={{ color: "#D946EF" }}
-                >
+                <div className="text-xs font-mono tracking-widest uppercase" style={{ color: "#D946EF" }}>
                   Monthly
                 </div>
                 <div className="mt-2 text-xl font-bold">GEO Starter Pro</div>
@@ -655,10 +605,7 @@ const Home = () => {
               </div>
 
               <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-6">
-                <div
-                  className="text-xs font-mono tracking-widest uppercase"
-                  style={{ color: "#D946EF" }}
-                >
+                <div className="text-xs font-mono tracking-widest uppercase" style={{ color: "#D946EF" }}>
                   Agency
                 </div>
                 <div className="mt-2 text-xl font-bold">GEO Agency Pro</div>
@@ -731,8 +678,7 @@ const Home = () => {
                 className="rounded-xl p-6"
                 style={{
                   border: "1px solid rgba(255,255,255,0.16)",
-                  background:
-                    "linear-gradient(135deg, rgba(6,182,212,0.06), rgba(217,70,239,0.06))",
+                  background: "linear-gradient(135deg, rgba(6,182,212,0.06), rgba(217,70,239,0.06))",
                 }}
               >
                 <div className="text-xs font-mono tracking-widest uppercase text-data/70">
@@ -824,7 +770,7 @@ const Home = () => {
         <div className="flex flex-wrap gap-4">
           <Link to="/conversion-audit" className="hover:text-clinic">Conversion</Link>
           <Link to="/geo-audit" className="hover:text-clinic">GEO AI</Link>
-          <Link to="/blog" className="hover:text-clinic">Blog</Link>
+          <a href="https://conversiondoc.co.uk/blog" className="hover:text-clinic">Blog</a>
           <Link to="/privacy" className="hover:text-clinic">Privacy</Link>
           <Link to="/terms" className="hover:text-clinic">Terms</Link>
           <Link to="/refund" className="hover:text-clinic">Refund</Link>
