@@ -9,6 +9,8 @@ import { AuditProvider } from "@/contexts/AuditContext";
 import { supabase } from "@/integrations/supabase/client";
 
 import Home from "./pages/Home.tsx";
+import Newsletter from "./pages/Newsletter.tsx";
+
 import Index from "./pages/Index.tsx";
 import PaidReport from "./pages/PaidReport.tsx";
 import ReportById from "./pages/ReportById.tsx";
@@ -106,6 +108,9 @@ const App = () => (
             <Routes>
               {/* Homepage */}
               <Route path="/" element={<Home />} />
+
+              {/* Newsletter */}
+              <Route path="/newsletter" element={<Newsletter />} />
 
               {/* Tool Selector (old homepage) */}
               <Route path="/tools" element={<CommandCenterHub />} />
