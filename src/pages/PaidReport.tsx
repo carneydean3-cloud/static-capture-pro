@@ -61,6 +61,8 @@ type AuditData = {
   logo_url?: string;
   brand_name?: string;
   primary_color?: string;
+  page_intent?: "home" | "blog" | "landing";
+  geo_schema?: string;
 };
 
 type PurchaseRow = {
@@ -107,6 +109,21 @@ const impactBg: Record<string, string> = {
 const GEO_PILLAR_KEYS = ["ai_search", "ai_readiness", "geo", "search_readiness"];
 const isGeoPillar = (key: string) =>
   GEO_PILLAR_KEYS.some((fragment) => key.toLowerCase().includes(fragment));
+
+// ─── HELPER: Get mockup label based on page intent ─────────────────────────
+const getMockupLabel = (pageIntent: string | undefined, isGeoMode: boolean): { title: string; subtitle: string } => {
+  const intent = pageIntent || "home";
+
+  if (isGeoMode) {
+    if (intent === "blog") return { title: "🎨 Your Restructured Article", subtitle: "Compare your current article with a GEO-optimised version structured for AI extractability." };
+    if (intent === "landing") return { title: "🎨 Your Restructured Landing Page", subtitle: "Compare your current page with a GEO-optimised direction." };
+    return { title: "🎨 Your Restructured Homepage", subtitle: "Compare your current page with a GEO-optimised direction." };
+  }
+
+  if (intent === "blog") return { title: "🎨 Your Article Mockup", subtitle: "Compare your current article with a more conversion-focused redesign." };
+  if (intent === "landing") return { title: "🎨 Your Landing Page Mockup", subtitle: "Compare your current page with a more conversion-focused direction." };
+  return { title: "🎨 Your Homepage Mockup", subtitle: "Compare your current site with a more conversion-focused direction." };
+};
 
 // ─── PDF BUILDER ───────────────────────────────────────────────────────────
 
@@ -725,13 +742,6 @@ const buildInstructionsDocx = async ({
       spacing: { after: 120 },
     });
 
-  const heading2 = (text: string) =>
-    new Paragraph({
-      heading: HeadingLevel.HEADING_2,
-      children: [new TextRun({ text, color: darkColor, size: 28, font: "Inter", bold: true })],
-      spacing: { before: 320, after: 100 },
-    });
-
   const sectionLabel = (text: string) =>
     new Paragraph({
       children: [new TextRun({ text: text.toUpperCase(), color: tealColor, size: 18, font: "Inter", bold: true, characterSpacing: 80 })],
@@ -825,6 +835,10 @@ const buildInstructionsDocx = async ({
       `${prefix}-mockup-b.html / .png`,
       "Alternative page direction (Version B)"
     )] : []),
+    ...(isGeoMode ? [fileRow(
+      `geo-schema.json`,
+      "Ready-to-deploy JSON-LD structured data for AI search engines"
+    )] : []),
     fileRow(
       "INSTRUCTIONS.docx",
       "This document"
@@ -849,13 +863,20 @@ const buildInstructionsDocx = async ({
       `Open ${prefix}-mockup-a.html in any browser to see a visual direction for the improved page.${hasMockupB ? ` A second direction is available in ${prefix}-mockup-b.html.` : ""} Share the PNG with a developer or designer if needed.`
     ),
 
-    stepNumber("4", "Apply highest-impact changes first"),
+    ...(isGeoMode ? [
+      stepNumber("4", "Deploy the JSON-LD schema"),
+      bodyText(
+        "Open geo-schema.json. Copy the entire content and paste it inside a <script type=\"application/ld+json\"> tag in your page's <head> section. This helps AI search engines understand and cite your page correctly."
+      ),
+    ] : []),
+
+    stepNumber(isGeoMode ? "5" : "4", "Apply highest-impact changes first"),
     bodyText(
-      "Focus on Priority 1 and 2 fixes before anything else. Small, targeted changes to the headline and CTA typically deliver the fastest results."
+      "Focus on Priority 1 and 2 fixes before anything else. Small, targeted changes typically deliver the fastest results."
     ),
 
     ...(isSubscriber ? [] : [
-      stepNumber("5", "Need help implementing?"),
+      stepNumber(isGeoMode ? "6" : "5", "Need help implementing?"),
       bodyText(
         "Get in touch at hello@conversiondoc.co.uk — we offer implementation support, copy rewrites, and full page redesigns."
       ),
@@ -1020,6 +1041,7 @@ export default function PaidReport() {
   const [mockupVersion, setMockupVersion] = useState<"a" | "b">("a");
   const [fullscreen, setFullscreen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [copySchemaSuccess, setCopySchemaSuccess] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadingDocx, setDownloadingDocx] = useState(false);
@@ -1073,6 +1095,8 @@ export default function PaidReport() {
   const mockupHtml = auditData?.mockup_html ?? null;
   const mockupHtmlB = auditData?.mockup_html_b ?? null;
   const activeMockupHtml = mockupVersion === "a" ? mockupHtml : (mockupHtmlB || mockupHtml);
+  const pageIntent = auditData?.page_intent ?? "home";
+  const geoSchema = auditData?.geo_schema ?? "";
 
   const isGeoMode = searchParams.get("focus") === "geo" || purchase?.focus === "geo";
 
@@ -1083,6 +1107,8 @@ export default function PaidReport() {
   const headingColor = isDarkTheme ? "text-white" : "text-slate-900";
   const bodyColor = isDarkTheme ? "text-slate-300" : "text-slate-700";
   const labelColor = isDarkTheme ? "text-teal-400" : "text-teal-600";
+
+  const mockupLabel = getMockupLabel(pageIntent, isGeoMode);
 
   const orderedScores = useMemo(() => {
     const entries = Object.entries(scores);
@@ -1136,6 +1162,12 @@ export default function PaidReport() {
     if (!activeMockupHtml) return;
     try { await navigator.clipboard.writeText(activeMockupHtml); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 2500); }
     catch { setCopySuccess(false); }
+  };
+
+  const handleCopySchema = async () => {
+    if (!geoSchema) return;
+    try { await navigator.clipboard.writeText(geoSchema); setCopySchemaSuccess(true); setTimeout(() => setCopySchemaSuccess(false), 2500); }
+    catch { setCopySchemaSuccess(false); }
   };
 
   const generateMockupPng = async (html: string | null): Promise<string> => {
@@ -1203,17 +1235,14 @@ ${html || ""}
       const zip = new JSZip();
       const prefix = isGeoMode ? "geo" : "homepage";
 
-      // PDF report (no "How to use this kit" page)
       try {
         const pdf = buildPdf({ isGeoMode, overallScore, auditData, topFixes, orderedScores, summary, purchaseUrl: purchase?.url, hasMockupB: !!mockupHtmlB, whiteLabel });
         zip.file(`${prefix}-audit-report.pdf`, await pdf.output("blob").arrayBuffer());
       } catch (e) { console.error("PDF for ZIP failed:", e); }
 
-      // Copy pack / content pack docx
       const docxBlob = await buildDocx({ isGeoMode, copyPack, overallScore, summary, topFixes, purchaseUrl: purchase?.url, whiteLabel });
       zip.file(isGeoMode ? "geo-content-pack.docx" : "copy-pack.docx", await docxBlob.arrayBuffer());
 
-      // Instructions docx (replaces the old "How to use this kit" PDF page)
       const instructionsBlob = await buildInstructionsDocx({
         isGeoMode,
         hasMockupB: !!mockupHtmlB,
@@ -1222,7 +1251,10 @@ ${html || ""}
       });
       zip.file("INSTRUCTIONS.docx", await instructionsBlob.arrayBuffer());
 
-      // Mockup files
+      if (isGeoMode && geoSchema) {
+        zip.file("geo-schema.json", geoSchema);
+      }
+
       if (mockupHtml) {
         zip.file(`${prefix}-mockup-a.html`, buildMockupHtmlFile(mockupHtml));
         try { const pngA = await generateMockupPng(mockupHtml); zip.file(`${prefix}-mockup-a.png`, pngA.split(",")[1], { base64: true }); } catch (e) { console.error("PNG A failed:", e); }
@@ -1391,7 +1423,7 @@ ${html || ""}
             <div>
               <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${labelColor}`}>Deliverable</p>
               <h2 className={`mt-2 text-3xl font-bold ${headingColor}`}>{isGeoMode ? "✍️ Content Pack" : "✍️ Copy Pack"}</h2>
-              <p className={`text-sm mt-2 ${isDarkTheme ? "text-slate-400" : "text-slate-500"}`}>{isGeoMode ? "Page-ready content written for AI extractability, clarity, and conversion." : "Homepage-ready copy written to improve clarity, trust, and action."}</p>
+              <p className={`text-sm mt-2 ${isDarkTheme ? "text-slate-400" : "text-slate-500"}`}>{isGeoMode ? "Page-ready content written for AI extractability, clarity, and conversion." : "Page-ready copy written to improve clarity, trust, and action."}</p>
             </div>
             <button onClick={handleDownloadDocx} disabled={downloadingDocx} className={`rounded-xl border font-semibold px-5 py-3 transition-colors text-sm shadow-sm disabled:opacity-50 ${isDarkTheme ? "border-slate-600 bg-slate-800 hover:bg-slate-700 text-slate-200" : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"}`}>
               {downloadingDocx ? "Generating…" : isGeoMode ? "Download Content Pack (.docx)" : "Download Copy Pack (.docx)"}
@@ -1435,8 +1467,8 @@ ${html || ""}
         <section className={`rounded-[28px] border ${isDarkTheme ? "border-slate-800" : "border-slate-200"} shadow-sm overflow-hidden`}>
           <div className="bg-[linear-gradient(135deg,#020617,#0f172a)] px-6 py-5">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-400">Visual Deliverable</p>
-            <h2 className="mt-2 text-2xl font-bold text-white">{isGeoMode ? "🎨 Your Restructured Page Mockup" : "🎨 Your Homepage Mockup"}</h2>
-            <p className="text-slate-400 text-sm mt-2">{isGeoMode ? "Compare your current page with a GEO-optimised direction." : "Compare your current site with a more conversion-focused direction."}</p>
+            <h2 className="mt-2 text-2xl font-bold text-white">{mockupLabel.title}</h2>
+            <p className="text-slate-400 text-sm mt-2">{mockupLabel.subtitle}</p>
           </div>
 
           <div className={`flex border-b ${isDarkTheme ? "border-slate-800" : "border-slate-200"}`}>
@@ -1513,6 +1545,61 @@ ${html || ""}
             {purchase.url && <a href={purchase.url} target="_blank" rel="noopener noreferrer" className={`rounded-xl border font-semibold px-5 py-3 transition-colors text-sm shadow-sm ${isDarkTheme ? "border-slate-600 bg-slate-800 hover:bg-slate-700 text-slate-200" : "border-slate-200 bg-white hover:bg-slate-100 text-slate-700"}`}>{isGeoMode ? "View Current Page →" : "View Current Site →"}</a>}
           </div>
         </section>
+
+        {/* GEO Schema Code Block — only shown in GEO mode */}
+        {isGeoMode && geoSchema && (
+          <section className={`rounded-[28px] border ${isDarkTheme ? "border-slate-800" : "border-slate-200"} shadow-sm overflow-hidden`}>
+            <div className="bg-[linear-gradient(135deg,#1a0b2e,#2d1654)] px-6 py-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "#d946ef" }}>JSON-LD Schema</p>
+              <h2 className="mt-2 text-2xl font-bold text-white">🔧 Your {pageIntent === "blog" ? "Article" : pageIntent === "landing" ? "Product" : "Organization"} Schema</h2>
+              <p className="text-slate-400 text-sm mt-2">Copy this code and paste it inside a &lt;script type="application/ld+json"&gt; tag in your page's &lt;head&gt; section.</p>
+            </div>
+
+            <div style={{ background: "#0a0a0a", padding: "24px", position: "relative" }}>
+              <button
+                onClick={handleCopySchema}
+                style={{
+                  position: "absolute",
+                  top: 16,
+                  right: 16,
+                  background: "#d946ef",
+                  color: "#fff",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  padding: "8px 16px",
+                  borderRadius: 8,
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 2px 8px rgba(217,70,239,0.4)"
+                }}
+              >
+                {copySchemaSuccess ? "✓ Copied!" : "Copy Schema"}
+              </button>
+              <pre style={{
+                fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+                fontSize: 13,
+                color: "#e0e0e0",
+                margin: 0,
+                padding: 0,
+                lineHeight: 1.7,
+                overflow: "auto",
+                maxHeight: 500,
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word"
+              }}>
+                {`<script type="application/ld+json">\n${geoSchema}\n</script>`}
+              </pre>
+            </div>
+
+            <div className={`px-6 py-4 border-t ${isDarkTheme ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-200"}`}>
+              <p className={`text-xs ${isDarkTheme ? "text-slate-400" : "text-slate-600"}`}>
+                💡 <strong>Tip:</strong> Validate your schema using{" "}
+                <a href="https://validator.schema.org/" target="_blank" rel="noopener noreferrer" className="text-teal-500 hover:underline">Schema.org Validator</a>{" "}or{" "}
+                <a href="https://search.google.com/test/rich-results" target="_blank" rel="noopener noreferrer" className="text-teal-500 hover:underline">Google's Rich Results Test</a>{" "}before deploying.
+              </p>
+            </div>
+          </section>
+        )}
 
         {/* Next Step — only show for one-off purchases, not white label subscribers */}
         {!isWhiteLabel && (
