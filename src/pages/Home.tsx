@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { Check, Star, Lock } from "lucide-react";
 
 type PricingMode = "conversion" | "geo" | "both";
 
@@ -57,6 +58,20 @@ const Logo = () => (
   </Link>
 );
 
+type PricingPlan = {
+  name: string;
+  price: number;
+  isMonthly?: boolean;
+  description: string;
+  features: string[];
+  cta: string;
+  ctaLink: string;
+  popular?: boolean;
+  popularLabel?: string;
+  isLaunchPrice?: boolean;
+  accent: "pulse" | "neon" | "both";
+};
+
 const Home = () => {
   const [mode, setMode] = useState<PricingMode>("conversion");
 
@@ -88,6 +103,263 @@ const Home = () => {
         : undefined,
     [mode]
   );
+
+  const conversionPlans: PricingPlan[] = [
+    {
+      name: "Free Audit",
+      price: 0,
+      description: "Perfect for identifying quick wins.",
+      features: [
+        "7-Pillar Conversion Analysis",
+        "Overall Conversion Score",
+        "Top 3 Critical Fixes",
+        "Page-Type Detection",
+        "Results in 60 Seconds",
+      ],
+      cta: "Start Free",
+      ctaLink: "/conversion-audit",
+      accent: "pulse",
+    },
+    {
+      name: "Full Diagnosis",
+      price: 149,
+      description: "One-time. Comprehensive analysis.",
+      features: [
+        "Full 7-Pillar Breakdown",
+        "Page-Type Intelligence (Home / Landing / Article)",
+        "Rewritten Copy (Every Section)",
+        "Article Rewrites with TL;DR + FAQ",
+        "Brand-Matched Mockup (PNG + HTML)",
+        "Ready-to-Use Code",
+      ],
+      cta: "Get Full Diagnosis",
+      ctaLink: "/conversion-audit",
+      accent: "pulse",
+    },
+    {
+      name: "Starter Pro",
+      price: 99,
+      isMonthly: true,
+      description: "20 audits/mo. For freelancers.",
+      features: [
+        "Everything in Full Diagnosis",
+        "20 Full Audits Per Month",
+        "Run Audits on Client Sites",
+        "Page-Type Intelligent Mockups",
+        "White Label Reports",
+        "Priority Support",
+      ],
+      cta: "Start Starter Pro",
+      ctaLink: "/conversion-audit",
+      popular: true,
+      popularLabel: "Best Value",
+      isLaunchPrice: true,
+      accent: "pulse",
+    },
+    {
+      name: "Agency Pro",
+      price: 199,
+      isMonthly: true,
+      description: "Unlimited. For agencies.",
+      features: [
+        "Everything in Starter Pro",
+        "Unlimited Full Audits",
+        "Audit All Client Sites",
+        "Page-Type Intelligent Mockups",
+        "White Label Reports",
+        "Priority Support",
+      ],
+      cta: "Start Agency Pro",
+      ctaLink: "/conversion-audit",
+      isLaunchPrice: true,
+      accent: "pulse",
+    },
+  ];
+
+  const geoPlans: PricingPlan[] = [
+    {
+      name: "Free GEO Audit",
+      price: 0,
+      description: "See how visible your page is to AI.",
+      features: [
+        "AI Search Readiness Score",
+        "7-Dimension GEO Analysis",
+        "Top 3 AI Visibility Fixes",
+        "Page-Type Detection",
+        "Results in 60 Seconds",
+      ],
+      cta: "Start Free",
+      ctaLink: "/geo-audit",
+      accent: "neon",
+    },
+    {
+      name: "Full GEO Audit",
+      price: 149,
+      description: "One-time. Full AI visibility diagnosis.",
+      features: [
+        "Full GEO + Conversion Audit",
+        "JSON-LD Schema (Article / Product / Org)",
+        "AI-Optimised Content Restructure",
+        "TL;DR + FAQ Generation",
+        "Brand-Matched Mockup (PNG + HTML)",
+        "Ready-to-Use Code",
+      ],
+      cta: "Get Full GEO Audit",
+      ctaLink: "/geo-audit",
+      accent: "neon",
+    },
+    {
+      name: "GEO Starter Pro",
+      price: 99,
+      isMonthly: true,
+      description: "20 GEO audits/mo. For freelancers.",
+      features: [
+        "Everything in Full GEO Audit",
+        "20 Full GEO Audits Per Month",
+        "JSON-LD Schema on Every Audit",
+        "Audit Client Sites",
+        "White Label Reports",
+        "Priority Support",
+      ],
+      cta: "Start GEO Starter Pro",
+      ctaLink: "/geo-audit",
+      popular: true,
+      popularLabel: "Best Value",
+      isLaunchPrice: true,
+      accent: "neon",
+    },
+    {
+      name: "GEO Agency Pro",
+      price: 199,
+      isMonthly: true,
+      description: "Unlimited GEO. For agencies.",
+      features: [
+        "Everything in GEO Starter Pro",
+        "Unlimited GEO Audits",
+        "JSON-LD Schema on Every Audit",
+        "Audit All Client Sites",
+        "White Label Reports",
+        "Priority Support",
+      ],
+      cta: "Start GEO Agency Pro",
+      ctaLink: "/geo-audit",
+      isLaunchPrice: true,
+      accent: "neon",
+    },
+  ];
+
+  const bothPlans: PricingPlan[] = [
+    {
+      name: "Both Free Scans",
+      price: 0,
+      description: "Run both diagnostics free.",
+      features: [
+        "Free Conversion Scan",
+        "Free GEO AI Scan",
+        "Page-Type Detection",
+        "Top 3 Fixes from Each Tool",
+        "Results in 60 Seconds",
+      ],
+      cta: "Start Free",
+      ctaLink: "/conversion-audit",
+      accent: "both",
+    },
+    {
+      name: "Full Stack Audit",
+      price: 199,
+      description: "One-time. Both full diagnoses.",
+      features: [
+        "Full Conversion Diagnosis (£149 value)",
+        "Full GEO Audit (£149 value)",
+        "Page-Type Intelligence",
+        "JSON-LD Schema + Mockups",
+        "TL;DR + FAQ for Articles",
+        "All Code Ready to Deploy",
+      ],
+      cta: "Get Full Stack",
+      ctaLink: "/conversion-audit",
+      accent: "both",
+    },
+    {
+      name: "Both Starter",
+      price: 149,
+      isMonthly: true,
+      description: "20 audits/mo each tool.",
+      features: [
+        "20 Conversion Audits/mo",
+        "20 GEO Audits/mo",
+        "Both Tools Combined",
+        "JSON-LD Schema Included",
+        "White Label Reports",
+        "Priority Support",
+      ],
+      cta: "Start Both Starter",
+      ctaLink: "/conversion-audit",
+      isLaunchPrice: true,
+      accent: "both",
+    },
+    {
+      name: "Agency Max",
+      price: 279,
+      isMonthly: true,
+      description: "Unlimited. Both tools. Full stack.",
+      features: [
+        "Unlimited Conversion Audits",
+        "Unlimited GEO Audits",
+        "Full GEO + AI Search Reports",
+        "JSON-LD Schema Generation",
+        "White Label Reports",
+        "Multi-Tool Dashboard",
+        "Priority Support",
+      ],
+      cta: "Start Agency Max",
+      ctaLink: "/conversion-audit",
+      popular: true,
+      popularLabel: "Full Stack",
+      isLaunchPrice: true,
+      accent: "both",
+    },
+  ];
+
+  const activePlans =
+    mode === "conversion" ? conversionPlans : mode === "geo" ? geoPlans : bothPlans;
+
+  const getAccentColor = (accent: "pulse" | "neon" | "both") => {
+    if (accent === "pulse") return "#06B6D4";
+    if (accent === "neon") return "#D946EF";
+    return "#FFFFFF";
+  };
+
+  const getAccentBorder = (accent: "pulse" | "neon" | "both", popular: boolean) => {
+    if (!popular) return "border-white/10";
+    if (accent === "pulse") return "border-[#06B6D4]/50";
+    if (accent === "neon") return "border-[#D946EF]/50";
+    return "border-white/30";
+  };
+
+  const getAccentBadgeStyle = (accent: "pulse" | "neon" | "both") => {
+    if (accent === "pulse") return { background: "#06B6D4", color: "#000" };
+    if (accent === "neon") return { background: "#D946EF", color: "#fff" };
+    return { background: "linear-gradient(90deg, #06B6D4, #D946EF)", color: "#fff" };
+  };
+
+  const getAccentBtnClass = (accent: "pulse" | "neon" | "both", popular: boolean) => {
+    if (popular) {
+      if (accent === "pulse") return "btn-pulse";
+      if (accent === "neon") return "btn-neon";
+      return "";
+    }
+    if (accent === "pulse") return "border border-[#06B6D4] text-[#06B6D4] hover:bg-[#06B6D4]/10";
+    if (accent === "neon") return "border border-[#D946EF] text-[#D946EF] hover:bg-[#D946EF]/10";
+    return "border border-white/30 text-white hover:bg-white/10";
+  };
+
+  const getBothGradientBtnStyle = (accent: "pulse" | "neon" | "both", popular: boolean) => {
+    if (accent === "both" && popular) {
+      return { background: "linear-gradient(90deg, #06B6D4, #D946EF)", color: "#fff" };
+    }
+    return undefined;
+  };
 
   return (
     <div className="min-h-screen bg-obsidian text-clinic">
@@ -370,8 +642,75 @@ const Home = () => {
             </button>
           </div>
 
-          {/* Pricing cards unchanged from your existing version */}
-          {/* Keep your current pricing section content here */}
+          {/* PRICING CARDS */}
+          <div className="mt-10 grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+            {activePlans.map((plan, idx) => {
+              const accentColor = getAccentColor(plan.accent);
+              const borderClass = getAccentBorder(plan.accent, !!plan.popular);
+              const badgeStyle = getAccentBadgeStyle(plan.accent);
+              const btnClass = getAccentBtnClass(plan.accent, !!plan.popular);
+              const btnStyle = getBothGradientBtnStyle(plan.accent, !!plan.popular);
+
+              return (
+                <div
+                  key={idx}
+                  className={`relative rounded-xl border ${borderClass} bg-[#0A0A0A] p-6 flex flex-col ${plan.popular ? "scale-[1.02] z-10" : ""}`}
+                >
+                  {plan.popular && plan.popularLabel && (
+                    <div
+                      className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-mono font-bold uppercase tracking-widest px-3 py-1 rounded-full flex items-center gap-1.5"
+                      style={badgeStyle}
+                    >
+                      <Star className="w-3 h-3" /> {plan.popularLabel}
+                    </div>
+                  )}
+
+                  {plan.isLaunchPrice && (
+                    <div className="flex items-center gap-1.5 mb-3 opacity-80">
+                      <Lock className="w-3 h-3" style={{ color: accentColor }} />
+                      <span className="text-[10px] font-mono tracking-wider uppercase" style={{ color: accentColor }}>
+                        Launch Pricing
+                      </span>
+                    </div>
+                  )}
+
+                  <h3 className="text-lg font-bold mb-2 text-clinic">{plan.name}</h3>
+                  <div className="flex items-baseline gap-1 mb-3">
+                    <span className="text-3xl font-black text-clinic">
+                      {plan.price === 0 ? "Free" : `£${plan.price}`}
+                    </span>
+                    {plan.isMonthly && (
+                      <span className="text-xs text-data font-mono">/mo</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-data mb-5 min-h-[32px]">
+                    {plan.description}
+                  </p>
+
+                  <ul className="space-y-2 mb-6 flex-1">
+                    {plan.features.map((feature, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs text-clinic">
+                        <Check className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: accentColor }} />
+                        <span className="leading-snug opacity-90">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Link
+                    to={plan.ctaLink}
+                    className={`w-full block text-center text-sm font-bold px-4 py-2.5 rounded-md transition-all duration-200 ${btnClass}`}
+                    style={btnStyle}
+                  >
+                    {plan.cta}
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-10 text-center text-xs text-data/70 font-mono tracking-wider">
+            All paid plans include refund guarantee — if we find fewer than 5 issues, you get your money back.
+          </div>
         </div>
       </section>
 
