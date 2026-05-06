@@ -64,7 +64,7 @@ const Pricing = () => {
         "7-Pillar Conversion Analysis",
         "Overall Conversion Score",
         "Top 3 Critical Fixes",
-        "Basic Layout Audit",
+        "Page-Type Detection (Home / Landing / Article)",
         "AI Search Readiness Signals",
         "Results in 60 Seconds",
       ],
@@ -79,8 +79,10 @@ const Pricing = () => {
       features: [
         "Full 7-Pillar Breakdown",
         "Every Issue Identified",
+        "Page-Type Intelligence (Home / Landing / Article)",
         "Rewritten Copy (Every Section)",
-        "Brand-Matched Mockup (PNG)",
+        "Article Rewrites with TL;DR + FAQ",
+        "Brand-Matched Mockup (PNG + HTML)",
         "Ready-to-Use Code (Paste Straight In)",
         "AI Search Readiness Assessment",
       ],
@@ -98,6 +100,7 @@ const Pricing = () => {
         "Everything in Full Diagnosis",
         "20 Full Audits Per Month",
         "Run Audits on Client Sites",
+        "Page-Type Intelligent Mockups",
         "White Label Reports (Your Logo)",
         "AI Search Readiness Included",
         "Priority Support",
@@ -119,6 +122,7 @@ const Pricing = () => {
         "Everything in Starter Pro",
         "Unlimited Full Audits",
         "Audit All Client Sites",
+        "Page-Type Intelligent Mockups",
         "White Label Reports (Your Logo)",
         "AI Search Readiness Included",
         "Priority Support",
@@ -139,6 +143,7 @@ const Pricing = () => {
         "Everything in Agency Pro",
         "Unlimited GEO + Conversion Audits",
         "Full GEO + AI Search Reports",
+        "JSON-LD Schema Generation",
         "White Label Reports (Your Logo)",
         "Multi-Tool Dashboard",
         "Priority Support",
@@ -159,8 +164,8 @@ const Pricing = () => {
         "AI Search Readiness Score",
         "7-Dimension GEO Analysis",
         "Top 3 AI Visibility Fixes",
+        "Page-Type Detection (Home / Landing / Article)",
         "Conversion Health Check",
-        "Structured Content Assessment",
         "Results in 60 Seconds",
       ],
       cta: "Start Free GEO Audit",
@@ -175,9 +180,10 @@ const Pricing = () => {
         "Full GEO + Conversion Audit",
         "AI Search Readiness Score (Detailed)",
         "Every Visibility Gap Identified",
-        "Structured Content Fixes",
-        "Conversion Alignment Assessment",
-        "Brand-Matched Mockup (PNG)",
+        "JSON-LD Schema (Article / Product / Organization)",
+        "AI-Optimised Content Restructure",
+        "TL;DR + FAQ Generation (Articles)",
+        "Brand-Matched Mockup (PNG + HTML)",
         "Ready-to-Use Code (Paste Straight In)",
       ],
       cta: "Get Full GEO Audit",
@@ -193,6 +199,7 @@ const Pricing = () => {
       features: [
         "AI Search Readiness on Every Audit",
         "Full GEO + Conversion Reports",
+        "JSON-LD Schema on Every Audit",
         "20 Full Audits Per Month",
         "Audit Client Sites",
         "White Label Reports (Your Logo)",
@@ -214,6 +221,7 @@ const Pricing = () => {
       features: [
         "Unlimited GEO + Conversion Audits",
         "AI Search Readiness on Every Audit",
+        "JSON-LD Schema on Every Audit",
         "Full Reports on Every Client Site",
         "Audit All Client Sites",
         "White Label Reports (Your Logo)",
@@ -235,6 +243,7 @@ const Pricing = () => {
         "Everything in GEO Agency Pro",
         "Unlimited Conversion + GEO Audits",
         "Full GEO + AI Search Reports",
+        "JSON-LD Schema Generation",
         "White Label Reports (Your Logo)",
         "Multi-Tool Dashboard",
         "Priority Support",
@@ -260,8 +269,8 @@ const Pricing = () => {
           </h2>
           <p className="text-lg text-data max-w-2xl mx-auto">
             {isGeoMode
-              ? "No hidden fees. Every plan includes deep GEO diagnosis and AI search readiness metrics."
-              : "No hidden fees. Every plan includes psychological conversion analysis and AI search readiness."}
+              ? "No hidden fees. Every plan includes deep GEO diagnosis, JSON-LD schema generation, and AI search readiness metrics."
+              : "No hidden fees. Every plan includes psychological conversion analysis, page-type intelligence, and AI search readiness."}
           </p>
         </div>
 
@@ -380,17 +389,17 @@ const Pricing = () => {
           className={`mt-16 bg-[#0A0A0A] border ${activeBorder} rounded-lg p-8 max-w-3xl mx-auto text-center`}
         >
           <p className={`text-xs font-mono font-bold uppercase tracking-widest mb-3 ${activeColor}`}>
-            {isGeoMode ? "GEO + Conversion" : "AI Search Readiness Included"}
+            {isGeoMode ? "GEO + Conversion" : "Page-Type Intelligent"}
           </p>
           <h3 className="text-xl font-bold mb-3 text-clinic">
             {isGeoMode
-              ? "AI visibility and human conversion. Both covered."
-              : "Built for humans. Ready for AI."}
+              ? "AI visibility, schema, and human conversion. All covered."
+              : "Built for humans. Ready for AI. Smart for every page type."}
           </h3>
           <p className="text-sm text-data leading-relaxed">
             {isGeoMode
-              ? "Every GEO audit includes a conversion alignment check — so you know your page can be found by AI search and converts when visitors arrive."
-              : "Every audit now includes an AI Search Readiness check — so you know whether your page is structured to be found, understood, and cited by AI search engines."}
+              ? "Every GEO audit detects your page type (home, landing, or article) and generates the right JSON-LD schema, restructured content, and conversion alignment check — so you know your page can be found by AI search and converts when visitors arrive."
+              : "Every audit detects your page type and delivers the right fix — homepage redesigns for homepages, landing page optimisations for offer pages, and full article restructures with TL;DR and FAQ sections for blog content."}
           </p>
         </motion.div>
       </div>
